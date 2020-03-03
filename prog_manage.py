@@ -640,12 +640,16 @@ def update():
         str: "No requests" if requests isn't installed, "No internet if there isn't
         an internet connection, "Newer version" if the installed
         version is newer than the one online, "No update" if there is no update,
-        "Updated" upon a successful update, or "Failed" if requests isn't installed.
+        "Updated" upon a successful update, "No git" if git isn't installed,
+        or "Failed" if it failed.
 
     """
     if not can_update:
         config.vprint("requests isn't installed.")
         return "No requests"
+    elif not config.check_bin("git"):
+        config.vprint("git isn't installed.")
+        return "No git"
     generic.progress(5)
     prog_version_internal = config.get_version('prog_internal_version')
     config.vprint("Checking version on GitHub")
@@ -658,25 +662,42 @@ def update():
     config.vprint('Version on GitHub: ' + str(final_version))
     generic.progress(10)
     if final_version > prog_version_internal:
-        print("An update has been found! Installing...")
-        config.vprint('Removing old tarstall pys...')
-        os.chdir(config.full("~/.tarstall"))
-        files = os.listdir()
-        for i in files:
-            i_num = len(i) - 3
-            if i[i_num:len(i)] == '.py':
-                os.remove(config.full('~/.tarstall/' + i))
-        generic.progress(40)
-        config.vprint("Downloading new tarstall pys..")
-        status = download_files(['tarstall.py', 'generic.py', 'config.py', 'prog_manage.py'], '~/.tarstall/')
-        if status == "Fail":
+        print("An update has been found! Installing...")  # Intentionally not a generic.pprint()
+        try:
+            rmtree("/tmp/tarstall-update")
+        except FileNotFoundError:
+            pass
+        os.chdir("/tmp/")
+        os.mkdir("tarstall-update")
+        os.chdir("/tmp/tarstall-update")
+        config.vprint("Cloning tarstall repository from git")
+        err = call(["git", "clone", "--branch", config.branch, "https://github.com/hammy3502/tarstall.git"])
+        if err != 0:
+            generic.pprint("Failed while cloning the git repository for tarstall!")
             return "Failed"
-        elif status == "No internet":
-            return "No internet"
-        generic.progress(75)
-        move(config.full("~/.tarstall/tarstall.py"), config.full("~/.tarstall/tarstall_execs/tarstall"))
-        os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
+        generic.progress(55)
+        config.vprint("Removing old tarstall files")
+        os.chdir(config.full("~/.tarstall/"))
+        files = os.listdir()
+        to_keep = ["bin", "database", ".bashrc"]
+        for f in files:
+            if f not in to_keep:
+                if os.path.isdir(config.full("~/.tarstall/{}".format(f))):
+                    rmtree(config.full("~/.tarstall/{}".format(f)))
+                else:
+                    os.remove(config.full("~/.tarstall/{}".format(f)))
+        generic.progress(70)
+        config.vprint("Moving in new tarstall files")
+        os.chdir("/tmp/tarstall-update/tarstall/")
+        files = os.listdir()
+        for f in files:
+            move("/tmp/tarstall-update/tarstall/{}".format(f), config.full("~/.tarstall/{}".format(f)))
         generic.progress(85)
+        config.vprint("Removing old tarstall temp directory")
+        try:
+            rmtree("/tmp/tarstall-update")
+        except FileNotFoundError:
+            pass
         config.db["version"]["prog_internal_version"] = final_version
         config.write_db()
         return "Updated"
@@ -1015,29 +1036,6 @@ def get_file_version(version_type):
         return config.db["version"]["file_version"]
     elif version_type == 'prog':
         return config.db["version"]["prog_internal_version"]
-
-
-def download_files(files, folder):
-    """Download List of Files.
-    
-    Args:
-        files (str[]): List of files to obtain from tarstall repo
-        folder (str): Folder to put files in
-
-    Returns:
-        str: "Fail" if requests library isn't installed or "No internet"
-
-    """
-    if not can_update:
-        print("Cannot download files if the request library isn't installed!")
-        return "Fail"
-    for i in files:
-        try:
-            r = requests.get(
-            "https://raw.githubusercontent.com/hammy3502/tarstall/{}/".format(config.db["version"]["branch"]) + i)
-        except requests.ConnectionError:
-            return "No internet"
-        open(config.full(folder + i), 'wb').write(r.content)
 
 
 verbose = config.vcheck()

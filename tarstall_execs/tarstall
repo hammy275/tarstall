@@ -702,7 +702,10 @@ def parse_args(args=None):
 
     elif args.update:
         status = prog_manage.update()
-        if status == "No requests":
+        if status == "No git":
+            generic.pprint("git isn't installed, please install it!")
+            exit_code = 1
+        elif status == "No requests":
             generic.pprint("requests isn't installed, please install it!")
             exit_code = 1
         elif status == "Newer version":
@@ -712,7 +715,7 @@ def parse_args(args=None):
         elif status == "Updated":
             generic.pprint("tarstall successfully updated!")
         elif status == "Failed":
-            generic.pprint("tarstall update failed! tarstall is most likely missing its files. Please manually re-install it!")
+            generic.pprint("tarstall update failed!")
             exit_code = 1
         elif status == "No internet":
             generic.pprint("Failed to connect to the internet!")
