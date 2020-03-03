@@ -23,7 +23,7 @@ import sys
 import getpass
 import shutil
 
-sys.path.insert(1, os.path.expanduser("~/.tarstall/"))
+sys.path.insert(1, os.path.abspath(os.path.expanduser("{}/..".format(os.path.dirname(__file__)))))
 
 import config
 import generic

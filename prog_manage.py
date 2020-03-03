@@ -249,10 +249,8 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
     Returns:
         str: One of many different values indicating the status of tarstall. Those include:
         "Not installed", "Locked", "Good" (nothing bad happened), "Root", "Old" (happens
-        when upgrading from tarstall prog_version 1), "Old upgrade" if tarstall
-        needs to upgrade but it would wipe the database during the upgrade
-        process, and "Unlocked" if tarstall was successfully unlocked.
-        Can also return a string from first_time_setup.
+        when upgrading from tarstall prog_version 1), and "Unlocked" if tarstall 
+        was successfully unlocked. Can also return a string from first_time_setup.
 
     """
     if config.locked():  # Lock check
@@ -278,85 +276,34 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
     if start_fts:  # Check if -f or --first is supplied
         return first_time_setup()
 
-    if not(config.exists('~/.tarstall/tarstall_execs/tarstall')) and not(config.exists("~/.tarstall/tarstall.py")):  # Make sure tarstall is installed
+    if not(config.exists('~/.tarstall/tarstall_execs/tarstall')) and not(config.exists("~/.hamstall/tarstall.py")) and not(config.exists('~/.hamstall/hamstall_execs/hamstall')):  # Make sure tarstall is installed
         return "Not installed"
 
-    try:  # Lingering upgrades check
-        file_version = get_file_version('file')
-    except KeyError:
-        file_version = 1
-    while config.get_version('file_version') > file_version:
-        if file_version == 1:
-            if not old_upgrade:
+    file_version = get_file_version('file')
+    while config.get_version('file_version') > file_version:  # Lingering upgrades check
+        print(config.db)
+        if file_version == 10:  # Older upgrades can only take place in hamstall, not tarstall. 
+            config.vprint("And such began the conversion from hamstall to tarstall.")
+            if config.exists("~/.tarstall"):
+                generic.pprint("Please delete the folder in your home directory named '.tarstall'!")
                 config.unlock()
-                return "Old upgrade"
-            try:
-                config.vprint("Removing old database")
-                os.remove(config.full("~/.tarstall/database"))
-            except FileNotFoundError:
-                pass
-            config.vprint("Creating new database")
-            config.create("~/.tarstall/database")
-            create_db()
-            config.vprint("Upgraded from tarstall file version 1 to 2.")
-        elif file_version == 2:
-            config.vprint("Database needs to have the branch key! Adding...")
-            config.db["version"].update({"branch": "master"})
-            config.db["version"]["file_version"] = 3
-            config.vprint("Upgraded from tarstall file version 2 to 3.")
-        elif file_version == 3:
-            config.vprint("Database needs to have the shell key! Adding...")
-            config.db["options"].update({"ShellFile": config.get_shell_file()})
-            config.db["version"]["file_version"] = 4
-            config.vprint("Upgraded from tarstall file version 3 to 4.")
-        elif file_version == 4:
-            config.vprint("file.py merged into config.py; deleting old file.py...")
-            try:
-                os.remove(config.full("~/.tarstall/file.py"))
-                config.vprint("Deleted file.py")
-            except FileNotFoundError:
-                pass
-                config.vprint("file.py not found, so not deleted!")
-            config.db["version"]["file_version"] = 5
-            config.vprint("Upgraded from tarstall file version 4 to 5.")
-        elif file_version == 5:
-            config.vprint("Database needs to have the mode key! Adding...")
-            config.db["options"].update({"Mode": "cli"})
-            config.db["version"]["file_version"] = 6
-            config.vprint("Upgraded from tarstall file version 5 to 6.")
-        elif file_version == 6:
-            config.vprint("Programs in database need git installed flag!")
-            config.vprint("Auto-detecting based on presence of .git folder!")
-            for p in config.db["programs"].keys():
-                if os.path.isdir(config.full("~/.tarstall/bin/{}/.git".format(p))):
-                    config.db["programs"][p]["git_installed"] = True
-                else:
-                    config.db["programs"][p]["git_installed"] = False
-            config.db["version"]["file_version"] = 7
-        elif file_version == 7:
-            config.vprint("Programs in database need post_upgrade_script entry!")
-            for p in config.db["programs"].keys():
-                config.db["programs"][p]["post_upgrade_script"] = None
-            config.db["version"]["file_version"] = 8
-        elif file_version == 8:
-            config.vprint("Configuration doesn't contain \"SkipQuestions\" key. Adding...")
-            config.db["options"]["SkipQuestions"] = False
-            config.db["version"]["file_version"] = 9
-        elif file_version == 9:
-            config.vprint("Moving tarstall to a seperate directory to be callable without alias!")
-            try:
-                os.mkdir(config.full("~/.tarstall/tarstall_execs"))
-            except FileExistsError:
-                generic.pprint("Please remove the \"tarstall_execs\" directory in your folder!")
                 sys.exit(1)
-            move(config.full("~/.tarstall/tarstall.py"), config.full("~/.tarstall/tarstall_execs/tarstall"))
-            config.replace_in_file("alias tarstall='python3 ~/.tarstall/tarstall.py'", "export PATH=$PATH:{}".format(
-                config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")
-            config.db["version"]["file_version"] = 10
-        try:
-            file_version = get_file_version('file')
-        except KeyError:
-            file_version = 1
+            else:
+                config.vprint("Renaming hamstall files and folders")
+                move(config.full("~/.hamstall/"),config.full("~/.tarstall/"))
+                move(config.full("~/.tarstall/hamstall_execs"), config.full("~/.tarstall/tarstall_execs"))
+                move(config.full("~/.tarstall/tarstall_execs/hamstall"), config.full("~/.tarstall/tarstall_execs/tarstall"))
+                config.vprint("Replacing line in shell file")
+                config.replace_in_file("source ~/.hamstall/.bashrc", "source ~/.tarstall/.bashrc", "~/{}".format(config.read_config("ShellFile")))
+                config.vprint("Replacing hamstall's bashrc lines")
+                config.replace_in_file("/.hamstall/hamstall_execs", "/.tarstall/tarstall_execs", "~/.tarstall/.bashrc")
+                config.replace_in_file("/.hamstall/bin", "/.tarstall/bin", "~/.tarstall/.bashrc")
+                config.vprint("Updating .desktop programs")
+                for p in config.db["programs"].keys():
+                    for d in config.db["programs"][p]["desktops"]:
+                        config.replace_in_file("/.hamstall/bin", "/.tarstall/bin", "~/.local/share/applications/{}.desktop".format(d))
+                config.db["version"]["file_version"] = 11
+        file_version = get_file_version('file')
         config.write_db()
 
     if get_file_version('prog') == 1:  # Online update broke between prog versions 1 and 2 of tarstall

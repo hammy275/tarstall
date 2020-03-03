@@ -23,8 +23,8 @@ import shutil
 ###VERSIONS###
 
 version = "1.4.0 beta"
-prog_internal_version = 62
-file_version = 10
+prog_internal_version = 63
+file_version = 11
 
 #############
 
@@ -264,7 +264,7 @@ def exists(file_name):
 
     """
     try:
-        return os.path.isfile(full(file_name))
+        return os.path.isfile(full(file_name)) or os.path.isdir(full(file_name))
     except FileNotFoundError:
         return False
 
@@ -468,12 +468,12 @@ def get_db(db_check=""):
     try:
         with open(full("~/.tarstall/database")) as f:
             db = json.load(f)
-    except FileNotFoundError:
-        db = {}
-    except json.decoder.JSONDecodeError:
-        db = {}
-        print("We're upgrading from an extremely old version of tarstall!")
-        print("Using empty database file...")
+    except (FileNotFoundError, json.decoder.JSONDecodeError):
+        try:
+            with open(full("~/.hamstall/database")) as f:
+                db = json.load(f)
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            db = {}
     return db
 
 
