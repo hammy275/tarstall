@@ -24,8 +24,8 @@ def nothing_two(a, b=False):
 
 def test_gitinstall(monkeypatch):
     monkeypatch.setattr(prog_manage, "finish_install", nothing_two)
-    prog_manage.gitinstall("https://github.com/hammy3502/hamstall.git", "hamstall")
-    assert os.path.isfile(os.path.expanduser("~/.hamstall/bin/hamstall/prog_manage.py"))
+    prog_manage.gitinstall("https://github.com/hammy3502/tarstall.git", "tarstall")
+    assert os.path.isfile(os.path.expanduser("~/.tarstall/bin/tarstall/prog_manage.py"))
 
 
 def test_get_file_version():
@@ -35,9 +35,9 @@ def test_get_file_version():
 
 def test_pathify():
     prog_manage.pathify("package")
-    assert config.check_line("export PATH=$PATH:~/.hamstall/bin/package # package", "~/.hamstall/.bashrc", "fuzzy")
+    assert config.check_line("export PATH=$PATH:~/.tarstall/bin/package # package", "~/.tarstall/.bashrc", "fuzzy")
     prog_manage.pathify("test_program")
-    assert config.check_line("export PATH=$PATH:~/.hamstall/bin/test_program # test_program", "~/.hamstall/.bashrc",
+    assert config.check_line("export PATH=$PATH:~/.tarstall/bin/test_program # test_program", "~/.tarstall/.bashrc",
                            "fuzzy")
 
 
@@ -64,16 +64,16 @@ def test_remove_desktop():
 
 def test_uninstall():
     prog_manage.uninstall("package")
-    assert config.check_line("export PATH=$PATH:~/.hamstall/bin/package # package", "~/.hamstall/.bashrc",
+    assert config.check_line("export PATH=$PATH:~/.tarstall/bin/package # package", "~/.tarstall/.bashrc",
                            "fuzzy") is False
-    assert os.path.isfile(config.full("~/.hamstall/bin/package/test.sh")) is False
+    assert os.path.isfile(config.full("~/.tarstall/bin/package/test.sh")) is False
 
 
 def test_install(monkeypatch):
     os.chdir(os.path.realpath(__file__)[:-19])
     monkeypatch.setattr(prog_manage, "finish_install", nothing_two)
     prog_manage.install("./fake_packages/package.tar.gz")
-    assert os.path.isfile(os.path.expanduser("~/.hamstall/bin/package/test.sh"))
+    assert os.path.isfile(os.path.expanduser("~/.tarstall/bin/package/test.sh"))
 
 
 def test_create_db():
@@ -83,7 +83,8 @@ def test_create_db():
         "options": {
             "Verbose": False,
             "AutoInstall": False,
-            "ShellFile": config.get_shell_file()
+            "ShellFile": config.get_shell_file(),
+            "SkipQuestions": False
         },
         "version": {
             "file_version": config.file_version,
@@ -97,5 +98,11 @@ def test_create_db():
 
 def test_erase():
     assert prog_manage.erase() == "Erased"
-    assert os.path.isfile(config.full("~/.hamstall/hamstall.py")) is False
-    assert config.check_line("source ~/.hamstall/.bashrc", "~/.bashrc", "fuzzy") is False
+    assert os.path.isfile(config.full("~/.tarstall/tarstall.py")) is False
+    try:
+        assert config.check_line("source ~/.tarstall/.bashrc", "~/.bashrc", "fuzzy") is False
+    except FileNotFoundError:
+        try:
+            config.check_line("source ~/.tarstall/.zshrc", "~/.zshrc", "fuzzy") is False
+        except FileNotFoundError:
+            raise AssertionError("Please use bash or zsh for testing!")

@@ -4,7 +4,7 @@ import generic
 from io import StringIO
 
 
-# This is more of an init that removes and re-installs hamstall so we have a blank slate to work with for testing.
+# This is more of an init that removes and re-installs tarstall so we have a blank slate to work with for testing.
 
 
 def test_reset(monkeypatch):

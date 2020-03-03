@@ -10,19 +10,19 @@ def test_check_bin():
 
 
 def test_replace_in_file():
-    with open("/tmp/hamstall-test-temp", "w") as f:
+    with open("/tmp/tarstall-test-temp", "w") as f:
         f.write("Test Line.")
-    config.replace_in_file("Test Line.", "TestHere", "/tmp/hamstall-test-temp")
-    with open("/tmp/hamstall-test-temp", "r") as f:
+    config.replace_in_file("Test Line.", "TestHere", "/tmp/tarstall-test-temp")
+    with open("/tmp/tarstall-test-temp", "r") as f:
         assert f.readline() == "TestHere"
     
-    with open("/tmp/hamstall-test-temp-two", "w") as f:
+    with open("/tmp/tarstall-test-temp-two", "w") as f:
         f.write("Test Line.")
-    config.replace_in_file("No Replace.", "TestHere", "/tmp/hamstall-test-temp")
-    with open("/tmp/hamstall-test-temp-two", "r") as f:
+    config.replace_in_file("No Replace.", "TestHere", "/tmp/tarstall-test-temp")
+    with open("/tmp/tarstall-test-temp-two", "r") as f:
         assert f.readline() == "Test Line."
-    os.remove("/tmp/hamstall-test-temp-two")
-    os.remove("/tmp/hamstall-test-temp")
+    os.remove("/tmp/tarstall-test-temp-two")
+    os.remove("/tmp/tarstall-test-temp")
 
 
 def test_read_config():
@@ -42,23 +42,24 @@ def test_vcheck():
 
 def test_lock():
     config.lock()
-    assert os.path.isfile("/tmp/hamstall-lock")
+    assert os.path.isfile("/tmp/tarstall-lock")
 
 
 def test_locked():
-    assert config.locked() == os.path.isfile("/tmp/hamstall-lock")
+    assert config.locked() == os.path.isfile("/tmp/tarstall-lock")
 
 
 def test_unlock():
     config.unlock()
-    assert not os.path.isfile("/tmp/hamstall-lock")
+    assert not os.path.isfile("/tmp/tarstall-lock")
 
 def test_get_db():
     assert config.get_db() == {
         "options": {
             "Verbose": False,
             "AutoInstall": False,
-            "ShellFile": config.get_shell_file()
+            "ShellFile": config.get_shell_file(),
+            "SkipQuestions": False
         },
         "version": {
             "file_version": config.file_version,
@@ -99,26 +100,26 @@ def test_spaceify():
 
 def test_check_line():
     # TODO: Test other modes
-    config.create("~/.hamstall/config")
-    config.add_line("Test Line", "~/.hamstall/config")
-    assert config.check_line("Test Line", "~/.hamstall/config", "fuzzy") is True
-    assert config.check_line("ThisShouldNotBeFound=True", "~/.hamstall/config", "fuzzy") is False
+    config.create("~/.tarstall/config")
+    config.add_line("Test Line", "~/.tarstall/config")
+    assert config.check_line("Test Line", "~/.tarstall/config", "fuzzy") is True
+    assert config.check_line("ThisShouldNotBeFound=True", "~/.tarstall/config", "fuzzy") is False
 
 
 def test_create():
-    config.create("~/.hamstall/test01")
-    assert config.exists("~/.hamstall/test01")
+    config.create("~/.tarstall/test01")
+    assert config.exists("~/.tarstall/test01")
 
 
 def test_remove_line():
     # TODO: Test other modes
-    config.remove_line("Test Line", "~/.hamstall/config", "fuzzy")
-    assert config.check_line("Verbose=False", "~/.hamstall/config", "fuzzy") is False
+    config.remove_line("Test Line", "~/.tarstall/config", "fuzzy")
+    assert config.check_line("Verbose=False", "~/.tarstall/config", "fuzzy") is False
 
 
 def test_add_line():
-    config.add_line("Verbose=False\n", "~/.hamstall/config")
-    assert config.check_line("Verbose=False", "~/.hamstall/config", "fuzzy") is True
+    config.add_line("Verbose=False\n", "~/.tarstall/config")
+    assert config.check_line("Verbose=False", "~/.tarstall/config", "fuzzy") is True
 
 
 def test_char_check():
@@ -132,6 +133,6 @@ def test_write_db():
     config.db.update({"test": "here"})
     config.write_db()
     old_db.update({"test": "here"})
-    with open(config.full("~/.hamstall/database")) as f:
+    with open(config.full("~/.tarstall/database")) as f:
         db = json.load(f)
     assert old_db == db
