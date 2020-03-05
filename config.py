@@ -23,7 +23,7 @@ import shutil
 ###VERSIONS###
 
 version = "1.4.0 beta"
-prog_internal_version = 64
+prog_internal_version = 65
 file_version = 11
 
 #############

@@ -281,28 +281,7 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
 
     file_version = get_file_version('file')
     while config.get_version('file_version') > file_version:  # Lingering upgrades check
-        print(config.db)
-        if file_version == 10:  # Older upgrades can only take place in hamstall, not tarstall. 
-            config.vprint("And such began the conversion from hamstall to tarstall.")
-            if config.exists("~/.tarstall"):
-                generic.pprint("Please delete the folder in your home directory named '.tarstall'!")
-                config.unlock()
-                sys.exit(1)
-            else:
-                config.vprint("Renaming hamstall files and folders")
-                move(config.full("~/.hamstall/"),config.full("~/.tarstall/"))
-                move(config.full("~/.tarstall/hamstall_execs"), config.full("~/.tarstall/tarstall_execs"))
-                move(config.full("~/.tarstall/tarstall_execs/hamstall"), config.full("~/.tarstall/tarstall_execs/tarstall"))
-                config.vprint("Replacing line in shell file")
-                config.replace_in_file("source ~/.hamstall/.bashrc", "source ~/.tarstall/.bashrc", "~/{}".format(config.read_config("ShellFile")))
-                config.vprint("Replacing hamstall's bashrc lines")
-                config.replace_in_file("/.hamstall/hamstall_execs", "/.tarstall/tarstall_execs", "~/.tarstall/.bashrc")
-                config.replace_in_file("/.hamstall/bin", "/.tarstall/bin", "~/.tarstall/.bashrc")
-                config.vprint("Updating .desktop programs")
-                for p in config.db["programs"].keys():
-                    for d in config.db["programs"][p]["desktops"]:
-                        config.replace_in_file("/.hamstall/bin", "/.tarstall/bin", "~/.local/share/applications/{}.desktop".format(d))
-                config.db["version"]["file_version"] = 11
+        pass
         file_version = get_file_version('file')
         config.write_db()
 
