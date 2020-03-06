@@ -206,7 +206,8 @@ E - Exit branch wizard and don't change branches."""
             elif status == "Reset":
                 generic.pprint("Successfully switched to the master branch and reset tarstall!")
                 generic.pprint("Please run tarstall again to finish the downgrade process!")
-                return
+                config.unlock
+                sys.exit(0)
             elif status == "Waiting":
                 generic.pprint("Successfully switched to the master branch!")
                 generic.pprint("When the master branch is a newer version than the beta one, the next update will bring you up to master.")
@@ -354,7 +355,7 @@ def install_wrap_up(program):
         program (str): Name of program
 
     """
-    if not config.db["options"]["SkipQuestions"]:
+    if not config.read_config("SkipQuestions"):
         yn = generic.get_input('Would you like to add the program to your PATH?', ['y', 'n'], 'y', ["Yes", "No"])
         if yn == 'y':
             pathify(program)
@@ -689,7 +690,7 @@ def parse_args(args=None):
                 if status == "Not installed":
                     generic.pprint("tarstall isn't installed, so not removed!")
                 elif status == "Erased":
-                    generic.pprint("tarstall has been removed!")
+                    generic.pprint("tarstall has been removed! Please restart your terminal.")
                     sys.exit(0)
             else:
                 generic.pprint('Erase cancelled.')

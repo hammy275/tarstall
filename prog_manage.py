@@ -15,7 +15,7 @@
     along with tarstall.  If not, see <https://www.gnu.org/licenses/>."""
 
 import os
-from shutil import copyfile, rmtree, move, which, copy
+from shutil import copyfile, rmtree, move, which, copy, copytree
 from subprocess import call
 import sys
 import re
@@ -126,7 +126,7 @@ def update_programs():
         return "No programs"
     if not config.check_bin("git"):
         return "No git"
-    increment = int(90 / len(config.db["programs"].keys()))
+    increment = int(100 / len(config.db["programs"].keys()))
     progress = 0
     statuses = {}
     for p in config.db["programs"].keys():
@@ -134,6 +134,7 @@ def update_programs():
             statuses.update({p: update_program(p)})
         progress += increment
         generic.progress(progress)
+    generic.progress(100)
     return statuses
 
 
@@ -178,6 +179,7 @@ def change_branch(branch, reset=False):
         return "Bad branch"
     config.vprint("Switching branch and writing change to file")
     config.db["version"]["branch"] = branch
+    config.branch = branch
     config.write_db()
     if branch == "beta":
         config.vprint("Updating tarstall...")
@@ -187,52 +189,15 @@ def change_branch(branch, reset=False):
     elif branch == "master":
         generic.progress(10)
         if reset:
-            config.vprint("Deleting and re-installing tarstall.")
-            os.chdir(config.full("~/.tarstall"))
-            config.vprint("Removing old tarstall .pys")
-            for i in os.listdir():
-                i_num = len(i) - 3
-                if i[i_num:len(i)] == '.py':
-                    try:
-                        os.remove(i)
-                    except FileNotFoundError:
-                        pass
-            generic.progress(25)
-            try:
-                rmtree("/tmp/tarstall-temp")
-            except FileNotFoundError:
-                pass
-            generic.progress(30)
-            os.mkdir("/tmp/tarstall-temp")
-            os.chdir("/tmp/tarstall-temp")
-            config.vprint("Cloning tarstall from the master branch")
-            call(["git", "clone", "https://github.com/hammy3502/tarstall.git"])
-            generic.progress(65)
-            os.chdir("/tmp/tarstall-temp/tarstall")
-            config.vprint("Adding new tarstall .pys")
-            for i in os.listdir():
-                i_num = len(i) - 3
-                if i[i_num:len(i)] == '.py':
-                    copyfile(i, config.full('~/.tarstall/' + i))
-            generic.progress(75)
-            config.vprint("Removing old database and programs.")
-            try:
-                os.remove(config.full("~/.tarstall/database"))
-            except FileNotFoundError:
-                pass
-            try:
-                rmtree(config.full("~/.tarstall/bin"))
-            except FileNotFoundError:
-                pass
-            os.mkdir(config.full("~/.tarstall/bin"))
-            generic.progress(85)
-            print("Please run tarstall again to re-create the database!")
+            config.vprint("Resetting by forcing an update of tarstall.")
+            update(True)
             config.db = {"refresh": True}
             config.write_db()
-            generic.progress(90)
+            generic.progress(100)
             config.unlock()
             return "Reset"
         else:
+            generic.progress(100)
             return "Waiting"
 
 
@@ -276,7 +241,7 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
     if start_fts:  # Check if -f or --first is supplied
         return first_time_setup()
 
-    if not(config.exists('~/.tarstall/tarstall_execs/tarstall')) and not(config.exists("~/.hamstall/tarstall.py")) and not(config.exists('~/.hamstall/hamstall_execs/hamstall')):  # Make sure tarstall is installed
+    if not(config.exists('~/.tarstall/tarstall_execs/tarstall')):  # Make sure tarstall is installed
         return "Not installed"
 
     file_version = get_file_version('file')
@@ -457,7 +422,7 @@ def rename(program, new_name):
     config.replace_in_file("# " + program, "# " + new_name, "~/.tarstall/.bashrc")
     move(config.full("~/.tarstall/bin/" + program), config.full("~/.tarstall/bin/" + new_name))
     config.write_db()
-    generic.progress(90)
+    generic.progress(100)
     return new_name
 
 
@@ -483,6 +448,7 @@ def finish_install(program_internal_name, is_git=False):
     config.db["programs"].update({program_internal_name: {"git_installed": is_git, "desktops": [], 
     "post_upgrade_script": None}})
     config.write_db()
+    generic.progress(100)
     return "Installed"
 
 
@@ -585,6 +551,7 @@ def gitinstall(git_url, program_internal_name, overwrite=False, reinstall=False)
     if not overwrite:
         return finish_install(program_internal_name, True)
     else:
+        generic.progress(100)
         return "Installed"
 
 
@@ -610,7 +577,7 @@ def pathify(program_internal_name):
     return "Complete"
 
 
-def update():
+def update(force_update=False):
     """Update tarstall.
 
     Checks to see if we should update tarstall, then does so if one is available
@@ -631,17 +598,17 @@ def update():
         return "No git"
     generic.progress(5)
     prog_version_internal = config.get_version('prog_internal_version')
-    config.vprint("Checking version on GitHub")
-    final_version = get_online_version('prog')
-    if final_version == -1:
-        return "No requests"
-    elif final_version == -2:
-        return "No internet"
-    config.vprint('Installed internal version: ' + str(prog_version_internal))
-    config.vprint('Version on GitHub: ' + str(final_version))
+    if not force_update:
+        config.vprint("Checking version on GitHub")
+        final_version = get_online_version('prog')
+        if final_version == -1:
+            return "No requests"
+        elif final_version == -2:
+            return "No internet"
+        config.vprint('Installed internal version: ' + str(prog_version_internal))
+        config.vprint('Version on GitHub: ' + str(final_version))
     generic.progress(10)
-    if final_version > prog_version_internal:
-        print("An update has been found! Installing...")  # Intentionally not a generic.pprint()
+    if force_update or final_version > prog_version_internal:
         try:
             rmtree("/tmp/tarstall-update")
         except FileNotFoundError:
@@ -652,7 +619,6 @@ def update():
         config.vprint("Cloning tarstall repository from git")
         err = call(["git", "clone", "--branch", config.branch, "https://github.com/hammy3502/tarstall.git"])
         if err != 0:
-            generic.pprint("Failed while cloning the git repository for tarstall!")
             return "Failed"
         generic.progress(55)
         config.vprint("Removing old tarstall files")
@@ -679,6 +645,7 @@ def update():
             pass
         config.db["version"]["prog_internal_version"] = final_version
         config.write_db()
+        generic.progress(100)
         return "Updated"
     elif final_version < prog_version_internal:
         return "Newer version"
@@ -714,9 +681,8 @@ def erase():
         rmtree("/tmp/tarstall-temp")
     except FileNotFoundError:
         pass
-    print("tarstall has been removed from your system.")
-    print('Please restart your terminal.')
     config.unlock()
+    generic.progress(100)
     return "Erased"
 
 
@@ -729,6 +695,7 @@ def first_time_setup():
         str: "Already installed" if already installed, "Success" on installation success.
 
     """
+    os.chdir(os.path.dirname(__file__))
     if config.exists(config.full('~/.tarstall/tarstall_execs/tarstall')):
         return "Already installed"
     print('Installing tarstall to your system...')
@@ -755,8 +722,7 @@ def first_time_setup():
             except FileNotFoundError:
                 return "Bad copy"
     config.add_line("source ~/.tarstall/.bashrc\n", "~/{}".format(config.read_config("ShellFile")))
-    os.mkdir(config.full("~/.tarstall/tarstall_execs"))
-    move(config.full("~/.tarstall/tarstall.py"), config.full("~/.tarstall/tarstall_execs/tarstall"))  # Move tarstall.py to execs dir
+    copytree(config.full("./tarstall_execs/"), config.full("~/.tarstall/tarstall_execs/"))  # Move tarstall.py to execs dir
     config.add_line("export PATH=$PATH:{}".format(
                 config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")  # Add bashrc line
     os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
@@ -898,6 +864,7 @@ def install(program, overwrite=False, reinstall=False):
     if not reinstall:
         return finish_install(program_internal_name)
     else:
+        generic.progress(100)
         return "Installed"
 
 
@@ -959,7 +926,7 @@ def uninstall(program):
     config.vprint("Removing program from tarstall list of programs")
     del config.db["programs"][program]
     config.write_db()
-    generic.progress(90)
+    generic.progress(100)
     return "Success"
 
 

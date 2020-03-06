@@ -16,6 +16,7 @@
 
 import sys
 import config
+import os
 
 try:
     import PySimpleGUI as sg
@@ -182,3 +183,13 @@ def progress(val):
     if config.mode == "gui":
         if config.install_bar is not None:
             config.install_bar.UpdateBar(val)
+    elif config.mode == "cli" and not config.verbose:
+        columns = int(os.popen('stty size', 'r').read().split()[1])
+        start_chars = "Progress: "
+        end_chars = "   "
+        full_squares = int(val * 0.01 * (columns - len(start_chars) - len(end_chars)))
+        empty_squares = columns - len(start_chars) - len(end_chars) - full_squares
+        if val < 100:
+            print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="\r")
+        else:
+            print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="")

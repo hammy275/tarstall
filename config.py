@@ -23,7 +23,7 @@ import shutil
 ###VERSIONS###
 
 version = "1.4.0 beta"
-prog_internal_version = 65
+prog_internal_version = 66
 file_version = 11
 
 #############
@@ -467,14 +467,9 @@ def get_db(db_check=""):
     """
     try:
         with open(full("~/.tarstall/database")) as f:
-            db = json.load(f)
+            return json.load(f)
     except (FileNotFoundError, json.decoder.JSONDecodeError):
-        try:
-            with open(full("~/.hamstall/database")) as f:
-                db = json.load(f)
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
-            db = {}
-    return db
+        return {}
 
 
 db = get_db()
