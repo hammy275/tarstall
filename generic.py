@@ -165,6 +165,13 @@ def endi(state):
 
 
 def pprint(st, title="tarstall-gui"):
+    """Print Depending on Mode.
+
+    Args:
+        st (str): String to print or display in GUI popup.
+        title (str, optional): Title for window if in GUI mode. Defaults to "tarstall-gui".
+
+    """
     if config.mode == "gui":
         sg.Popup(st, title=title)
     elif config.mode == "cli":
@@ -184,12 +191,15 @@ def progress(val):
         if config.install_bar is not None:
             config.install_bar.UpdateBar(val)
     elif config.mode == "cli" and not config.verbose:
-        columns = int(os.popen('stty size', 'r').read().split()[1])
-        start_chars = "Progress: "
-        end_chars = "   "
-        full_squares = int(val * 0.01 * (columns - len(start_chars) - len(end_chars)))
-        empty_squares = columns - len(start_chars) - len(end_chars) - full_squares
-        if val < 100:
-            print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="\r")
-        else:
-            print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="")
+        try:
+            columns = int(os.popen('stty size', 'r').read().split()[1])
+            start_chars = "Progress: "
+            end_chars = "   "
+            full_squares = int(val * 0.01 * (columns - len(start_chars) - len(end_chars)))
+            empty_squares = columns - len(start_chars) - len(end_chars) - full_squares
+            if val < 100:
+                print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="\r")
+            else:
+                print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="")
+        except IndexError:
+            print("{}% complete".format(val), end="\r")

@@ -16,7 +16,7 @@
 
 import os
 from shutil import copyfile, rmtree, move, which, copy, copytree
-from subprocess import call
+from subprocess import call, DEVNULL
 import sys
 import re
 import getpass
@@ -34,6 +34,11 @@ except ImportError:
 
 import config
 import generic
+
+if config.verbose:
+    c_out = None
+else:
+    c_out = DEVNULL
 
 def update_program(program):
     """Update Program.
@@ -63,7 +68,7 @@ def update_program(program):
         else:
             try:
                 err = call(config.db["programs"][program]["post_upgrade_script"], 
-                cwd=config.full("~/.tarstall/bin/{}".format(program)))
+                cwd=config.full("~/.tarstall/bin/{}".format(program)), stdout=c_out)
                 if err != 0:
                     return "Script error"
                 else:
@@ -105,7 +110,7 @@ def update_git_program(program):
     if not config.check_bin("git"):
         config.vprint("git isn't installed!")
         return "No git"
-    err = call(["git", "pull"], cwd=config.full("~/.tarstall/bin/{}".format(program)))
+    err = call(["git", "pull"], cwd=config.full("~/.tarstall/bin/{}".format(program)), stdout=c_out)
     if err != 0:
         config.vprint("Failed updating: {}".format(program))
         return "Error updating"
@@ -151,7 +156,7 @@ def change_git_branch(program, branch):
     """
     if not config.check_bin("git"):
         return "No git"
-    err = call(["git", "checkout", "-f", branch], cwd=config.full("~/.tarstall/bin/{}".format(program)))
+    err = call(["git", "checkout", "-f", branch], cwd=config.full("~/.tarstall/bin/{}".format(program)), stdout=c_out)
     if err != 0:
         return "Error changing"
     else:
@@ -542,12 +547,15 @@ def gitinstall(git_url, program_internal_name, overwrite=False, reinstall=False)
     else:
         os.chdir(config.full("~/.tarstall/bin"))
     generic.progress(5)
-    err = call(["git", "clone", git_url])
+    if config.verbose:
+        err = call(["git", "clone", git_url])
+    else:
+        err = call(["git", "clone", git_url], stderr=DEVNULL)
     if err != 0:
         return "Error"
     generic.progress(65)
     if overwrite:
-        call(["rsync", "-a", "/tmp/tarstall-temp/{}/".format(program_internal_name), config.full("~/.tarstall/bin/{}".format(program_internal_name))])
+        call(["rsync", "-a", "/tmp/tarstall-temp/{}/".format(program_internal_name), config.full("~/.tarstall/bin/{}".format(program_internal_name))], stdout=c_out)
     if not overwrite:
         return finish_install(program_internal_name, True)
     else:
@@ -617,7 +625,10 @@ def update(force_update=False):
         os.mkdir("tarstall-update")
         os.chdir("/tmp/tarstall-update")
         config.vprint("Cloning tarstall repository from git")
-        err = call(["git", "clone", "--branch", config.branch, "https://github.com/hammy3502/tarstall.git"])
+        if config.verbose:
+            err = call(["git", "clone", "--branch", config.branch, "https://github.com/hammy3502/tarstall.git"])
+        else:
+            err = call(["git", "clone", "--branch", config.branch, "https://github.com/hammy3502/tarstall.git"], stderr=c_out)
         if err != 0:
             return "Failed"
         generic.progress(55)
@@ -851,7 +862,7 @@ def install(program, overwrite=False, reinstall=False):
             verbose_flag = "v"
         else:
             verbose_flag = ""
-        call(["rsync", "-a{}".format(verbose_flag), source, dest])
+        call(["rsync", "-a{}".format(verbose_flag), source, dest], stdout=c_out)
     else:
         move(source, dest)
     generic.progress(80)
@@ -887,7 +898,7 @@ def dirinstall(program_path, program_internal_name, overwrite=False, reinstall=F
         return "No rsync"
     config.vprint("Moving folder to tarstall destination")
     if overwrite:
-        call(["rsync", "-a", program_path, config.full("~/.tarstall/bin/{}".format(program_internal_name))])
+        call(["rsync", "-a", program_path, config.full("~/.tarstall/bin/{}".format(program_internal_name))], stdout=c_out)
         rmtree(program_path)
     else:
         move(program_path, config.full("~/.tarstall/bin/"))

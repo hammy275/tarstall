@@ -505,7 +505,7 @@ def fts_status(status):
     if status == "Success":
         generic.pprint('First time setup complete!')
         generic.pprint('Please run the command "source ~/{}" or restart your terminal.'.format(config.read_config("ShellFile")))
-        generic.pprint('Afterwards, you may begin using tarstall with the tarstall command!')
+        generic.pprint('Afterwards, you may begin using tarstall with the "tarstall" command!')
         return 0
 
     elif status == "Already installed":
@@ -543,7 +543,7 @@ def parse_args(args=None):
     group.add_argument('-c', '--config', help="Change tarstall options", action="store_true")
     group.add_argument('-q', '--update-programs', help="Update programs installed through git and ones with upgrade scripts", action="store_true")
     if args is None:
-        args = parser.parse_args()  # Parser stuff
+        args = parser.parse_args()
     else:
         args = parser.parse_args(args)
 

@@ -23,7 +23,7 @@ import shutil
 ###VERSIONS###
 
 version = "1.4.0 beta"
-prog_internal_version = 66
+prog_internal_version = 67
 file_version = 11
 
 #############
@@ -437,19 +437,21 @@ Database structure
 
 {
     "options" : {
-        "Verbose" : False,
-        "AutoInstall" : False
+        "Verbose": False,
+        "AutoInstall": False,
+        "ShellFile": ".bashrc"
+        "SkipQuestions": False
     }
     "version" : {
-        "file_version" : file_version,
-        "prog_internal_version" : prog_internal_version,
-        "branch" : "master"
+        "file_version": file_version,
+        "prog_internal_version": prog_internal_version,
+        "branch": "master"
     }
-    "programs" : {
-        "package" : {
+    "programs": {
+        "package": {
             "git_installed": False,
             "post_upgrade_script": None,
-            "desktops" : [
+            "desktops": [
                 "desktop_file_name"
             ]
         }
