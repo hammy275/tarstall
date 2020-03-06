@@ -12,7 +12,7 @@ tarstall is a lightweight package manager for Linux (and similar) systems that m
 * Ability to keep itself up to date
 
 ## Getting Started
-Simply download this repo! Make sure you have Python 3 installed and you should be set! You can invoke first time setup by navigating to the directory where tarstall is stored and running ```python3 tarstall.py -f```. Afterwards, feel free to use ```tarstall -h``` to view a list of commands!
+Simply download this repo! Make sure you have Python 3 installed and you should be set! You can invoke first time setup by navigating to the directory where tarstall is stored, then going to the ```tarstall_execs``` directory and running ```python3 tarstall -f```. Afterwards, feel free to use ```tarstall -h``` to view a list of commands!
 
 ## More Info
 Tons of more information is provided in the Wiki. The [Basic Usage section of the wiki](https://github.com/hammy3502/tarstall/wiki/Basic-Usage) provides examples, usage, etc. for most commands while the [Features section of the wiki](https://github.com/hammy3502/tarstall/wiki/Features) details all of the features of tarstall.
