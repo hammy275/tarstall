@@ -22,8 +22,8 @@ import shutil
 
 ###VERSIONS###
 
-version = "1.4.0 beta"
-prog_internal_version = 67
+version = "1.4.0"
+prog_internal_version = 68
 file_version = 11
 
 #############
@@ -60,8 +60,8 @@ def get_shell_file():
         vprint("Auto-detected zsh")
         return ".zshrc"
     else:
-        vprint("Couldn't auto-detect shell environment! Defaulting to bash...")
-        return ".bashrc"
+        vprint("Couldn't auto-detect shell environment!")
+        return None
 
 
 def read_config(key):

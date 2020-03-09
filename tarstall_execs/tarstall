@@ -507,15 +507,18 @@ def fts_status(status):
         generic.pprint('Please run the command "source ~/{}" or restart your terminal.'.format(config.read_config("ShellFile")))
         generic.pprint('Afterwards, you may begin using tarstall with the "tarstall" command!')
         return 0
-
     elif status == "Already installed":
         generic.pprint("tarstall is already installed on your system! Cancelling installation.")
         return 1
-
     elif status == "Bad copy":
         generic.pprint("A file was attempting to be copied, but was deleted during the process! Installation halted.")
         return 1
-    
+    elif status == "Unsupported shell":
+        generic.pprint("#"*30 + "\nWARNING: Your shell is not supported by tarstall! If your shell supports 'source' and 'alias' like bash does," + 
+        " please point your shell's equivalent of .bashrc to ~/.tarstall/.bashrc. If not, anything related to PATHs and binlinks" + 
+        " will NOT work, and you will have to run tarstall from the ~/.tarstall/tarstall_execs directory, unless you point to it yourself!\n" + 
+        "#"*30 + "\nFirst time setup has otherwise been complete!")
+        return 1
     else:
         return
 
@@ -551,6 +554,8 @@ def parse_args(args=None):
 
     fts_status(status)
 
+    did_fts = args.first
+
     if status == "Locked":
         if mode == "cli":
             generic.pprint("Another instance of tarstall is probably running! Execution halted!")
@@ -566,8 +571,9 @@ def parse_args(args=None):
         yn = generic.get_input('tarstall is not installed on your system. Would you like to install it?',
                                 ['y', 'n'], 'y')
         if yn == 'y':
-            prog_manage.first_time_setup()
+            status = prog_manage.first_time_setup()
             exit_code = fts_status(status)
+            did_fts = True
         else:
             generic.pprint('tarstall not installed.')
             config.unlock()
@@ -692,6 +698,9 @@ def parse_args(args=None):
                 elif status == "Erased":
                     generic.pprint("tarstall has been removed! Please restart your terminal.")
                     sys.exit(0)
+                elif status == "No line":
+                    generic.pprint("tarstall has been removed!" + 
+                    " Couldn't remove the line for tarstall's shell file. Your shell isn't supported, or the file couldn't be found!")
             else:
                 generic.pprint('Erase cancelled.')
         else:
@@ -745,7 +754,7 @@ def parse_args(args=None):
             generic.pprint(msg)
 
 
-    else:
+    elif not did_fts:
         generic.pprint("""
 tarstall. A Python based package manager to manage archives.
 Written by: hammy3502

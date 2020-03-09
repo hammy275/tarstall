@@ -668,13 +668,18 @@ def erase():
     """Remove tarstall.
 
     Returns:
-        str: "Erased" on success or "Not installed" if tarstall isn't installed.
+        str: "Erased" on success, "Not installed" if tarstall isn't installed, or "No line" if the shell
+        line couldn't be removed.
 
     """
     if not (config.exists(config.full("~/.tarstall/tarstall_execs/tarstall"))):
         return "Not installed"
     config.vprint('Removing source line from bashrc')
-    config.remove_line("~/.tarstall/.bashrc", "~/{}".format(config.read_config("ShellFile")), "word")
+    try:
+        config.remove_line("~/.tarstall/.bashrc", "~/{}".format(config.read_config("ShellFile")), "word")
+        to_return = "Erased"
+    except FileNotFoundError:
+        to_return = "No line"
     generic.progress(10)
     config.vprint("Removing .desktop files")
     for prog in config.db["programs"]:
@@ -694,7 +699,7 @@ def erase():
         pass
     config.unlock()
     generic.progress(100)
-    return "Erased"
+    return to_return
 
 
 def first_time_setup():
@@ -703,13 +708,15 @@ def first_time_setup():
     Sets up tarstall for the first time.
 
     Returns:
-        str: "Already installed" if already installed, "Success" on installation success.
+        str: "Already installed" if already installed, "Success" on installation success, "Unsupported shell"
+        on success but the shell being used isn't supported.
 
     """
     os.chdir(os.path.dirname(__file__))
     if config.exists(config.full('~/.tarstall/tarstall_execs/tarstall')):
         return "Already installed"
     print('Installing tarstall to your system...')
+    generic.progress(5)
     try:
         os.mkdir(config.full("~/.tarstall"))
     except FileExistsError:
@@ -720,11 +727,15 @@ def first_time_setup():
     except FileExistsError:
         rmtree(config.full("/tmp/tarstall-temp"))
         os.mkdir(config.full("/tmp/tarstall-temp/"))
+    generic.progress(10)
     os.mkdir(config.full("~/.tarstall/bin"))
     config.create("~/.tarstall/database")
     create_db()
     config.create("~/.tarstall/.bashrc")  # Create directories and files
+    generic.progress(15)
+    progress = 15
     files = os.listdir()
+    prog_change = int(55 / len(files))
     for i in files:
         i_num = len(i) - 3
         if i[i_num:len(i)] == '.py':
@@ -732,13 +743,24 @@ def first_time_setup():
                 copyfile(i, config.full('~/.tarstall/' + i))
             except FileNotFoundError:
                 return "Bad copy"
-    config.add_line("source ~/.tarstall/.bashrc\n", "~/{}".format(config.read_config("ShellFile")))
+        progress += prog_change
+        generic.progress(progress)
+    generic.progress(70)
+    shell_file = config.read_config("ShellFile")
+    if shell_file is None:
+        to_return = "Unsupported shell"
+    else:
+        to_return = "Success"
+        config.add_line("source ~/.tarstall/.bashrc\n", "~/{}".format(shell_file))
+    generic.progress(75)
     copytree(config.full("./tarstall_execs/"), config.full("~/.tarstall/tarstall_execs/"))  # Move tarstall.py to execs dir
+    generic.progress(90)
     config.add_line("export PATH=$PATH:{}".format(
                 config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")  # Add bashrc line
     os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
     config.unlock()
-    return "Success"
+    generic.progress(100)
+    return to_return
 
 
 def verbose_toggle():
