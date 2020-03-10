@@ -259,7 +259,7 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
         return "Old"
 
     if config.read_config("AutoInstall"):  # Auto-update, if enabled
-        update()
+        update(show_progress=False)
     
     username = getpass.getuser()  # Root check
     if username == 'root':
@@ -585,7 +585,7 @@ def pathify(program_internal_name):
     return "Complete"
 
 
-def update(force_update=False):
+def update(force_update=False, show_progress=True):
     """Update tarstall.
 
     Checks to see if we should update tarstall, then does so if one is available
@@ -604,18 +604,20 @@ def update(force_update=False):
     elif not config.check_bin("git"):
         config.vprint("git isn't installed.")
         return "No git"
-    generic.progress(5)
+    generic.progress(5, show_progress)
     prog_version_internal = config.get_version('prog_internal_version')
     if not force_update:
         config.vprint("Checking version on GitHub")
         final_version = get_online_version('prog')
         if final_version == -1:
+            generic.progress(100, show_progress)
             return "No requests"
         elif final_version == -2:
+            generic.progress(100, show_progress)
             return "No internet"
         config.vprint('Installed internal version: ' + str(prog_version_internal))
         config.vprint('Version on GitHub: ' + str(final_version))
-    generic.progress(10)
+    generic.progress(10, show_progress)
     if force_update or final_version > prog_version_internal:
         try:
             rmtree("/tmp/tarstall-update")
@@ -630,8 +632,9 @@ def update(force_update=False):
         else:
             err = call(["git", "clone", "--branch", config.branch, "https://github.com/hammy3502/tarstall.git"], stderr=c_out)
         if err != 0:
+            generic.progress(100, show_progress)
             return "Failed"
-        generic.progress(55)
+        generic.progress(55, show_progress)
         config.vprint("Removing old tarstall files")
         os.chdir(config.full("~/.tarstall/"))
         files = os.listdir()
@@ -642,13 +645,13 @@ def update(force_update=False):
                     rmtree(config.full("~/.tarstall/{}".format(f)))
                 else:
                     os.remove(config.full("~/.tarstall/{}".format(f)))
-        generic.progress(70)
+        generic.progress(70, show_progress)
         config.vprint("Moving in new tarstall files")
         os.chdir("/tmp/tarstall-update/tarstall/")
         files = os.listdir()
         for f in files:
             move("/tmp/tarstall-update/tarstall/{}".format(f), config.full("~/.tarstall/{}".format(f)))
-        generic.progress(85)
+        generic.progress(85, show_progress)
         config.vprint("Removing old tarstall temp directory")
         try:
             rmtree("/tmp/tarstall-update")
@@ -656,11 +659,13 @@ def update(force_update=False):
             pass
         config.db["version"]["prog_internal_version"] = final_version
         config.write_db()
-        generic.progress(100)
+        generic.progress(100, show_progress)
         return "Updated"
     elif final_version < prog_version_internal:
+        generic.progress(100, show_progress)
         return "Newer version"
     else:
+        generic.progress(100, show_progress)
         return "No update"
 
 
@@ -755,8 +760,12 @@ def first_time_setup():
     generic.progress(75)
     copytree(config.full("./tarstall_execs/"), config.full("~/.tarstall/tarstall_execs/"))  # Move tarstall.py to execs dir
     generic.progress(90)
+    if not config.exists("~/.local/share/applications"):
+        os.mkdir(config.full("~/.local/share/applications"))
+    generic.progress(92)
     config.add_line("export PATH=$PATH:{}".format(
                 config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")  # Add bashrc line
+    generic.progress(95)
     os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
     config.unlock()
     generic.progress(100)

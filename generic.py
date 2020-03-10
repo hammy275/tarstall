@@ -178,19 +178,20 @@ def pprint(st, title="tarstall-gui"):
         print(st)
 
 
-def progress(val):
+def progress(val, should_show=True):
     """Update Progress of Operation.
 
     Updates a progress bar (if we have a GUI) as tarstall processes run
 
     Args:
         val (int): Value to update the progress bar to.
+        should_show (bool): If set to False, don't show the bar in CLI. Defaults to True.
 
     """
     if config.mode == "gui":
         if config.install_bar is not None:
             config.install_bar.UpdateBar(val)
-    elif config.mode == "cli" and not config.verbose:
+    elif config.mode == "cli" and not config.verbose and should_show:
         try:
             columns = int(os.popen('stty size', 'r').read().split()[1])
             start_chars = "Progress: "
