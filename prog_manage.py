@@ -138,6 +138,8 @@ def update_programs():
         if config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"] is not None:
             statuses.update({p: update_program(p)})
         progress += increment
+        if progress >= 100:
+            progress = 99
         generic.progress(progress)
     generic.progress(100)
     return statuses

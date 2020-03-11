@@ -69,10 +69,10 @@ def ask_file(question):
     
     """
     if config.mode == "cli":
-        f = "/"
-        while not config.exists(f):
+        f = "asdf"
+        while not config.exists(config.full(f)):
             f = input(question)
-        return f
+        return config.full(f)
     elif config.mode == "gui":
         layout = [
             [sg.Text(question)],
