@@ -385,7 +385,7 @@ def manage(program):
     q_msg = ""
     q = ""
     if config.db["programs"][program]["git_installed"]:
-        git_msg = "\ng - Manage git-related settings for {program}"
+        git_msg = "\ng - Manage git-related settings for {program}".format(program=program)
         g_msg = "g/"
         options.append('g')
         option_strings.append("Manage git settings")
@@ -479,11 +479,11 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
                 generic.pprint("Shell not specified! Please specify one at the top of the supplied script (ex. #!/bin/sh)")
         elif option == 'us':
             msg = """
-Please input the script you would like to run to upgrade an installed program.
+Please input the path to a script you would like to run to upgrade an installed program.
 Note: The script will be run inside your program's directory.
 Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh)
 """
-            status = prog_manage.update_script(program, generic.ask_file("Please enter the path to the script: "))
+            status = prog_manage.update_script(program, generic.ask_file(msg))
             if status == "Success":
                 generic.pprint("Update script added successfully!")
             elif status == "Bad path":
@@ -748,6 +748,8 @@ def parse_args(args=None):
             for p in status.keys():
                 if status[p] == "Success":
                     msg += p + " updated successfully!\n"
+                elif status[p] == "OSError":
+                    msg += p + " does not have #!/bin/sh or similar specified at the top of its file!"
                 else:
                     msg += p + " did not update successfully!\n"
                     exit_code = 1
