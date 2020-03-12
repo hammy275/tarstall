@@ -650,8 +650,10 @@ def update(force_update=False, show_progress=True):
         config.vprint("Moving in new tarstall files")
         os.chdir("/tmp/tarstall-update/tarstall/")
         files = os.listdir()
+        to_ignore = [".git", ".gitignore", "README.md", "readme-images", "COPYING", "requirements.txt", "requirements-gui.txt", "tests"]
         for f in files:
-            move("/tmp/tarstall-update/tarstall/{}".format(f), config.full("~/.tarstall/{}".format(f)))
+            if f not in to_ignore:
+                move("/tmp/tarstall-update/tarstall/{}".format(f), config.full("~/.tarstall/{}".format(f)))
         generic.progress(85, show_progress)
         config.vprint("Removing old tarstall temp directory")
         try:
