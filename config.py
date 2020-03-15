@@ -23,7 +23,7 @@ import shutil
 ###VERSIONS###
 
 version = "1.4.2"
-prog_internal_version = 72
+prog_internal_version = 73
 file_version = 11
 
 #############
@@ -104,14 +104,14 @@ def change_config(key, mode, value=None):
             db["options"][key] = not db["options"][key]
             r = db["options"][key]
         except KeyError:  # All config values are False by default, so this should make them True.
-            db["options"].update({key: True})
+            db["options"][key] = True
             r = True
     elif mode == 'change':
         try:
             db["options"][key] = value
             r = value
         except KeyError:
-            db["options"].update({key: value})
+            db["options"][key] = value
             r = value
     write_db()
     return r

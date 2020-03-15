@@ -136,7 +136,7 @@ def update_programs():
     statuses = {}
     for p in config.db["programs"].keys():
         if config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"] is not None:
-            statuses.update({p: update_program(p)})
+            statuses[p] = update_program(p)
         progress += increment
         generic.progress(progress)
     if progress < 100:
@@ -656,6 +656,7 @@ def update(force_update=False, show_progress=True):
                 move("/tmp/tarstall-update/tarstall/{}".format(f), config.full("~/.tarstall/{}".format(f)))
         generic.progress(85, show_progress)
         config.vprint("Removing old tarstall temp directory")
+        os.chdir(config.full("~/.tarstall/"))
         try:
             rmtree("/tmp/tarstall-update")
         except FileNotFoundError:

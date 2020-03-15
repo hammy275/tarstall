@@ -18,11 +18,6 @@ import sys
 import config
 import os
 
-try:
-    import PySimpleGUI as sg
-except ImportError:
-    pass
-
 if config.mode == "gui":
     try:
         import PySimpleGUI as sg
@@ -203,4 +198,7 @@ def progress(val, should_show=True):
             else:
                 print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="")
         except IndexError:
-            print("{}% complete".format(val), end="\r")
+            if val < 100:
+                print("{}% complete".format(val), end="\r")
+            else:
+                print("{}% complete".format(val), end="")
