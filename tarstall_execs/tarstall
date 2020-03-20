@@ -577,6 +577,7 @@ def parse_args(args=None):
         else:
             generic.pprint('tarstall not installed.')
             config.unlock()
+            sys.exit(1)
     
     elif status == "Root":
         generic.pprint("Don't use sudo unless you want your programs installed for root and only root!")
@@ -763,6 +764,7 @@ Written by: hammy3502
 
 tarstall Version: {user_version}
 Internal Version Code: {file_version}.{prog_version}
+Branch: {branch}
 
 For help, type "tarstall -h"
 
@@ -770,7 +772,7 @@ For additional help, the tarstall wiki is linked below.
 
 https://github.com/hammy3502/tarstall/wiki
         """.format(user_version=config.get_version("version"), file_version=config.get_version("file_version"),
-                prog_version=config.get_version("prog_internal_version")))
+                prog_version=config.get_version("prog_internal_version"), branch=config.branch))
 
     config.unlock()
     if mode == "gui":

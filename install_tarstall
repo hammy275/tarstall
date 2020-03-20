@@ -1,0 +1,83 @@
+#!/usr/bin/python3
+
+import sys
+import os
+from subprocess import call
+from shutil import which, rmtree
+
+columns = int(os.popen('stty size', 'r').read().split()[1])
+
+def status(msg):
+    print("#"*int(columns*0.75))
+    print(msg)
+    print("#"*int(columns*0.75))
+
+
+def run(cmds):
+    err = call(cmds)
+    return err == 0
+
+
+def setup():
+    # Install git
+    status("Installing git")
+    if which("apt") is not None:
+        run(["sudo", "apt", "install", "git", "-y"])
+    else:
+        status("This script only supports automatic program installtion through apt and pip; please install git!")
+        sys.exit(1)
+
+    # Clone repository
+    status("Getting a copy of tarstall")
+    try:
+        rmtree("/tmp/tarstall-setup")
+    except FileNotFoundError:
+        pass
+    os.mkdir("/tmp/tarstall-setup")
+    os.chdir("/tmp/tarstall-setup")
+    if not run(["git", "clone", "https://github.com/hammy3502/tarstall.git"]):
+        status("Error while getting the tarstall repository!")
+        try:
+            rmtree("/tmp/tarstall-setup")
+        except FileNotFoundError:
+            pass
+        sys.exit(1)
+    os.chdir("/tmp/tarstall-setup/tarstall")
+
+    # Install requirements
+    status("Installing tarstall's requirements")
+    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]):
+        if which("apt") is not None:
+            run(["sudo", "apt", "install", "python3-pip", "-y"])
+        else:
+            status("This script only supports automatic program installtion through apt and pip; please install pip for python3!")
+            sys.exit(1)
+    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements-gui.txt"]):
+        status("An error occured while installing the GUI requirements!")
+        sys.exit(1)
+
+    # Test tkinter (since we can't install it through pip)
+    status("Installing tkinter")
+    try:
+        import tkinter
+        del tkinter
+        print("Thanks for having tkinter already installed!")
+    except ImportError:
+        if which("apt") is not None:
+            run(["sudo", "apt", "install", "python3-tk", "-y"])
+        else:
+            status("This script only supports automatic program installtion through apt and pip; please install tkinter for python3!")
+            sys.exit(1)
+
+    # Pass control to tarstall
+    status("Running tarstall installation")
+    run([sys.executable, "./tarstall_execs/tarstall", "-f"])
+
+    # Removing tarstall setup directory
+    try:
+        rmtree("/tmp/tarstall-setup")
+    except FileNotFoundError:
+        pass
+
+if __name__ == "__main__":
+    setup()
