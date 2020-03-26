@@ -16,7 +16,7 @@
 
 import os
 from shutil import copyfile, rmtree, move, which, copy, copytree
-from subprocess import call, DEVNULL
+from subprocess import call, run, DEVNULL, PIPE
 import sys
 import re
 import getpass
@@ -104,19 +104,26 @@ def update_git_program(program):
         program (str): Name of program to update
 
     Returns:
-        str: "No git" if git isn't found, "Error updating" on a generic failure, and "Success" on successful update.
+        str: "No git" if git isn't found, "Error updating" on a generic failure, "Success" on a successful update, and
+        "No update" if the program is already up-to-date.
 
     """
     if not config.check_bin("git"):
         config.vprint("git isn't installed!")
         return "No git"
-    err = call(["git", "pull"], cwd=config.full("~/.tarstall/bin/{}".format(program)), stdout=c_out)
+    outp = run(["git", "pull"], cwd=config.full("~/.tarstall/bin/{}".format(program)), stdout=PIPE, stderr=PIPE)
+    err = outp.returncode
+    output = str(outp.stdout) + "\n\n\n" + str(outp.stderr)
     if err != 0:
         config.vprint("Failed updating: {}".format(program))
         return "Error updating"
     else:
-        config.vprint("Successfully updated: {}".format(program))
-        return "Success"
+        if "Already up to date." in output:
+            config.vprint("{} is already up to date!".format(program))
+            return "No update"
+        else:
+            config.vprint("Successfully updated: {}".format(program))
+            return "Success"
 
 
 def update_programs():

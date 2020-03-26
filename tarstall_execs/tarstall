@@ -467,6 +467,8 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
             status = prog_manage.update_program(program)
             if status == "Success":
                 generic.pprint("Program upgrading successful!")
+            elif status == "No update":
+                generic.pprint("Program is already up to date!")
             elif status == "No git":
                 generic.pprint("Git not installed, please install it!")
             elif status == "Error updating":
@@ -749,6 +751,8 @@ def parse_args(args=None):
             for p in status.keys():
                 if status[p] == "Success":
                     msg += p + " updated successfully!\n"
+                elif status[p] == "No update":
+                    msg += p + " is already up to date!\n"
                 elif status[p] == "OSError":
                     msg += p + " does not have #!/bin/sh or similar specified at the top of its file!"
                 else:
