@@ -12,7 +12,7 @@ tarstall is a lightweight package manager for Linux (and similar) systems that m
 * Ability to keep itself up to date
 
 ## Getting Started
-On a system with wget, run the following command: ```wget https://raw.githubusercontent.com/hammy3502/tarstall/beta/install_tarstall && python3 install_tarstall```. You may need to enter your root password to install some of the dependencies for tarstall.
+On a system with wget, run the following command: ```wget https://raw.githubusercontent.com/hammy3502/tarstall/master/install_tarstall && python3 install_tarstall```. You may need to enter your root password to install some of the dependencies for tarstall.
 
 NOTE: Dependencies should be installed manually if you're on a system that doesn't use apt! You'll need to get ahold of `git` and `python3-tk` (tkinter for Python 3). From there, you can run the command above, and everything else will be taken care of for you!
 
