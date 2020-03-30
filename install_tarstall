@@ -8,40 +8,87 @@ from shutil import which, rmtree
 columns = int(os.popen('stty size', 'r').read().split()[1])
 
 def status(msg):
+    """Print Status Message.
+
+    Prints "major" messages for the end user.
+
+    Args:
+        msg (str): Message to print.
+
+    """
     print("#"*int(columns*0.75))
     print(msg)
     print("#"*int(columns*0.75))
 
 
 def run(cmds):
+    """Run Command.
+
+    A tiny function that simply uses 'call', and returns whether or not the call exited successfully.
+
+    Args:
+        cmds (str[]): The command list to pass to call()
+
+    Returns:
+        bool: Whether or not the call() succeeded.
+
+    """
     err = call(cmds)
     return err == 0
 
 
-def install_package(pkg, is_different=False):
-    if is_different:
+def install_package(pkg):
+    """Installs a Package.
+
+    Installs the specified package using the distro's package manager.
+    Currently supports the following package managers:
+        * apt
+        * apt-get
+        * dnf
+        * pacman
+    
+    Dictionary format:
+    If a given package has a different name depending on the package manager (ie. Debian systems having 'python3-tk'
+    while Arch systems having 'tk'), a dict can be used to specify that.
+    Example:
+    {"apt": "python3-tk", "dnf": "python3-tkinter", "pacman": "tk"}
+    The above example will install the package "python3-tk" if the user is using apt OR apt-get,
+    "python3-tkinter" if the user is using dnf, or "tk" if the user is using pacman.
+    
+    Args:
+        pkg (str/dict): If a string, the package to install. See above for dictionary format.
+
+    """
+    if type(pkg) is not str:
         if which("apt") is not None or which("apt-get") is not None:
             pkg = pkg["apt"]
         elif which("dnf") is not None:
             pkg = pkg["dnf"]
+        elif which("pacman") is not None:
+            pkg = pkg["pacman"]
         else:
             status("This script only supports automatic program installtion through apt(-get), dnf, and pip; please install {} manually!".format(pkg))
             sys.exit(1)
     if which("apt") is not None:
-        run(["sudo", "apt", "install", pkg, "-y"])
+        passed = run(["sudo", "apt", "install", pkg, "-y"])
     elif which("apt-get") is not None:
-        run(["sudo", "apt-get", "install", pkg, "-y"])
+        passed = run(["sudo", "apt-get", "install", pkg, "-y"])
     elif which("dnf") is not None:
-        run(["sudo", "dnf", "install", pkg, "-y"])
+        passed = run(["sudo", "dnf", "install", pkg, "-y"])
+    elif which("pacman") is not None:
+        passed = run(["sudo", "pacman", "-S", pkg, "--noconfirm"])
     else:
         status("This script only supports automatic program installtion through apt(-get), dnf, and pip; please install {} manually!".format(pkg))
+        sys.exit(1)
+    if not passed:
+        status("Error installing package {}! Please install it manually, and read the error above for information!".format(pkg))
         sys.exit(1)
 
 
 def setup():
     # Checks
     status("Checking for anything missing for tarstall setup")
-    supported_package_managers = ["apt", "apt-get", "dnf"]
+    supported_package_managers = ["apt", "apt-get", "dnf", "pacman"]
     if which("sudo") is None:
         status("Please install 'sudo'!")
         sys.exit(1)
@@ -53,7 +100,15 @@ def setup():
     if not supported:
         status("You currently don't have a supported package manager! Currently supported package managers are: " + ", ".join(supported_package_managers))
         sys.exit(1)
-    print("All of the checks passed!\nStarting tarstall installation...")
+    print("All of the checks passed!\n\n\n")
+
+    # User information
+    status("Welcome!\nThis installer is going to install tarstall! You'll need to enter your sudo password at some points. " + 
+    "This will use your distro's package manager along with pip to install the dependencies required for tarstall!")
+    cancel = input("When you're ready to start installation, press ENTER! If you would like to cancel, type 'c', then press ENTER!")
+    if cancel.lower() == 'c':
+        status("Cancelling tarstall setup...")
+        sys.exit()
 
     # Install git
     status("Installing git")
@@ -79,7 +134,7 @@ def setup():
     # Install requirements
     status("Installing tarstall's requirements")
     if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"]):
-        install_package("python3-pip")
+        install_package({"apt": "python3-pip", "dnf": "python3-pip", "pacman": "python-pip"})
     if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"]) or not \
     run([sys.executable, "-m", "pip", "install", "-r", "requirements-gui.txt", "--user"]):
         status("An error occured while installing the GUI requirements!")
@@ -92,7 +147,7 @@ def setup():
         del tkinter
         print("Thanks for having tkinter already installed!")
     except ImportError:
-        install_package({"apt": "python3-tk", "dnf": "python3-tkinter"}, True)
+        install_package({"apt": "python3-tk", "dnf": "python3-tkinter", "pacman": "tk"})
 
     # Pass control to tarstall
     status("Running tarstall installation")
