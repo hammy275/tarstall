@@ -18,14 +18,46 @@ def run(cmds):
     return err == 0
 
 
+def install_package(pkg, is_different=False):
+    if is_different:
+        if which("apt") is not None or which("apt-get") is not None:
+            pkg = pkg["apt"]
+        elif which("dnf") is not None:
+            pkg = pkg["dnf"]
+        else:
+            status("This script only supports automatic program installtion through apt(-get), dnf, and pip; please install {} manually!".format(pkg))
+            sys.exit(1)
+    if which("apt") is not None:
+        run(["sudo", "apt", "install", pkg, "-y"])
+    elif which("apt-get") is not None:
+        run(["sudo", "apt-get", "install", pkg, "-y"])
+    elif which("dnf") is not None:
+        run(["sudo", "dnf", "install", pkg, "-y"])
+    else:
+        status("This script only supports automatic program installtion through apt(-get), dnf, and pip; please install {} manually!".format(pkg))
+        sys.exit(1)
+
+
 def setup():
+    # Checks
+    status("Checking for anything missing for tarstall setup")
+    supported_package_managers = ["apt", "apt-get", "dnf"]
+    if which("sudo") is None:
+        status("Please install 'sudo'!")
+        sys.exit(1)
+    supported = False
+    for manager in supported_package_managers:
+        if which(manager) is not None:
+            supported = True
+            break
+    if not supported:
+        status("You currently don't have a supported package manager! Currently supported package managers are: " + ", ".join(supported_package_managers))
+        sys.exit(1)
+    print("All of the checks passed!\nStarting tarstall installation...")
+
     # Install git
     status("Installing git")
-    if which("apt") is not None:
-        run(["sudo", "apt", "install", "git", "-y"])
-    else:
-        status("This script only supports automatic program installtion through apt and pip; please install git!")
-        sys.exit(1)
+    install_package("git")
 
     # Clone repository
     status("Getting a copy of tarstall")
@@ -46,13 +78,10 @@ def setup():
 
     # Install requirements
     status("Installing tarstall's requirements")
-    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]):
-        if which("apt") is not None:
-            run(["sudo", "apt", "install", "python3-pip", "-y"])
-        else:
-            status("This script only supports automatic program installtion through apt and pip; please install pip for python3!")
-            sys.exit(1)
-    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements-gui.txt"]):
+    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"]):
+        install_package("python3-pip")
+    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"]) or not \
+    run([sys.executable, "-m", "pip", "install", "-r", "requirements-gui.txt", "--user"]):
         status("An error occured while installing the GUI requirements!")
         sys.exit(1)
 
@@ -63,11 +92,7 @@ def setup():
         del tkinter
         print("Thanks for having tkinter already installed!")
     except ImportError:
-        if which("apt") is not None:
-            run(["sudo", "apt", "install", "python3-tk", "-y"])
-        else:
-            status("This script only supports automatic program installtion through apt and pip; please install tkinter for python3!")
-            sys.exit(1)
+        install_package({"apt": "python3-tk", "dnf": "python3-tkinter"}, True)
 
     # Pass control to tarstall
     status("Running tarstall installation")
