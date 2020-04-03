@@ -40,6 +40,63 @@ if config.verbose:
 else:
     c_out = DEVNULL
 
+def add_upgrade_url(program, url):
+    """Adds an Upgrade URL to a Program.
+
+    Args:
+        program (str): The program that will be upgraded
+        url (str): The URL containing the archive to upgrade from. THIS MUST BE A VALID URL!!!!!
+
+    """
+    config.db["programs"][program]["update_url"] = url
+    config.write_db()
+
+
+def remove_update_url(program):
+    """Removes Upgrade URL for Program.
+
+    Args:
+        program (str): Program to remove URL of.
+
+    """
+    config.db["programs"][program]["update_url"] = None
+    config.write_db()
+
+
+def wget_program(program):
+    """Wget an Archive and Overwrite Program.
+
+    Args:
+        program (str): Program that has an update_url to update
+
+    Returns:
+        str: "No wget", "Wget error", "Install error" if install() fails, "Success" on success.
+
+    """
+    if not config.check_bin("wget"):
+        return "No wget"
+    else:
+        try:
+            rmtree(config.full("/tmp/tarstall-temp2"))
+        except FileNotFoundError:
+            pass
+        os.mkdir("/tmp/tarstall-temp2")
+        os.chdir("/tmp/tarstall-temp2")
+        if config.verbose:
+            err = call(["wget", config.db["programs"][program]["update_url"]])
+        else:
+            err = call(["wget", config.db["programs"][program]["update_url"]], stdout=DEVNULL, stderr=DEVNULL)
+        if err != 0:
+            return "Wget error"
+        files = os.listdir()
+        os.rename("/tmp/tarstall-temp2/{}".format(files[0]), "/tmp/tarstall-temp2/{}".format(program + ".tar.gz"))
+        inst_status = install("/tmp/tarstall-temp2/{}".format(program + ".tar.gz"), True, True, False)
+        if inst_status != "Installed":
+            return "Install error"
+        else:
+            return "Success"
+
+
 def update_program(program):
     """Update Program.
 
@@ -51,11 +108,18 @@ def update_program(program):
         failed to execute, or "Success" on a success. Can also be something
         from update_git_program if the program supplied is a
         git installed program. Can also return "OSError" if the supplied
-        script doesn't specify the shell to be used.
+        script doesn't specify the shell to be used. Can also return
+        something from wget_program().
 
     """
     if config.db["programs"][program]["git_installed"]:
         status = update_git_program(program)
+        if config.db["programs"][program]["post_upgrade_script"] is None:
+            return status
+        elif status != "Success":
+            return status
+    if config.db["programs"][program]["update_url"] is not None:
+        status = wget_program(program)
         if config.db["programs"][program]["post_upgrade_script"] is None:
             return status
         elif status != "Success":
@@ -141,8 +205,9 @@ def update_programs():
     increment = int(100 / len(config.db["programs"].keys()))
     progress = 0
     statuses = {}
+    generic.progress(progress)
     for p in config.db["programs"].keys():
-        if config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"] is not None:
+        if config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"] or config.db["programs"][p]["update_url"]:
             statuses[p] = update_program(p)
         progress += increment
         generic.progress(progress)
@@ -259,7 +324,14 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
 
     file_version = get_file_version('file')
     while config.get_version('file_version') > file_version:  # Lingering upgrades check
-        pass
+        config.vprint("Upgrading files and database from {} to {}.".format(file_version, config.get_version("file_version")))
+
+        if file_version == 11:
+            config.vprint("Adding 'update_url' key in database for all programs!")
+            for program in config.db["programs"]:
+                config.db["programs"][program]["update_url"] = None
+
+        config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
         config.write_db()
 
@@ -459,7 +531,7 @@ def finish_install(program_internal_name, is_git=False):
         pass
     config.vprint("Adding program to tarstall list of programs")
     config.db["programs"].update({program_internal_name: {"git_installed": is_git, "desktops": [], 
-    "post_upgrade_script": None}})
+    "post_upgrade_script": None, "update_url": None}})
     config.write_db()
     generic.progress(100)
     return "Installed"
@@ -849,7 +921,7 @@ def create_command(file_extension, program):
     return command_to_go
 
 
-def install(program, overwrite=False, reinstall=False):
+def install(program, overwrite=False, reinstall=False, show_progress=True):
     """Install Archive.
 
     Takes an archive and installs it.
@@ -872,7 +944,7 @@ def install(program, overwrite=False, reinstall=False):
         rmtree(config.full("/tmp/tarstall-temp"))  # Removes temp directory (used during installs)
     except FileNotFoundError:
         pass
-    generic.progress(10)
+    generic.progress(10, show_progress)
     config.vprint("Creating new temp directory")
     os.mkdir(config.full("/tmp/tarstall-temp"))  # Creates temp directory for extracting archive
     config.vprint("Extracting archive to temp directory")
@@ -888,7 +960,7 @@ def install(program, overwrite=False, reinstall=False):
         print('Failed to run command: ' + command_to_go + "!")
         print("Program installation halted!")
         return "Error"
-    generic.progress(50)
+    generic.progress(50, show_progress)
     config.vprint('Checking for folder in folder')
     if os.path.isdir(config.full('/tmp/tarstall-temp/' + program_internal_name + '/')):
         config.vprint('Folder in folder detected! Using that directory instead...')
@@ -907,7 +979,7 @@ def install(program, overwrite=False, reinstall=False):
         call(["rsync", "-a{}".format(verbose_flag), source, dest], stdout=c_out)
     else:
         move(source, dest)
-    generic.progress(80)
+    generic.progress(80, show_progress)
     config.vprint("Adding program to tarstall list of programs")
     config.vprint('Removing old temp directory...')
     try:
@@ -917,7 +989,7 @@ def install(program, overwrite=False, reinstall=False):
     if not reinstall:
         return finish_install(program_internal_name)
     else:
-        generic.progress(100)
+        generic.progress(100, show_progress)
         return "Installed"
 
 
