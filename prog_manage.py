@@ -76,21 +76,31 @@ def wget_program(program):
     if not config.check_bin("wget"):
         return "No wget"
     else:
+        generic.progress(5)
+        config.vprint("Creating second temp folder for archive.")
         try:
             rmtree(config.full("/tmp/tarstall-temp2"))
         except FileNotFoundError:
             pass
         os.mkdir("/tmp/tarstall-temp2")
         os.chdir("/tmp/tarstall-temp2")
+        generic.progress(15)
+        config.vprint("Downloading archive...")
+        url = config.db["programs"][program]["update_url"]
         if config.verbose:
-            err = call(["wget", config.db["programs"][program]["update_url"]])
+            err = call(["wget", url])
         else:
-            err = call(["wget", config.db["programs"][program]["update_url"]], stdout=DEVNULL, stderr=DEVNULL)
+            err = call(["wget", url], stdout=DEVNULL, stderr=DEVNULL)
         if err != 0:
             return "Wget error"
+        generic.progress(65)
         files = os.listdir()
+        config.vprint("Renaming archive")
         os.rename("/tmp/tarstall-temp2/{}".format(files[0]), "/tmp/tarstall-temp2/{}".format(program + ".tar.gz"))
-        inst_status = install("/tmp/tarstall-temp2/{}".format(program + ".tar.gz"), True, True, False)
+        generic.progress(70)
+        config.vprint("Using install to install the program.")
+        inst_status = pre_install("/tmp/tarstall-temp2/{}".format(program + ".tar.gz"), True)
+        generic.progress(100)
         if inst_status != "Installed":
             return "Install error"
         else:
@@ -349,7 +359,7 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
     return "Good"
 
 
-def pre_install(program, overwrite=None, reinstall=False):
+def pre_install(program, overwrite=None):
     """Pre-Archive Install.
 
     Preparation before installing an archive.
@@ -965,7 +975,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
     if os.path.isdir(config.full('/tmp/tarstall-temp/' + program_internal_name + '/')):
         config.vprint('Folder in folder detected! Using that directory instead...')
         source = config.full('/tmp/tarstall-temp/' + program_internal_name) + '/'
-        dest = config.full('~/.tarstall/bin/')
+        dest = config.full('~/.tarstall/bin/' + program_internal_name) + '/'
     else:
         config.vprint('Folder in folder not detected!')
         source = config.full('/tmp/tarstall-temp') + '/'
