@@ -309,6 +309,8 @@ def pathify(program):
     status = prog_manage.pathify(program)
     if status == "Complete":
         generic.pprint("Program added to PATH!")
+    elif status == "Already there":
+        generic.pprint("Program already added to PATH!")
 
 
 def binlink(program):
@@ -327,7 +329,9 @@ def binlink(program):
             file_chosen = input('Please enter a file listed above. If you would like to cancel, type exit: ')
             if file_chosen == "exit":
                 return
-        prog_manage.add_binlink(file_chosen, program)
+        status = prog_manage.add_binlink(file_chosen, program)
+        if status == "Already there":
+            generic.pprint("Binlink not added since it already exists!")
         yn = generic.get_input('Would you like to continue adding files to be run directly?', ['y', 'n'], 'n')
 
 

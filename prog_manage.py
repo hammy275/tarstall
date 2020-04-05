@@ -100,6 +100,11 @@ def wget_program(program):
         generic.progress(70)
         config.vprint("Using install to install the program.")
         inst_status = pre_install("/tmp/tarstall-temp2/{}".format(program + ".tar.gz"), True)
+        generic.progress(95)
+        try:
+            rmtree(config.full("/tmp/tarstall-temp2"))
+        except FileNotFoundError:
+            pass
         generic.progress(100)
         if inst_status != "Installed":
             return "Install error"
@@ -340,6 +345,12 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
             config.vprint("Adding 'update_url' key in database for all programs!")
             for program in config.db["programs"]:
                 config.db["programs"][program]["update_url"] = None
+        
+        elif file_version == 12:
+            config.vprint("Adding 'has_path' and 'binlinks' to programs.")
+            for program in config.db["programs"]:
+                config.db["programs"][program]["has_path"] = False
+                config.db["programs"][program]["binlinks"] = []
 
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
@@ -488,6 +499,9 @@ def remove_paths_and_binlinks(program):
 
     """
     config.remove_line(program, "~/.tarstall/.bashrc", 'poundword')
+    config.db["programs"][program]["has_path"] = False
+    config.db["programs"][program]["binlinks"] = []
+    config.write_db()
     return "Complete"
 
 
@@ -541,7 +555,7 @@ def finish_install(program_internal_name, is_git=False):
         pass
     config.vprint("Adding program to tarstall list of programs")
     config.db["programs"].update({program_internal_name: {"git_installed": is_git, "desktops": [], 
-    "post_upgrade_script": None, "update_url": None}})
+    "post_upgrade_script": None, "update_url": None, "has_path": False, "binlinks": []}})
     config.write_db()
     generic.progress(100)
     return "Installed"
@@ -654,10 +668,25 @@ def gitinstall(git_url, program_internal_name, overwrite=False, reinstall=False)
 
 
 def add_binlink(file_chosen, program_internal_name):
+    """Add Binlink.
+
+    Args:
+        file_chosen (str): File to add
+        program_internal_name (str): Name of program to binlink
+
+    Returns:
+        str: "Added" or "Already there"
+
+    """
+    if file_chosen in config.db["programs"][program_internal_name]["binlinks"]:
+        return "Already there"
     line_to_add = 'alias ' + file_chosen + "='cd " + config.full('~/.tarstall/bin/' + program_internal_name) + \
     '/ && ./' + file_chosen + "' # " + program_internal_name + "\n"
     config.vprint("Adding alias to bashrc")
     config.add_line(line_to_add, "~/.tarstall/.bashrc")
+    config.db["programs"][program_internal_name]["binlinks"].append(file_chosen)
+    config.write_db()
+    return "Added"
 
 
 def pathify(program_internal_name):
@@ -668,10 +697,16 @@ def pathify(program_internal_name):
     Args:
         program_internal_name (str): Name of program to add to PATH
 
+    Returns:
+        "Complete" or "Already there"
+
     """
+    if config.db["programs"][program_internal_name]["has_path"]:
+        return "Already there"
     config.vprint('Adding program to PATH')
     line_to_write = "export PATH=$PATH:~/.tarstall/bin/" + program_internal_name + ' # ' + program_internal_name + '\n'
     config.add_line(line_to_write, "~/.tarstall/.bashrc")
+    config.db["programs"][program_internal_name]["has_path"] = True
     return "Complete"
 
 
@@ -793,6 +828,16 @@ def erase():
     generic.progress(90)
     try:
         rmtree("/tmp/tarstall-temp")
+    except FileNotFoundError:
+        pass
+    generic.progress(95)
+    try:
+        rmtree("/tmp/tarstall-temp2")
+    except FileNotFoundError:
+        pass
+    generic.progress(98)
+    try:
+        os.remove(config.full("~/.local/share/applications/tarstall.desktop"))
     except FileNotFoundError:
         pass
     config.unlock()

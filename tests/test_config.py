@@ -70,7 +70,10 @@ def test_get_db():
             "package": {
                 "git_installed": False,
                 "desktops": [],
-                "post_upgrade_script": None
+                "post_upgrade_script": None,
+                "update_url": None,
+                "has_path": False,
+                "binlinks": []
             }
         }
     }
@@ -90,7 +93,7 @@ def test_extension():
 
 
 def test_exists():
-    assert config.exists("./config.py") is True
+    assert config.exists(os.path.expanduser("~/.tarstall/config.py")) is True
     assert config.exists("./config.no") is False
 
 
