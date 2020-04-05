@@ -941,7 +941,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
         overwrite (bool): Whether or not to assume the program is already installed and to overwite it
 
     Returns:
-       str: A string from finish_install() a string from create_command(), "No rsync", "Bad name", "Installed", or "Error"
+       str: A string from finish_install() a string from create_command(), "No rsync", "Bad name", "Installed", or "Error".
 
     """
     if not config.check_bin("rsync") and overwrite:
@@ -972,14 +972,20 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
         return "Error"
     generic.progress(50, show_progress)
     config.vprint('Checking for folder in folder')
+    os.chdir("/tmp/tarstall-temp/")
     if os.path.isdir(config.full('/tmp/tarstall-temp/' + program_internal_name + '/')):
         config.vprint('Folder in folder detected! Using that directory instead...')
         source = config.full('/tmp/tarstall-temp/' + program_internal_name) + '/'
         dest = config.full('~/.tarstall/bin/' + program_internal_name) + '/'
+    elif len(os.listdir()) == 1 and os.path.isdir(os.listdir()[0]):
+        config.vprint("Single folder detected!")
+        folder = os.listdir()[0]
+        source = config.full("/tmp/tarstall-temp/" + folder)
+        dest = config.full("~/.tarstall/bin/" + program_internal_name) + '/'
     else:
         config.vprint('Folder in folder not detected!')
         source = config.full('/tmp/tarstall-temp') + '/'
-        dest = config.full('~/.tarstall/bin/' + program_internal_name + "/")
+        dest = config.full('~/.tarstall/bin/' + program_internal_name) + '/'
     config.vprint("Moving program to directory")
     if overwrite:
         if verbose:

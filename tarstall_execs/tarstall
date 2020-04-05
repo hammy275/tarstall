@@ -39,6 +39,7 @@ if mode == "gui":
         del tkinter
         try:
             import PySimpleGUI as sg
+            sg.theme("Black")
         except ImportError:
             config.mode = "cli"
             mode = "cli"
