@@ -81,7 +81,7 @@ def install_package(pkg):
         status("This script only supports automatic program installtion through apt(-get), dnf, and pip; please install {} manually!".format(pkg))
         sys.exit(1)
     if not passed:
-        status("Error installing package {}! Please install it manually, and read the error above for information!".format(pkg))
+        status("Error installing package {}! Please install it manually, and/or read the error above for information how to resolve this error!".format(pkg))
         sys.exit(1)
 
 
@@ -89,6 +89,7 @@ def setup():
     # Checks
     status("Checking for anything missing for tarstall setup")
     supported_package_managers = ["apt", "apt-get", "dnf", "pacman"]
+    supported_shells = ["bash", "zsh"]
     if which("sudo") is None:
         status("Please install 'sudo'!")
         sys.exit(1)
@@ -100,6 +101,21 @@ def setup():
     if not supported:
         status("You currently don't have a supported package manager! Currently supported package managers are: " + ", ".join(supported_package_managers))
         sys.exit(1)
+    shell = os.environ["SHELL"]
+    shell_supported = False
+    for sshell in supported_shells:
+        if sshell in shell:
+            shell_supported = True
+            break
+    if not shell_supported:
+        print(shell)
+        msg = "WARNING: YOUR SHELL IS NOT SUPPORTED!\n\nYOU WILL HAVE TO MANUALLY ADD ~/.tarstall/tarstall_execs TO YOUR PATH, " \
+        "AND ANY PATH/BINLINK FUNCTIONS WILL NOT WORK!\nWOULD YOU LIKE TO PROCEED WITH INSTALLATION ANYWAYS?"
+        status(msg)
+        should_proceed = input("Type 'YES' to continue; anything else to exit... ")
+        if should_proceed.lower() != "yes":
+            status("Installation cancelled!")
+            sys.exit(1)
     print("All of the checks passed!\n\n\n")
 
     # User information
