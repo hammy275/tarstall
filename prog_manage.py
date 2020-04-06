@@ -76,7 +76,6 @@ def wget_program(program):
     if not config.check_bin("wget"):
         return "No wget"
     else:
-        generic.progress(5)
         config.vprint("Creating second temp folder for archive.")
         try:
             rmtree(config.full("/tmp/tarstall-temp2"))
@@ -84,7 +83,6 @@ def wget_program(program):
             pass
         os.mkdir("/tmp/tarstall-temp2")
         os.chdir("/tmp/tarstall-temp2")
-        generic.progress(15)
         config.vprint("Downloading archive...")
         url = config.db["programs"][program]["update_url"]
         if config.verbose:
@@ -93,19 +91,16 @@ def wget_program(program):
             err = call(["wget", url], stdout=DEVNULL, stderr=DEVNULL)
         if err != 0:
             return "Wget error"
-        generic.progress(65)
         files = os.listdir()
         config.vprint("Renaming archive")
         os.rename("/tmp/tarstall-temp2/{}".format(files[0]), "/tmp/tarstall-temp2/{}".format(program + ".tar.gz"))
-        generic.progress(70)
+        os.chdir("/tmp/")
         config.vprint("Using install to install the program.")
-        inst_status = pre_install("/tmp/tarstall-temp2/{}".format(program + ".tar.gz"), True)
-        generic.progress(95)
+        inst_status = pre_install("/tmp/tarstall-temp2/{}".format(program + ".tar.gz"), True, show_progress=False)
         try:
             rmtree(config.full("/tmp/tarstall-temp2"))
         except FileNotFoundError:
             pass
-        generic.progress(100)
         if inst_status != "Installed":
             return "Install error"
         else:
@@ -370,7 +365,7 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
     return "Good"
 
 
-def pre_install(program, overwrite=None):
+def pre_install(program, overwrite=None, show_progress=True):
     """Pre-Archive Install.
 
     Preparation before installing an archive.
@@ -392,11 +387,11 @@ def pre_install(program, overwrite=None):
         else:
             if not overwrite:
                 uninstall(program_internal_name)
-                return install(program, False, True)  # Reinstall
+                return install(program, False, True, show_progress)  # Reinstall
             elif overwrite:
-                return install(program, True, True)
+                return install(program, True, True, show_progress)
     else:
-        return install(program)  # No reinstall needed to be asked, install program
+        return install(program, show_progress=show_progress)  # No reinstall needed to be asked, install program
     config.write_db()
 
 
@@ -1043,6 +1038,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
     generic.progress(80, show_progress)
     config.vprint("Adding program to tarstall list of programs")
     config.vprint('Removing old temp directory...')
+    os.chdir("/tmp")
     try:
         rmtree(config.full("/tmp/tarstall-temp"))
     except FileNotFoundError:
