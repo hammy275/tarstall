@@ -36,9 +36,6 @@ def test_get_file_version():
 def test_pathify():
     prog_manage.pathify("package")
     assert config.check_line("export PATH=$PATH:~/.tarstall/bin/package # package", "~/.tarstall/.bashrc", "fuzzy")
-    prog_manage.pathify("test_program")
-    assert config.check_line("export PATH=$PATH:~/.tarstall/bin/test_program # test_program", "~/.tarstall/.bashrc",
-                           "fuzzy")
 
 
 def test_verbose_toggle():

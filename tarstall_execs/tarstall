@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 """tarstall: A package manager for managing archives
-    Copyright (C) 2019  hammy3502
+    Copyright (C) 2020  hammy3502
 
     tarstall is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ sys.path.insert(1, os.path.abspath(os.path.expanduser("{}/..".format(os.path.dir
 import config
 import generic
 import prog_manage
+import re
 from subprocess import call
 
 mode = config.read_config("Mode")
@@ -36,16 +37,17 @@ if mode == "gui":
     try:
         import tkinter
         del tkinter
+        try:
+            import PySimpleGUI as sg
+            sg.theme("Black")
+        except ImportError:
+            config.mode = "cli"
+            mode = "cli"
+            print("PySimpleGUI not installed! Defaulting to cli mode...")
     except ImportError:
         config.mode = "cli"
         mode = "cli"
         print("Tkinter not installed! Defaulting to cli mode...")
-    try:
-        import PySimpleGUI as sg
-    except ImportError:
-        config.mode = "cli"
-        mode = "cli"
-        print("PySimpleGUI not installed! Defaulting to cli mode...")
 
 def gui_loop():
     """Main Loop for GUI."""
@@ -120,6 +122,42 @@ def gui_loop():
                 window.Element("remove").Update(disabled=False)
             elif event == "should_manage":
                 window.Element("manage").Update(disabled=False)
+
+
+def wget_wizard(program):
+    if not config.check_bin("wget"):
+        generic.pprint("You must have 'wget' installed to use this feature!")
+        return
+    while True:
+        if config.db["programs"][program]["update_url"]:
+            r_msg = "\nr - Remove URL to download a copy of this program when upgraded."
+        else:
+            r_msg = ""
+        msg = """
+Select an option:
+a - Add a URL to download a fresh copy of this program when upgraded{r_msg}
+e - Return to program management""".format(r_msg=r_msg)
+        options = ['a', 'e']
+        gui_options = ["Add a URL", "Return to Program Management"]
+        if r_msg:
+            options.append('r')
+            gui_options.append("Remove URL from Program")
+        ans = generic.get_input(msg, options, 'e', gui_options)
+        if ans == 'a':
+            new_url = ""
+            while re.match(r"https://\w.\w", new_url) is None or new_url == "":
+                new_url = generic.ask("Please enter a URL that points directly to a .tar.gz that contains" + 
+                "a full-copy of the program to install when upgrading. Type 'c' or 'cancel' to cancel: ")
+                if new_url.lower() == 'c' or new_url.lower() == "cancel":
+                    return
+            prog_manage.add_upgrade_url(program, new_url)
+            generic.pprint("URL added successfully!")
+        elif ans == 'r' and r_msg:
+            prog_manage.remove_update_url(program)
+            generic.pprint("Upgrade URL successfully removed from program!")
+        elif ans == 'e':
+            return
+
 
 
 def git_wizard(program):
@@ -271,6 +309,8 @@ def pathify(program):
     status = prog_manage.pathify(program)
     if status == "Complete":
         generic.pprint("Program added to PATH!")
+    elif status == "Already there":
+        generic.pprint("Program already added to PATH!")
 
 
 def binlink(program):
@@ -289,7 +329,9 @@ def binlink(program):
             file_chosen = input('Please enter a file listed above. If you would like to cancel, type exit: ')
             if file_chosen == "exit":
                 return
-        prog_manage.add_binlink(file_chosen, program)
+        status = prog_manage.add_binlink(file_chosen, program)
+        if status == "Already there":
+            generic.pprint("Binlink not added since it already exists!")
         yn = generic.get_input('Would you like to continue adding files to be run directly?', ['y', 'n'], 'n')
 
 
@@ -395,10 +437,15 @@ def manage(program):
         options.append('q')
         option_strings.append("Upgrade program")
     else:
-        git_msg = ""
-        g_msg = ""
-        us = "an upgrade"
-    if q == "" and config.db["programs"][program]["post_upgrade_script"] is not None:
+        git_msg = "\nw - Add/remove an update URL for {}".format(program)
+        g_msg = "w/"
+        options.append('w')
+        option_strings.append("Add/remove update URL")
+        if config.db["programs"][program]["update_url"]:
+            us = "a post-upgrade"
+        else:
+            us = "an upgrade"
+    if q == "" and (config.db["programs"][program]["post_upgrade_script"] or config.db["programs"][program]["update_url"]):
         q_msg = "\nq - Upgrade {program}".format(program=program)
         q = "q/"
         options.append('q')
@@ -461,12 +508,16 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
                     call(["/bin/zsh"])
                 else:
                     call(["/bin/bash"])
-        elif option == 'g':
+        elif option == 'g' and g_msg == "g/":
             git_wizard(program)
+        elif option == 'w' and g_msg == "w/":
+            wget_wizard(program)
         elif option == 'q' and q != "":
             status = prog_manage.update_program(program)
             if status == "Success":
                 generic.pprint("Program upgrading successful!")
+            elif status == "No update":
+                generic.pprint("Program is already up to date!")
             elif status == "No git":
                 generic.pprint("Git not installed, please install it!")
             elif status == "Error updating":
@@ -477,6 +528,12 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
                 generic.pprint("Error while executing the supplied upgrade script!")
             elif status == "OSError":
                 generic.pprint("Shell not specified! Please specify one at the top of the supplied script (ex. #!/bin/sh)")
+            elif status == "No wget":
+                generic.pprint("Wget is not installed!")
+            elif status == "Wget error":
+                generic.pprint("An error occured while downloading the archive!")
+            elif status == "Install error":
+                generic.pprint("An error occured while installing the program!")
         elif option == 'us':
             msg = """
 Please input the path to a script you would like to run to upgrade an installed program.
@@ -544,7 +601,7 @@ def parse_args(args=None):
     group.add_argument('-k', '--remove-lock', help="Remove tarstall lock file (only do this if tarstall isn't already "
                                                 "running)", action="store_true")
     group.add_argument('-c', '--config', help="Change tarstall options", action="store_true")
-    group.add_argument('-q', '--update-programs', help="Update programs installed through git and ones with upgrade scripts", action="store_true")
+    group.add_argument('-q', '--update-programs', help="Update programs installed through git, ones with upgrade scripts, and ones with a URL assigned to them", action="store_true")
     if args is None:
         args = parser.parse_args()
     else:
@@ -577,6 +634,7 @@ def parse_args(args=None):
         else:
             generic.pprint('tarstall not installed.')
             config.unlock()
+            sys.exit(1)
     
     elif status == "Root":
         generic.pprint("Don't use sudo unless you want your programs installed for root and only root!")
@@ -748,6 +806,8 @@ def parse_args(args=None):
             for p in status.keys():
                 if status[p] == "Success":
                     msg += p + " updated successfully!\n"
+                elif status[p] == "No update":
+                    msg += p + " is already up to date!\n"
                 elif status[p] == "OSError":
                     msg += p + " does not have #!/bin/sh or similar specified at the top of its file!"
                 else:
@@ -763,6 +823,7 @@ Written by: hammy3502
 
 tarstall Version: {user_version}
 Internal Version Code: {file_version}.{prog_version}
+Branch: {branch}
 
 For help, type "tarstall -h"
 
@@ -770,7 +831,7 @@ For additional help, the tarstall wiki is linked below.
 
 https://github.com/hammy3502/tarstall/wiki
         """.format(user_version=config.get_version("version"), file_version=config.get_version("file_version"),
-                prog_version=config.get_version("prog_internal_version")))
+                prog_version=config.get_version("prog_internal_version"), branch=config.branch))
 
     config.unlock()
     if mode == "gui":

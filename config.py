@@ -1,5 +1,5 @@
 """tarstall: A package manager for managing archives
-    Copyright (C) 2019  hammy3502
+    Copyright (C) 2020  hammy3502
 
     tarstall is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,9 +22,9 @@ import shutil
 
 ###VERSIONS###
 
-version = "1.4.2"
-prog_internal_version = 73
-file_version = 11
+version = "1.5.0"
+prog_internal_version = 82
+file_version = 13
 
 #############
 
