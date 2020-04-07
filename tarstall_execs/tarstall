@@ -601,7 +601,7 @@ def parse_args(args=None):
     group.add_argument('-k', '--remove-lock', help="Remove tarstall lock file (only do this if tarstall isn't already "
                                                 "running)", action="store_true")
     group.add_argument('-c', '--config', help="Change tarstall options", action="store_true")
-    group.add_argument('-q', '--update-programs', help="Update programs installed through git and ones with upgrade scripts", action="store_true")
+    group.add_argument('-q', '--update-programs', help="Update programs installed through git, ones with upgrade scripts, and ones with a URL assigned to them", action="store_true")
     if args is None:
         args = parser.parse_args()
     else:
