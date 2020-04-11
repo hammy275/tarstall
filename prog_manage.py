@@ -217,7 +217,7 @@ def update_programs():
     statuses = {}
     generic.progress(progress)
     for p in config.db["programs"].keys():
-        if config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"] or config.db["programs"][p]["update_url"]:
+        if config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"] or (config.db["programs"][p]["update_url"] and config.read_config("UpdateURLPrograms")):
             statuses[p] = update_program(p)
         progress += increment
         generic.progress(progress)
@@ -346,6 +346,10 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
             for program in config.db["programs"]:
                 config.db["programs"][program]["has_path"] = False
                 config.db["programs"][program]["binlinks"] = []
+        
+        elif file_version == 13:
+            config.vprint("Adding 'UpdateURLPrograms' to config database.")
+            config.db["options"]["UpdateURLPrograms"] = False
 
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
@@ -450,7 +454,8 @@ def create_db():
             "Verbose": False,
             "AutoInstall": False,
             "ShellFile": config.get_shell_file(),
-            "SkipQuestions": False
+            "SkipQuestions": False,
+            "UpdateURLPrograms": False
         },
         "version": {
             "file_version": config.file_version,

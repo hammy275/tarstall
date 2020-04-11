@@ -262,13 +262,14 @@ v - Enable/disable verbose mode, showing more output when tarstall commands are 
 b - Swap branches in tarstall. Allows you to get updates sooner at the cost of possible bugs. Current branch: {b}.
 m - Whether or not to use the GUI for tarstall. Currently {gui}.
 s - Whether or not to skip ending questions and confirmations. Currently {skip}.
+u - Whether or not to update programs that have a URL attatched to them for updating. Currently {url}.
 e - Exit tarstall""".format(
             au=generic.endi(config.read_config("AutoInstall")), v=generic.endi(config.read_config("Verbose")),
             b=config.db["version"]["branch"], gui=generic.endi(config.read_config("Mode") == "gui"),
-            skip=generic.endi(config.read_config("SkipQuestions"))
+            skip=generic.endi(config.read_config("SkipQuestions")), url=generic.endi(config.read_config("UpdateURLPrograms"))
         )
-        option = generic.get_input(msg, ['au', 'v', 'b', 'm', 's', 'e'], 'e', 
-        ["Autoupdate", "Verbosity", "Change Branches", "Change Interaction Mode", "Skip Questions", "Exit"])
+        option = generic.get_input(msg, ['au', 'v', 'b', 'm', 's', 'u', 'e'], 'e', 
+        ["Autoupdate", "Verbosity", "Change Branches", "Change Interaction Mode", "Skip Questions", "Update URL-Attatched Programs", "Exit"])
         if option == 'au':
             if not prog_manage.can_update:
                 generic.pprint("requests isn't installed, so AutoInstall cannot be enabled!")
@@ -292,6 +293,8 @@ e - Exit tarstall""".format(
             key = None
         elif option == 's':
             key = "SkipQuestions"
+        elif option == 'u':
+            key = "UpdateURLPrograms"
         elif option == 'e':
             return
         if key is not None:
