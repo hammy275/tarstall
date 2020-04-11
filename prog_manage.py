@@ -1033,7 +1033,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
     elif len(os.listdir()) == 1 and os.path.isdir(os.listdir()[0]):
         config.vprint("Single folder detected!")
         folder = os.listdir()[0]
-        source = config.full("/tmp/tarstall-temp/" + folder)
+        source = config.full("/tmp/tarstall-temp/" + folder) + '/'
         dest = config.full("~/.tarstall/bin/" + program_internal_name) + '/'
     else:
         config.vprint('Folder in folder not detected!')
