@@ -584,7 +584,11 @@ def create_desktop(program_internal_name, name, program_file, comment="", should
     if program_internal_name is not None:
         exec_path = config.full("~/.tarstall/bin/{}/{}".format(program_internal_name, program_file))
         path = config.full("~/.tarstall/bin/{}/".format(program_internal_name))
-        desktop_name = "{}-{}".format(program_file, program_internal_name)
+        name = program_file
+        if "/" in name:
+            name += ".tar.gz"
+            name = config.name(name)
+        desktop_name = "{}-{}".format(name, program_internal_name)
     else:
         exec_path = config.full(program_file)
         desktop_name = name
@@ -678,13 +682,17 @@ def add_binlink(file_chosen, program_internal_name):
         str: "Added" or "Already there"
 
     """
-    if file_chosen in config.db["programs"][program_internal_name]["binlinks"]:
+    name = file_chosen
+    if "/" in name:
+        name += ".tar.gz"
+        name = config.name(name)
+    if name in config.db["programs"][program_internal_name]["binlinks"]:
         return "Already there"
-    line_to_add = 'alias ' + file_chosen + "='cd " + config.full('~/.tarstall/bin/' + program_internal_name) + \
-    '/ && ./' + file_chosen + "' # " + program_internal_name + "\n"
+    line_to_add = '\nalias ' + name + "='cd " + config.full('~/.tarstall/bin/' + program_internal_name) + \
+    '/ && ./' + file_chosen + "' # " + program_internal_name
     config.vprint("Adding alias to bashrc")
     config.add_line(line_to_add, "~/.tarstall/.bashrc")
-    config.db["programs"][program_internal_name]["binlinks"].append(file_chosen)
+    config.db["programs"][program_internal_name]["binlinks"].append(name)
     config.write_db()
     return "Added"
 
@@ -704,7 +712,7 @@ def pathify(program_internal_name):
     if config.db["programs"][program_internal_name]["has_path"]:
         return "Already there"
     config.vprint('Adding program to PATH')
-    line_to_write = "export PATH=$PATH:~/.tarstall/bin/" + program_internal_name + ' # ' + program_internal_name + '\n'
+    line_to_write = "\nexport PATH=$PATH:~/.tarstall/bin/" + program_internal_name + ' # ' + program_internal_name
     config.add_line(line_to_write, "~/.tarstall/.bashrc")
     config.db["programs"][program_internal_name]["has_path"] = True
     return "Complete"

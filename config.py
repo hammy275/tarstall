@@ -22,8 +22,8 @@ import shutil
 
 ###VERSIONS###
 
-version = "1.5.0"
-prog_internal_version = 83
+version = "1.5.1"
+prog_internal_version = 84
 file_version = 14
 
 #############

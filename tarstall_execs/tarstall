@@ -325,13 +325,9 @@ def binlink(program):
     """
     yn = 'y'
     while yn != 'n':
-        files = os.listdir(config.full('~/.tarstall/bin/' + program + '/'))
-        generic.pprint(' '.join(files))
-        file_chosen = 'Cool fact. This line was originally written on line 163.'
-        while file_chosen not in files:
-            file_chosen = input('Please enter a file listed above. If you would like to cancel, type exit: ')
-            if file_chosen == "exit":
-                return
+        file_chosen = generic.file_browser('~/.tarstall/bin/' + program + '/')
+        if file_chosen is None:
+            return
         status = prog_manage.add_binlink(file_chosen, program)
         if status == "Already there":
             generic.pprint("Binlink not added since it already exists!")
@@ -345,13 +341,9 @@ def desktop_wizard(program):
         program (str): Program to create .desktop file of
 
     """
-    files = os.listdir(config.full('~/.tarstall/bin/' + program + '/'))
-    generic.pprint(' '.join(files))
-    program_file = '/Placeholder/'
-    while program_file not in files:
-        program_file = input('Please enter a file listed above. If you would like to cancel, type exit: ')
-        if program_file == "exit":
-            return
+    program_file = generic.file_browser(config.full('~/.tarstall/bin/' + program + '/'))
+    if program_file is None:
+        return
     comment = "/"
     while not comment.replace(" ", "").isalnum() and comment != "":
         comment = input("Please input a comment for the application: ")

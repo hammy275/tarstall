@@ -24,6 +24,49 @@ if config.mode == "gui":
     except ImportError:
         pass  # This will be caught by tarstall.py, let's not worry about it here.
 
+
+def file_browser(root_dir):
+    root_dir = config.full(root_dir)
+    os.chdir(root_dir)
+    all_files = os.listdir()
+    folders = []
+    files = []
+    for f in all_files:
+        if os.path.isdir("./{}".format(f)):
+            folders.append(f)
+        else:
+            files.append(f)
+    msg = "Folders: " + ' '.join(folders) + "\n" + "Files: " + ' '.join(files)
+    file_chosen = 'Cool fact. This line was originally written on line 163.'
+    current_folder_path = []
+    while file_chosen not in files:
+        all_files = os.listdir()
+        folders = []
+        files = []
+        for f in all_files:
+            if os.path.isdir("./{}".format(f)):
+                folders.append(f)
+            else:
+                files.append(f)
+        msg = "Folders: " + ' '.join(folders) + "\n" + "Files: " + ' '.join(files)
+        file_chosen = input(msg + '\n\nPlease enter a file listed above. If you would like to cancel, type exit. If you would like to go up a directory, type "..": ')
+        if file_chosen == "exit":
+            return None
+        elif file_chosen in folders:
+            os.chdir(config.full("./{}".format(file_chosen)))
+            current_folder_path.append(file_chosen)
+        elif file_chosen == "..":
+            if os.getcwd() == root_dir:
+                pprint("\nCan't go up a directory!\n")
+            else:
+                os.chdir(config.full(".."))
+    if current_folder_path != []:
+        extra_slash = "/"
+    else:
+        extra_slash = ""
+    return "/".join(current_folder_path) + extra_slash + file_chosen
+
+
 def ask(question):
     """Get Any User Input.
 
