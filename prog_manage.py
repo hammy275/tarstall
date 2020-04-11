@@ -584,11 +584,11 @@ def create_desktop(program_internal_name, name, program_file, comment="", should
     if program_internal_name is not None:
         exec_path = config.full("~/.tarstall/bin/{}/{}".format(program_internal_name, program_file))
         path = config.full("~/.tarstall/bin/{}/".format(program_internal_name))
-        name = program_file
-        if "/" in name:
-            name += ".tar.gz"
-            name = config.name(name)
-        desktop_name = "{}-{}".format(name, program_internal_name)
+        file_name = program_file
+        if "/" in file_name:
+            file_name += ".tar.gz"
+            file_name = config.name(file_name)
+        desktop_name = "{}-{}".format(file_name, program_internal_name)
     else:
         exec_path = config.full(program_file)
         desktop_name = name
