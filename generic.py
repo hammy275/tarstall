@@ -26,6 +26,17 @@ if config.mode == "gui":
 
 
 def file_browser(root_dir):
+    """File Browser.
+
+    File browser for CLI that allows the choosing of files in folders.
+
+    Args:
+        root_dir (str): Path to top directory. Anything above this will be unaccessible
+    
+    Returns:
+        str: path/to/file/from/root_dir/file.txt (Path to the selected file from root_dir (NOT FROM / !!!!)
+
+    """
     root_dir = config.full(root_dir)
     os.chdir(root_dir)
     all_files = os.listdir()
