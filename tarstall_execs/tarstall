@@ -262,13 +262,14 @@ v - Enable/disable verbose mode, showing more output when tarstall commands are 
 b - Swap branches in tarstall. Allows you to get updates sooner at the cost of possible bugs. Current branch: {b}.
 m - Whether or not to use the GUI for tarstall. Currently {gui}.
 s - Whether or not to skip ending questions and confirmations. Currently {skip}.
+u - Whether or not to update programs that have a URL attatched to them for updating. Currently {url}.
 e - Exit tarstall""".format(
             au=generic.endi(config.read_config("AutoInstall")), v=generic.endi(config.read_config("Verbose")),
             b=config.db["version"]["branch"], gui=generic.endi(config.read_config("Mode") == "gui"),
-            skip=generic.endi(config.read_config("SkipQuestions"))
+            skip=generic.endi(config.read_config("SkipQuestions")), url=generic.endi(config.read_config("UpdateURLPrograms"))
         )
-        option = generic.get_input(msg, ['au', 'v', 'b', 'm', 's', 'e'], 'e', 
-        ["Autoupdate", "Verbosity", "Change Branches", "Change Interaction Mode", "Skip Questions", "Exit"])
+        option = generic.get_input(msg, ['au', 'v', 'b', 'm', 's', 'u', 'e'], 'e', 
+        ["Autoupdate", "Verbosity", "Change Branches", "Change Interaction Mode", "Skip Questions", "Update URL-Attatched Programs", "Exit"])
         if option == 'au':
             if not prog_manage.can_update:
                 generic.pprint("requests isn't installed, so AutoInstall cannot be enabled!")
@@ -292,6 +293,8 @@ e - Exit tarstall""".format(
             key = None
         elif option == 's':
             key = "SkipQuestions"
+        elif option == 'u':
+            key = "UpdateURLPrograms"
         elif option == 'e':
             return
         if key is not None:
@@ -322,13 +325,9 @@ def binlink(program):
     """
     yn = 'y'
     while yn != 'n':
-        files = os.listdir(config.full('~/.tarstall/bin/' + program + '/'))
-        generic.pprint(' '.join(files))
-        file_chosen = 'Cool fact. This line was originally written on line 163.'
-        while file_chosen not in files:
-            file_chosen = input('Please enter a file listed above. If you would like to cancel, type exit: ')
-            if file_chosen == "exit":
-                return
+        file_chosen = generic.file_browser('~/.tarstall/bin/' + program + '/')
+        if file_chosen is None:
+            return
         status = prog_manage.add_binlink(file_chosen, program)
         if status == "Already there":
             generic.pprint("Binlink not added since it already exists!")
@@ -342,13 +341,9 @@ def desktop_wizard(program):
         program (str): Program to create .desktop file of
 
     """
-    files = os.listdir(config.full('~/.tarstall/bin/' + program + '/'))
-    generic.pprint(' '.join(files))
-    program_file = '/Placeholder/'
-    while program_file not in files:
-        program_file = input('Please enter a file listed above. If you would like to cancel, type exit: ')
-        if program_file == "exit":
-            return
+    program_file = generic.file_browser(config.full('~/.tarstall/bin/' + program + '/'))
+    if program_file is None:
+        return
     comment = "/"
     while not comment.replace(" ", "").isalnum() and comment != "":
         comment = input("Please input a comment for the application: ")
@@ -538,13 +533,16 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
             msg = """
 Please input the path to a script you would like to run to upgrade an installed program.
 Note: The script will be run inside your program's directory.
-Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh)
+Leave blank to de-link the script from the program.
+Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh")
 """
             status = prog_manage.update_script(program, generic.ask_file(msg))
             if status == "Success":
                 generic.pprint("Update script added successfully!")
             elif status == "Bad path":
                 generic.pprint("Script specified does not exist!")
+            elif status == "Wiped":
+                generic.pprint("Successfully removed post upgrade script.")
         elif option == 'e':
             break
 

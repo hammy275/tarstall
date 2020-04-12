@@ -81,7 +81,8 @@ def test_create_db():
             "Verbose": False,
             "AutoInstall": False,
             "ShellFile": config.get_shell_file(),
-            "SkipQuestions": False
+            "SkipQuestions": False,
+            "UpdateURLPrograms": False
         },
         "version": {
             "file_version": config.file_version,

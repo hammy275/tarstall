@@ -22,9 +22,9 @@ import shutil
 
 ###VERSIONS###
 
-version = "1.5.0"
-prog_internal_version = 82
-file_version = 13
+version = "1.5.1"
+prog_internal_version = 87
+file_version = 14
 
 #############
 
@@ -76,7 +76,7 @@ def read_config(key):
     try:
         return db["options"][key]
     except KeyError:
-        if key in ["Verbose", "AutoInstall", "SkipQuestions"]:
+        if key in ["Verbose", "AutoInstall", "SkipQuestions", "UpdateURLPrograms"]:
             return False
         elif key == "ShellFile":
             return get_shell_file()

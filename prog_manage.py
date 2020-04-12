@@ -161,9 +161,12 @@ def update_script(program, script_path):
         script_path (str): Path to script to run as an/after update.
 
     Returns:
-        str: "Bad path" if the path doesn't exist, "Success" otherwise.
+        str: "Bad path" if the path doesn't exist, "Success" on success, and "Wiped" on clear.
 
     """
+    if script_path == "":
+        config.db["programs"][program]["post_upgrade_script"] = None
+        return "Wiped"
     if not config.exists(config.full(script_path)):
         return "Bad path"
     config.db["programs"][program]["post_upgrade_script"] = config.full(script_path)
@@ -217,7 +220,9 @@ def update_programs():
     statuses = {}
     generic.progress(progress)
     for p in config.db["programs"].keys():
-        if config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"] or config.db["programs"][p]["update_url"]:
+        if not config.db["programs"][p]["update_url"] and (config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"]):
+            statuses[p] = update_program(p)
+        elif (config.db["programs"][p]["update_url"] and config.read_config("UpdateURLPrograms")):
             statuses[p] = update_program(p)
         progress += increment
         generic.progress(progress)
@@ -346,6 +351,10 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
             for program in config.db["programs"]:
                 config.db["programs"][program]["has_path"] = False
                 config.db["programs"][program]["binlinks"] = []
+        
+        elif file_version == 13:
+            config.vprint("Adding 'UpdateURLPrograms' to config database.")
+            config.db["options"]["UpdateURLPrograms"] = False
 
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
@@ -450,7 +459,8 @@ def create_db():
             "Verbose": False,
             "AutoInstall": False,
             "ShellFile": config.get_shell_file(),
-            "SkipQuestions": False
+            "SkipQuestions": False,
+            "UpdateURLPrograms": False
         },
         "version": {
             "file_version": config.file_version,
@@ -579,7 +589,11 @@ def create_desktop(program_internal_name, name, program_file, comment="", should
     if program_internal_name is not None:
         exec_path = config.full("~/.tarstall/bin/{}/{}".format(program_internal_name, program_file))
         path = config.full("~/.tarstall/bin/{}/".format(program_internal_name))
-        desktop_name = "{}-{}".format(program_file, program_internal_name)
+        file_name = program_file
+        if "/" in file_name:
+            file_name += ".tar.gz"
+            file_name = config.name(file_name)
+        desktop_name = "{}-{}".format(file_name, program_internal_name)
     else:
         exec_path = config.full(program_file)
         desktop_name = name
@@ -673,13 +687,17 @@ def add_binlink(file_chosen, program_internal_name):
         str: "Added" or "Already there"
 
     """
-    if file_chosen in config.db["programs"][program_internal_name]["binlinks"]:
+    name = file_chosen
+    if "/" in name:
+        name += ".tar.gz"
+        name = config.name(name)
+    if name in config.db["programs"][program_internal_name]["binlinks"]:
         return "Already there"
-    line_to_add = 'alias ' + file_chosen + "='cd " + config.full('~/.tarstall/bin/' + program_internal_name) + \
-    '/ && ./' + file_chosen + "' # " + program_internal_name + "\n"
+    line_to_add = '\nalias ' + name + "='cd " + config.full('~/.tarstall/bin/' + program_internal_name) + \
+    '/ && ./' + file_chosen + "' # " + program_internal_name
     config.vprint("Adding alias to bashrc")
     config.add_line(line_to_add, "~/.tarstall/.bashrc")
-    config.db["programs"][program_internal_name]["binlinks"].append(file_chosen)
+    config.db["programs"][program_internal_name]["binlinks"].append(name)
     config.write_db()
     return "Added"
 
@@ -699,7 +717,7 @@ def pathify(program_internal_name):
     if config.db["programs"][program_internal_name]["has_path"]:
         return "Already there"
     config.vprint('Adding program to PATH')
-    line_to_write = "export PATH=$PATH:~/.tarstall/bin/" + program_internal_name + ' # ' + program_internal_name + '\n'
+    line_to_write = "\nexport PATH=$PATH:~/.tarstall/bin/" + program_internal_name + ' # ' + program_internal_name
     config.add_line(line_to_write, "~/.tarstall/.bashrc")
     config.db["programs"][program_internal_name]["has_path"] = True
     return "Complete"
@@ -1020,7 +1038,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
     elif len(os.listdir()) == 1 and os.path.isdir(os.listdir()[0]):
         config.vprint("Single folder detected!")
         folder = os.listdir()[0]
-        source = config.full("/tmp/tarstall-temp/" + folder)
+        source = config.full("/tmp/tarstall-temp/" + folder) + '/'
         dest = config.full("~/.tarstall/bin/" + program_internal_name) + '/'
     else:
         config.vprint('Folder in folder not detected!')
