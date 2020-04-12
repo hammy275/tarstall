@@ -161,9 +161,12 @@ def update_script(program, script_path):
         script_path (str): Path to script to run as an/after update.
 
     Returns:
-        str: "Bad path" if the path doesn't exist, "Success" otherwise.
+        str: "Bad path" if the path doesn't exist, "Success" on success, and "Wiped" on clear.
 
     """
+    if script_path == "":
+        config.db["programs"][program]["post_upgrade_script"] = None
+        return "Wiped"
     if not config.exists(config.full(script_path)):
         return "Bad path"
     config.db["programs"][program]["post_upgrade_script"] = config.full(script_path)
@@ -217,7 +220,9 @@ def update_programs():
     statuses = {}
     generic.progress(progress)
     for p in config.db["programs"].keys():
-        if config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"] or (config.db["programs"][p]["update_url"] and config.read_config("UpdateURLPrograms")):
+        if not config.db["programs"][p]["update_url"] and (config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"]):
+            statuses[p] = update_program(p)
+        elif (config.db["programs"][p]["update_url"] and config.read_config("UpdateURLPrograms")):
             statuses[p] = update_program(p)
         progress += increment
         generic.progress(progress)

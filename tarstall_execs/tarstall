@@ -533,13 +533,16 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
             msg = """
 Please input the path to a script you would like to run to upgrade an installed program.
 Note: The script will be run inside your program's directory.
-Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh)
+Leave blank to de-link the script from the program.
+Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh")
 """
             status = prog_manage.update_script(program, generic.ask_file(msg))
             if status == "Success":
                 generic.pprint("Update script added successfully!")
             elif status == "Bad path":
                 generic.pprint("Script specified does not exist!")
+            elif status == "Wiped":
+                generic.pprint("Successfully removed post upgrade script.")
         elif option == 'e':
             break
 
