@@ -283,11 +283,23 @@ def change_branch(branch, reset=False):
         generic.progress(10)
         if reset:
             config.vprint("Resetting by forcing an update of tarstall.")
-            update(True)
+            update(True, False)
+            generic.progress(70)
+            config.vprint("Deleting old .desktops")
+            for prog in config.db["programs"]:
+                if config.db["programs"][prog]["desktops"]:
+                    for d in config.db["programs"][prog]["desktops"]:
+                        try:
+                            os.remove(config.full("~/.local/share/applications/{}.desktop".format(d)))
+                        except FileNotFoundError:
+                            pass
+            generic.progress(85)
+            config.vprint("Writing 'refresh' key to database to tell tarstall to reset itself")
             config.db = {"refresh": True}
             config.write_db()
             generic.progress(100)
             config.unlock()
+            config.vprint("Done!")
             return "Reset"
         else:
             generic.progress(100)
@@ -325,10 +337,17 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
 
     if config.db == {"refresh": True}:  # Downgrade check
         print("Hang tight! We're finishing up your downgrade...")
+        generic.progress(5)
         config.create("~/.tarstall/database")
         create_db()
+        generic.progress(15)
         config.db = config.get_db()
         config.write_db()
+        generic.progress(20)
+        rmtree(config.full("~/.tarstall/bin"))
+        generic.progress(90)
+        os.mkdir(config.full("~/.tarstall/bin"))
+        generic.progress(100)
         print("We're done! Continuing tarstall execution...")
 
     if start_fts:  # Check if -f or --first is supplied
@@ -744,9 +763,9 @@ def update(force_update=False, show_progress=True):
         return "No git"
     generic.progress(5, show_progress)
     prog_version_internal = config.get_version('prog_internal_version')
+    config.vprint("Checking version on GitHub")
+    final_version = get_online_version('prog')
     if not force_update:
-        config.vprint("Checking version on GitHub")
-        final_version = get_online_version('prog')
         if final_version == -1:
             generic.progress(100, show_progress)
             return "No requests"

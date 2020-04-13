@@ -242,13 +242,13 @@ E - Exit branch wizard and don't change branches."""
                 generic.pprint("Invalid branch specified!")
                 return
             elif status == "Reset":
-                generic.pprint("Successfully switched to the master branch and reset tarstall!")
-                generic.pprint("Please run tarstall again to finish the downgrade process!")
-                config.unlock
+                generic.pprint("Successfully switched to the master branch and reset tarstall!" \
+                " Please run tarstall again to finish the downgrade process!")
+                config.unlock()
                 sys.exit(0)
             elif status == "Waiting":
-                generic.pprint("Successfully switched to the master branch!")
-                generic.pprint("When the master branch is a newer version than the beta one, the next update will bring you up to master.")
+                generic.pprint("Successfully switched to the master branch!" \
+                " When the master branch is a newer version than the beta one, the next update will bring you up to master.")
                 return
 
 
@@ -346,10 +346,10 @@ def desktop_wizard(program):
         return
     comment = "/"
     while not comment.replace(" ", "").isalnum() and comment != "":
-        comment = input("Please input a comment for the application: ")
+        comment = generic.ask("Please input a comment for the application: ")
     icon = ";"
     while not icon.replace("-", "").replace("_", "").replace("/", "").isalnum() and icon != "":
-        icon = input("Enter the path to an icon, the name of the icon, or press ENTER for no icon! ")
+        icon = generic.ask("Enter the path to an icon, the name of the icon, or press ENTER for no icon! ")
     terminal = generic.get_input("Should this program launch a terminal to run it in?", ['y', 'n'], 'n')
     if terminal.lower() == 'y':
         should_terminal = "True"
@@ -357,7 +357,7 @@ def desktop_wizard(program):
         should_terminal = "False"
     name = "/"
     while not name.replace(" ", "").isalnum() and name != "":
-        name = input("Please enter a name: ")
+        name = generic.ask("Please enter a name: ")
     if name == "":
         name = program
     ans = " "
@@ -366,9 +366,9 @@ def desktop_wizard(program):
                     "science",
                     "settings", "system", "utility", "end"]
     while ans.lower() != "end":
-        generic.pprint("Please enter categories, one at a time, from the list of .desktop categories below (defaults to "
-                "Utility). Type \"end\" to end category selection. \n")
-        generic.pprint(", ".join(categories))
+        msg = "Please enter categories, one at a time, from the list of .desktop categories below (defaults to " \
+                "Utility). Type \"end\" to end category selection. \n" + ", ".join(categories)
+        generic.pprint(msg)
         ans = generic.get_input("", categories, "utility")
         if ans.capitalize() in chosen_categories or ans == "end":
             pass
@@ -467,7 +467,7 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
         elif option == 'n':
             new_name = "!"
             while not new_name.replace("_", "").replace("-", "").isalnum():
-                new_name = input("Please enter the name you would like to change this program to: ")
+                new_name = generic.ask("Please enter the name you would like to change this program to: ")
                 if not new_name.replace("_", "").replace("-", "").isalnum():
                     generic.pprint("Alphanumeric characters, dashes, and underscores only, please!")
             r_program = prog_manage.rename(program, new_name)
@@ -485,12 +485,12 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
         elif option == 'd':
             desktop_wizard(program)
         elif option == 'rd':
-            generic.pprint("Desktops: ")
+            msg = "Desktops:\n"
             for d in config.db["programs"][program]["desktops"]:
-                generic.pprint(d)
+                msg += d + "\n"
             inp = "/ choose desktop"
             while not (inp in config.db["programs"][program]["desktops"]) and inp != "exit":
-                inp = input("Please enter the desktop you would like to remove or type \"exit\" to exit: ")
+                inp = generic.ask(msg + "\nPlease enter the desktop you would like to remove or type \"exit\" to exit: ")
             if inp != "exit":
                 prog_manage.remove_desktop(program, inp)
         elif option == 's':
@@ -644,7 +644,7 @@ def parse_args(args=None):
     elif status == "Old upgrade":
         generic.pprint("You are upgrading from a VERY old version of tarstall.")
         generic.pprint("Press ENTER to continue and wipe your database in the upgrade process!")
-        input("")
+        generic.ask("")
         prog_manage.tarstall_startup(start_fts=args.first, del_lock=args.remove_lock, old_upgrade=True)
 
     if args.install is not None:
@@ -737,8 +737,10 @@ def parse_args(args=None):
         if programs == []:
             generic.pprint("No programs installed!")
         else:
+            msg = ""
             for p in programs:
-                generic.pprint(p)
+                msg += p + "\n"
+            generic.pprint(msg)
 
     elif args.erase:
         erase_sure = generic.get_input("Are you sure you would like to remove tarstall from your system?",
