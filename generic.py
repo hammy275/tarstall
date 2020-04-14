@@ -60,7 +60,7 @@ def file_browser(root_dir):
             else:
                 files.append(f)
         msg = "Folders: " + ' '.join(folders) + "\n" + "Files: " + ' '.join(files)
-        file_chosen = input(msg + '\n\nPlease enter a file listed above. If you would like to cancel, type exit. If you would like to go up a directory, type "..": ')
+        file_chosen = ask(msg + '\n\nPlease enter a file listed above. If you would like to cancel, type exit. If you would like to go up a directory, type "..": ')
         if file_chosen == "exit":
             return None
         elif file_chosen in folders:
