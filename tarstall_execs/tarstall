@@ -350,7 +350,7 @@ def desktop_wizard(program):
     icon = ";"
     while not icon.replace("-", "").replace("_", "").replace("/", "").isalnum() and icon != "":
         icon = generic.ask("Enter the path to an icon, the name of the icon, or press ENTER for no icon! ")
-    terminal = generic.get_input("Should this program launch a terminal to run it in?", ['y', 'n'], 'n')
+    terminal = generic.get_input("Should this program launch a terminal to run it in?", ['y', 'n'], 'n', ["Yes", "No"])
     if terminal.lower() == 'y':
         should_terminal = "True"
     else:
