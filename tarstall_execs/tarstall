@@ -363,13 +363,11 @@ def desktop_wizard(program):
     ans = " "
     chosen_categories = []
     categories = ["audio", "video", "development", "education", "game", "graphics", "network", "office",
-                    "science",
-                    "settings", "system", "utility", "end"]
+                    "science", "settings", "system", "utility", "end"]
     while ans.lower() != "end":
         msg = "Please enter categories, one at a time, from the list of .desktop categories below (defaults to " \
-                "Utility). Type \"end\" to end category selection. \n" + ", ".join(categories)
-        generic.pprint(msg)
-        ans = generic.get_input("", categories, "utility")
+                "Utility). Type \"end\" to end category selection. \n" + ", ".join(categories) + "\n"
+        ans = generic.get_input(msg, categories, "utility")
         if ans.capitalize() in chosen_categories or ans == "end":
             pass
         else:

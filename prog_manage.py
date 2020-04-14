@@ -578,6 +578,7 @@ def finish_install(program_internal_name, is_git=False):
     except FileNotFoundError:
         pass
     config.vprint("Adding program to tarstall list of programs")
+    generic.progress(95)
     config.db["programs"].update({program_internal_name: {"git_installed": is_git, "desktops": [], 
     "post_upgrade_script": None, "update_url": None, "has_path": False, "binlinks": []}})
     config.write_db()
@@ -1039,6 +1040,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
     program = config.spaceify(program)
     command_to_go = create_command(file_extension, program)
     config.vprint('File type detected: ' + file_extension)
+    generic.progress(15, show_progress)
     if command_to_go.startswith("No") or command_to_go == "Bad Filetype":
         return command_to_go
     try:
