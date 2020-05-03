@@ -108,7 +108,6 @@ def setup():
             shell_supported = True
             break
     if not shell_supported:
-        print(shell)
         msg = "WARNING: YOUR SHELL IS NOT SUPPORTED!\n\nYOU WILL HAVE TO MANUALLY ADD ~/.tarstall/tarstall_execs TO YOUR PATH, " \
         "AND ANY PATH/BINLINK FUNCTIONS WILL NOT WORK!\nWOULD YOU LIKE TO PROCEED WITH INSTALLATION ANYWAYS?"
         status(msg)
@@ -126,10 +125,22 @@ def setup():
         status("Cancelling tarstall setup...")
         sys.exit()
 
-    # Install git and wget
-    status("Installing git and wget")
-    install_package("git")
-    install_package("wget")
+    # Install requirements obtained through package manager
+    status("Installing tarstall's package requirements")
+    if which("git") is None:
+        install_package("git")
+    else:
+        print("git is already installed!")
+    if which("wget") is None:
+        install_package("wget")
+    else:
+        print("wget is already installed!")
+    try:
+        import tkinter
+        del tkinter
+        print("Thanks for having tkinter already installed!")
+    except ImportError:
+        install_package({"apt": "python3-tk", "dnf": "python3-tkinter", "pacman": "tk"})
 
     # Clone repository
     status("Getting a copy of tarstall")
@@ -148,23 +159,14 @@ def setup():
         sys.exit(1)
     os.chdir("/tmp/tarstall-setup/tarstall")
 
-    # Install requirements
-    status("Installing tarstall's requirements")
+    # Install Python requirements
+    status("Installing tarstall's Python requirements")
     if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"]):
         install_package({"apt": "python3-pip", "dnf": "python3-pip", "pacman": "python-pip"})
     if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"]) or not \
     run([sys.executable, "-m", "pip", "install", "-r", "requirements-gui.txt", "--user"]):
         status("An error occured while installing the GUI requirements!")
         sys.exit(1)
-
-    # Test tkinter (since we can't install it through pip)
-    status("Installing tkinter")
-    try:
-        import tkinter
-        del tkinter
-        print("Thanks for having tkinter already installed!")
-    except ImportError:
-        install_package({"apt": "python3-tk", "dnf": "python3-tkinter", "pacman": "tk"})
 
     # Pass control to tarstall
     status("Running tarstall installation")
