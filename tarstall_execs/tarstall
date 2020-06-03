@@ -407,6 +407,38 @@ def install_wrap_up(program):
     generic.pprint("Installation complete!")
 
 
+def update_program_gui(program):
+    """Update a Program and Print Result to User.
+
+    Args:
+        program (str): Program to update.
+
+    """
+    status = prog_manage.update_program(program)
+    if status == "Success":
+        generic.ppause("Program upgrading successful!")
+    elif status == "No update":
+        generic.ppause("Program is already up to date!")
+    elif status == "No git":
+        generic.ppause("Git not installed, please install it!")
+    elif status == "Error updating":
+        generic.ppause("Error while upgrading through git!")
+    elif status == "No script":
+        generic.ppause("Upgrade script no longer exists! The update script reference has been removed!")
+    elif status == "Script error":
+        generic.ppause("Error while executing the supplied upgrade script!")
+    elif status == "OSError":
+        generic.ppause("Shell not specified! Please specify one at the top of the supplied script (ex. #!/bin/sh)")
+    elif status == "No wget":
+        generic.ppause("Wget is not installed!")
+    elif status == "Wget error":
+        generic.ppause("An error occured while downloading the archive!")
+    elif status == "Install error":
+        generic.ppause("An error occured while installing the program!")
+    elif status == "Does not update":  # Can only be reached through -q, so no need to ppause here
+        generic.pprint("Program does not have any way of updating!")
+
+
 def manage(program):
     """Manage Installed Program.
 
@@ -512,27 +544,7 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
         elif option == 'w' and g_msg == "w/":
             wget_wizard(program)
         elif option == 'q' and q != "":
-            status = prog_manage.update_program(program)
-            if status == "Success":
-                generic.ppause("Program upgrading successful!")
-            elif status == "No update":
-                generic.ppause("Program is already up to date!")
-            elif status == "No git":
-                generic.ppause("Git not installed, please install it!")
-            elif status == "Error updating":
-                generic.ppause("Error while upgrading through git!")
-            elif status == "No script":
-                generic.ppause("Upgrade script no longer exists! The update script reference has been removed!")
-            elif status == "Script error":
-                generic.ppause("Error while executing the supplied upgrade script!")
-            elif status == "OSError":
-                generic.ppause("Shell not specified! Please specify one at the top of the supplied script (ex. #!/bin/sh)")
-            elif status == "No wget":
-                generic.ppause("Wget is not installed!")
-            elif status == "Wget error":
-                generic.ppause("An error occured while downloading the archive!")
-            elif status == "Install error":
-                generic.ppause("An error occured while installing the program!")
+            update_program_gui(program)
         elif option == 'us':
             msg = """
 Please input the path to a script you would like to run to upgrade an installed program.
@@ -603,7 +615,7 @@ def parse_args(args=None):
     group.add_argument('-k', '--remove-lock', help="Remove tarstall lock file (only do this if tarstall isn't already "
                                                 "running)", action="store_true")
     group.add_argument('-c', '--config', help="Change tarstall options", action="store_true")
-    group.add_argument('-q', '--update-programs', help="Update programs installed through git, ones with upgrade scripts, and ones with a URL assigned to them", action="store_true")
+    group.add_argument('-q', '--update-programs', help="Update programs that can be updated, or a single program if supplied.", nargs='?', const="True", type=str)
     if args is None:
         args = parser.parse_args()
     else:
@@ -794,7 +806,7 @@ def parse_args(args=None):
     elif args.config:
         configure()
     
-    elif args.update_programs:
+    elif args.update_programs == "True":
         status = prog_manage.update_programs()
         if status == "No git":
             generic.pprint("git isn't installed, please install it!")
@@ -812,13 +824,24 @@ def parse_args(args=None):
                     msg += p + " is already up to date!\n"
                 elif status[p] == "OSError":
                     msg += p + " does not have #!/bin/sh or similar specified at the top of its file!"
+                    exit_code = 1
+                elif status[p] == "Does not update":
+                    msg += p + " does not update or has a URL as its only update option!"
                 else:
                     msg += p + " did not update successfully!\n"
                     exit_code = 1
             generic.pprint(msg)
+    
+    elif args.update_programs:
+        if not args.update_programs in config.db["programs"]:
+            generic.pprint("{} not installed!".format(args.update_programs))
+            exit_code = 1
+        else:
+            update_program_gui(args.update_programs)
 
 
     elif not did_fts:
+        print(args.update_programs)
         generic.pprint("""
 tarstall. A Python based package manager to manage archives.
 Written by: hammy3502

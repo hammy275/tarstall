@@ -149,6 +149,7 @@ def update_program(program):
                     return "Success"
             except OSError:
                 return "OSError"
+    return "Does not update"
 
 
 def update_script(program, script_path):
@@ -224,6 +225,8 @@ def update_programs():
             statuses[p] = update_program(p)
         elif (config.db["programs"][p]["update_url"] and config.read_config("UpdateURLPrograms")):
             statuses[p] = update_program(p)
+        else:
+            statuses[p] = "Does not update"
         progress += increment
         generic.progress(progress)
     if progress < 100:
