@@ -823,10 +823,10 @@ def parse_args(args=None):
                 elif status[p] == "No update":
                     msg += p + " is already up to date!\n"
                 elif status[p] == "OSError":
-                    msg += p + " does not have #!/bin/sh or similar specified at the top of its file!"
+                    msg += p + " does not have #!/bin/sh or similar specified at the top of its file!\n"
                     exit_code = 1
                 elif status[p] == "Does not update":
-                    msg += p + " does not update or has a URL as its only update option!"
+                    msg += p + " does not update or has a URL as its only update option!\n"
                 else:
                     msg += p + " did not update successfully!\n"
                     exit_code = 1
