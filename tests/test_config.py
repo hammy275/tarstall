@@ -60,7 +60,8 @@ def test_get_db():
             "AutoInstall": False,
             "ShellFile": config.get_shell_file(),
             "SkipQuestions": False,
-            "UpdateURLPrograms": False
+            "UpdateURLPrograms": False,
+            "PressEnterKey": True
         },
         "version": {
             "file_version": config.file_version,

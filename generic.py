@@ -227,6 +227,22 @@ def pprint(st, title="tarstall-gui"):
         print(st)
 
 
+def ppause(st, title="tarstall-gui"):
+    """Print and Pause if CLI.
+
+    Args:
+        st (str): String to print or display in GUI popup.
+        title (str, optional): Title for window if in GUI mode. Defaults to "tarstall-gui".
+
+    """
+    if config.mode == "gui":
+        sg.Popup(st, title=title)
+    elif config.mode == "cli":
+        print(st)
+        if config.read_config("PressEnterKey"):
+            input("Press ENTER to continue...")
+
+
 def progress(val, should_show=True):
     """Update Progress of Operation.
 
