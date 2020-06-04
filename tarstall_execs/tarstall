@@ -615,7 +615,7 @@ def parse_args(args=None):
     group.add_argument('-k', '--remove-lock', help="Remove tarstall lock file (only do this if tarstall isn't already "
                                                 "running)", action="store_true")
     group.add_argument('-c', '--config', help="Change tarstall options", action="store_true")
-    group.add_argument('-q', '--update-programs', help="Update programs that can be updated, or a single program if supplied.", nargs='?', const="True", type=str)
+    group.add_argument('-q', '--update-programs', help="Update programs that can be updated, or a single program if supplied.", nargs='?', const=True, type=str)
     if args is None:
         args = parser.parse_args()
     else:
@@ -806,7 +806,7 @@ def parse_args(args=None):
     elif args.config:
         configure()
     
-    elif args.update_programs == "True":
+    elif args.update_programs is True:
         status = prog_manage.update_programs()
         if status == "No git":
             generic.pprint("git isn't installed, please install it!")
