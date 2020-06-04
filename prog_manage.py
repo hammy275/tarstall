@@ -149,6 +149,7 @@ def update_program(program):
                     return "Success"
             except OSError:
                 return "OSError"
+    return "Does not update"
 
 
 def update_script(program, script_path):
@@ -224,6 +225,8 @@ def update_programs():
             statuses[p] = update_program(p)
         elif (config.db["programs"][p]["update_url"] and config.read_config("UpdateURLPrograms")):
             statuses[p] = update_program(p)
+        else:
+            statuses[p] = "Does not update"
         progress += increment
         generic.progress(progress)
     if progress < 100:
@@ -374,6 +377,10 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
         elif file_version == 13:
             config.vprint("Adding 'UpdateURLPrograms' to config database.")
             config.db["options"]["UpdateURLPrograms"] = False
+        
+        elif file_version == 14:
+            config.vprint("Adding 'PressEnterKey' to config database.")
+            config.db["options"]["PressEnterKey"] = True
 
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
@@ -479,7 +486,8 @@ def create_db():
             "AutoInstall": False,
             "ShellFile": config.get_shell_file(),
             "SkipQuestions": False,
-            "UpdateURLPrograms": False
+            "UpdateURLPrograms": False,
+            "PressEnterKey": True
         },
         "version": {
             "file_version": config.file_version,
@@ -519,9 +527,11 @@ def remove_paths_and_binlinks(program):
         program (str): Program to remove PATHs and binlinks of
 
     Returns:
-        str: "Complete"
+        str: "Complete" or "None exist"
 
     """
+    if not config.db["programs"][program]["has_path"] and config.db["programs"][program]["binlinks"] == []:
+        return "None exist"
     config.remove_line(program, "~/.tarstall/.bashrc", 'poundword')
     config.db["programs"][program]["has_path"] = False
     config.db["programs"][program]["binlinks"] = []

@@ -126,7 +126,7 @@ def gui_loop():
 
 def wget_wizard(program):
     if not config.check_bin("wget"):
-        generic.pprint("You must have 'wget' installed to use this feature!")
+        generic.ppause("You must have 'wget' installed to use this feature!")
         return
     while True:
         if config.db["programs"][program]["update_url"]:
@@ -263,12 +263,14 @@ b - Swap branches in tarstall. Allows you to get updates sooner at the cost of p
 m - Whether or not to use the GUI for tarstall. Currently {gui}.
 s - Whether or not to skip ending questions and confirmations. Currently {skip}.
 u - Whether or not to update programs that have a URL attatched to them for updating. Currently {url}.
+c - Whether or not to have some messages have you "Press ENTER to continue...". Currently {skipenter}.
 e - Exit tarstall""".format(
             au=generic.endi(config.read_config("AutoInstall")), v=generic.endi(config.read_config("Verbose")),
             b=config.db["version"]["branch"], gui=generic.endi(config.read_config("Mode") == "gui"),
-            skip=generic.endi(config.read_config("SkipQuestions")), url=generic.endi(config.read_config("UpdateURLPrograms"))
+            skip=generic.endi(config.read_config("SkipQuestions")), url=generic.endi(config.read_config("UpdateURLPrograms")),
+            skipenter=generic.endi(config.read_config("PressEnterKey"))
         )
-        option = generic.get_input(msg, ['au', 'v', 'b', 'm', 's', 'u', 'e'], 'e', 
+        option = generic.get_input(msg, ['au', 'v', 'b', 'm', 's', 'u', 'c', 'e'], 'e', 
         ["Autoupdate", "Verbosity", "Change Branches", "Change Interaction Mode", "Skip Questions", "Update URL-Attatched Programs", "Exit"])
         if option == 'au':
             if not prog_manage.can_update:
@@ -285,21 +287,23 @@ e - Exit tarstall""".format(
                 config.change_config("Mode", "change", "gui")
                 prog_manage.create_desktop(None, "tarstall", "~/.tarstall/tarstall_execs/tarstall", 
                 "Run tarstall's GUI", "False", ["Utility"], "", "~/.tarstall/tarstall_execs/")
-                generic.pprint("Changed to GUI mode! Please restart tarstall.")
+                generic.ppause("Changed to GUI mode! Restart tarstall to confirm your changes!")
             else:
                 config.change_config("Mode", "change", "cli")
                 os.remove(config.full("~/.local/share/applications/tarstall.desktop"))
-                generic.pprint("Changed to CLI mode! Please restart tarstall.")
+                generic.ppause("Changed to CLI mode! Restart tarstall to confirm your changes!")
             key = None
         elif option == 's':
             key = "SkipQuestions"
         elif option == 'u':
             key = "UpdateURLPrograms"
+        elif option == 'c':
+            key = "PressEnterKey"
         elif option == 'e':
             return
         if key is not None:
             new_value = config.change_config(key, "flip")
-            generic.pprint("\n{key} mode {value}!".format(key=key, value=generic.endi(new_value)))
+            generic.ppause("\n{key} mode {value}!".format(key=key, value=generic.endi(new_value)))
 
 
 def pathify(program):
@@ -311,9 +315,9 @@ def pathify(program):
     """
     status = prog_manage.pathify(program)
     if status == "Complete":
-        generic.pprint("Program added to PATH!")
+        generic.ppause("Program added to PATH!")
     elif status == "Already there":
-        generic.pprint("Program already added to PATH!")
+        generic.ppause("Program already added to PATH!")
 
 
 def binlink(program):
@@ -330,8 +334,8 @@ def binlink(program):
             return
         status = prog_manage.add_binlink(file_chosen, program)
         if status == "Already there":
-            generic.pprint("Binlink not added since it already exists!")
-        yn = generic.get_input('Would you like to continue adding files to be run directly?', ['y', 'n'], 'n')
+            generic.ppause("Binlink not added since it already exists!")
+        yn = generic.get_input('Would you like to add another binlink?', ['y', 'n'], 'n')
 
 
 def desktop_wizard(program):
@@ -376,9 +380,9 @@ def desktop_wizard(program):
     status = prog_manage.create_desktop(program, name, program_file, comment, should_terminal,
                                         chosen_categories, icon)
     if status == "Created":
-        generic.pprint(".desktop file successfully created!")
+        generic.ppause(".desktop file successfully created!")
     elif status == "Already exists":
-        generic.pprint(".desktop file already exists!")
+        generic.ppause(".desktop file already exists!")
 
 
 def install_wrap_up(program):
@@ -401,6 +405,38 @@ def install_wrap_up(program):
         if yn == 'y':
             desktop_wizard(program)
     generic.pprint("Installation complete!")
+
+
+def update_program_gui(program):
+    """Update a Program and Print Result to User.
+
+    Args:
+        program (str): Program to update.
+
+    """
+    status = prog_manage.update_program(program)
+    if status == "Success":
+        generic.ppause("Program upgrading successful!")
+    elif status == "No update":
+        generic.ppause("Program is already up to date!")
+    elif status == "No git":
+        generic.ppause("Git not installed, please install it!")
+    elif status == "Error updating":
+        generic.ppause("Error while upgrading through git!")
+    elif status == "No script":
+        generic.ppause("Upgrade script no longer exists! The update script reference has been removed!")
+    elif status == "Script error":
+        generic.ppause("Error while executing the supplied upgrade script!")
+    elif status == "OSError":
+        generic.ppause("Shell not specified! Please specify one at the top of the supplied script (ex. #!/bin/sh)")
+    elif status == "No wget":
+        generic.ppause("Wget is not installed!")
+    elif status == "Wget error":
+        generic.ppause("An error occured while downloading the archive!")
+    elif status == "Install error":
+        generic.ppause("An error occured while installing the program!")
+    elif status == "Does not update":  # Can only be reached through -q, so no need to ppause here
+        generic.pprint("Program does not have any way of updating!")
 
 
 def manage(program):
@@ -479,7 +515,9 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
         elif option == 'r':
             status = prog_manage.remove_paths_and_binlinks(program)
             if status == "Complete":
-                generic.pprint("Removal of PATHs and binlinks complete!")
+                generic.ppause("Removal of PATHs and binlinks complete!")
+            elif status == "None exist":
+                generic.ppause("The program isn't added to PATH and has no binlinks, so none removed!")
         elif option == 'd':
             desktop_wizard(program)
         elif option == 'rd':
@@ -506,27 +544,7 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
         elif option == 'w' and g_msg == "w/":
             wget_wizard(program)
         elif option == 'q' and q != "":
-            status = prog_manage.update_program(program)
-            if status == "Success":
-                generic.pprint("Program upgrading successful!")
-            elif status == "No update":
-                generic.pprint("Program is already up to date!")
-            elif status == "No git":
-                generic.pprint("Git not installed, please install it!")
-            elif status == "Error updating":
-                generic.pprint("Error while upgrading through git!")
-            elif status == "No script":
-                generic.pprint("Upgrade script no longer exists! The update script reference has been removed!")
-            elif status == "Script error":
-                generic.pprint("Error while executing the supplied upgrade script!")
-            elif status == "OSError":
-                generic.pprint("Shell not specified! Please specify one at the top of the supplied script (ex. #!/bin/sh)")
-            elif status == "No wget":
-                generic.pprint("Wget is not installed!")
-            elif status == "Wget error":
-                generic.pprint("An error occured while downloading the archive!")
-            elif status == "Install error":
-                generic.pprint("An error occured while installing the program!")
+            update_program_gui(program)
         elif option == 'us':
             msg = """
 Please input the path to a script you would like to run to upgrade an installed program.
@@ -536,11 +554,11 @@ Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh")
 """
             status = prog_manage.update_script(program, generic.ask_file(msg))
             if status == "Success":
-                generic.pprint("Update script added successfully!")
+                generic.ppause("Update script added successfully!")
             elif status == "Bad path":
-                generic.pprint("Script specified does not exist!")
+                generic.ppause("Script specified does not exist!")
             elif status == "Wiped":
-                generic.pprint("Successfully removed post upgrade script.")
+                generic.ppause("Successfully removed post upgrade script.")
         elif option == 'e':
             break
 
@@ -597,7 +615,7 @@ def parse_args(args=None):
     group.add_argument('-k', '--remove-lock', help="Remove tarstall lock file (only do this if tarstall isn't already "
                                                 "running)", action="store_true")
     group.add_argument('-c', '--config', help="Change tarstall options", action="store_true")
-    group.add_argument('-q', '--update-programs', help="Update programs installed through git, ones with upgrade scripts, and ones with a URL assigned to them", action="store_true")
+    group.add_argument('-q', '--update-programs', help="Update programs that can be updated, or a single program if supplied.", nargs='?', const=True, type=str)
     if args is None:
         args = parser.parse_args()
     else:
@@ -640,9 +658,7 @@ def parse_args(args=None):
         sys.exit(1)
     
     elif status == "Old upgrade":
-        generic.pprint("You are upgrading from a VERY old version of tarstall.")
-        generic.pprint("Press ENTER to continue and wipe your database in the upgrade process!")
-        generic.ask("")
+        generic.ppause("You are upgrading from a VERY old version of tarstall. Upgradiing will wipe your database! To upgrade: ")
         prog_manage.tarstall_startup(start_fts=args.first, del_lock=args.remove_lock, old_upgrade=True)
 
     if args.install is not None:
@@ -790,7 +806,7 @@ def parse_args(args=None):
     elif args.config:
         configure()
     
-    elif args.update_programs:
+    elif args.update_programs is True:
         status = prog_manage.update_programs()
         if status == "No git":
             generic.pprint("git isn't installed, please install it!")
@@ -807,14 +823,25 @@ def parse_args(args=None):
                 elif status[p] == "No update":
                     msg += p + " is already up to date!\n"
                 elif status[p] == "OSError":
-                    msg += p + " does not have #!/bin/sh or similar specified at the top of its file!"
+                    msg += p + " does not have #!/bin/sh or similar specified at the top of its file!\n"
+                    exit_code = 1
+                elif status[p] == "Does not update":
+                    msg += p + " does not update or has a URL as its only update option!\n"
                 else:
                     msg += p + " did not update successfully!\n"
                     exit_code = 1
             generic.pprint(msg)
+    
+    elif args.update_programs:
+        if not args.update_programs in config.db["programs"]:
+            generic.pprint("{} not installed!".format(args.update_programs))
+            exit_code = 1
+        else:
+            update_program_gui(args.update_programs)
 
 
     elif not did_fts:
+        print(args.update_programs)
         generic.pprint("""
 tarstall. A Python based package manager to manage archives.
 Written by: hammy3502
