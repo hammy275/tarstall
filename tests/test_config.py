@@ -26,18 +26,18 @@ def test_replace_in_file():
 
 
 def test_read_config():
-    assert config.read_config("Verbose") is False
+    assert config.read_config("Verbose") is True
 
 
 def test_change_config():
     config.change_config("Verbose", "flip")
-    assert config.read_config("Verbose") is True
-    config.change_config("Verbose", "flip")
     assert config.read_config("Verbose") is False
+    config.change_config("Verbose", "flip")
+    assert config.read_config("Verbose") is True
 
 
 def test_vcheck():
-    assert config.vcheck() is False
+    assert config.vcheck() is True
 
 
 def test_lock():
@@ -56,7 +56,7 @@ def test_unlock():
 def test_get_db():
     assert config.get_db() == {
         "options": {
-            "Verbose": False,
+            "Verbose": True,
             "AutoInstall": False,
             "ShellFile": config.get_shell_file(),
             "SkipQuestions": False,
@@ -118,6 +118,9 @@ def test_create():
 
 def test_remove_line():
     # TODO: Test other modes
+    config.create("~/.tarstall/config")
+    config.add_line("Test Line", "~/.tarstall/config")
+    config.add_line("Verbose=True", "~/.tarstall/config")
     config.remove_line("Test Line", "~/.tarstall/config", "fuzzy")
     assert config.check_line("Verbose=False", "~/.tarstall/config", "fuzzy") is False
 
