@@ -414,7 +414,7 @@ def update_program_gui(program):
         program (str): Program to update.
 
     """
-    status = prog_manage.update_program(program)
+    status = prog_manage.update_program(program, True)
     if status == "Success":
         generic.ppause("Program upgrading successful!")
     elif status == "No update":

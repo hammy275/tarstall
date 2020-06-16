@@ -63,11 +63,13 @@ def remove_update_url(program):
     config.write_db()
 
 
-def wget_program(program):
+def wget_program(program, show_progress=False, progress_modifier=1):
     """Wget an Archive and Overwrite Program.
 
     Args:
         program (str): Program that has an update_url to update
+        show_progress (bool): Whether to display a progress bar. Defaults to False.
+        progress_modifier (int): The number to divide the total progress by. Defaults to 1.
 
     Returns:
         str: "No wget", "Wget error", "Install error" if install() fails, "Success" on success.
@@ -83,6 +85,7 @@ def wget_program(program):
             pass
         os.mkdir("/tmp/tarstall-temp2")
         os.chdir("/tmp/tarstall-temp2")
+        generic.progress(10 / progress_modifier, show_progress)
         config.vprint("Downloading archive...")
         url = config.db["programs"][program]["update_url"]
         if config.verbose:
@@ -91,23 +94,27 @@ def wget_program(program):
             err = call(["wget", url], stdout=DEVNULL, stderr=DEVNULL)
         if err != 0:
             return "Wget error"
+        generic.progress(65 / progress_modifier, show_progress)
         files = os.listdir()
         config.vprint("Renaming archive")
         os.rename("/tmp/tarstall-temp2/{}".format(files[0]), "/tmp/tarstall-temp2/{}".format(program + ".tar.gz"))
         os.chdir("/tmp/")
+        generic.progress(70 / progress_modifier, show_progress)
         config.vprint("Using install to install the program.")
         inst_status = pre_install("/tmp/tarstall-temp2/{}".format(program + ".tar.gz"), True, show_progress=False)
+        generic.progress(95 / progress_modifier, show_progress)
         try:
             rmtree(config.full("/tmp/tarstall-temp2"))
         except FileNotFoundError:
             pass
+        generic.progress(100 / progress_modifier, show_progress)
         if inst_status != "Installed":
             return "Install error"
         else:
             return "Success"
 
 
-def update_program(program):
+def update_program(program, show_progress=False):
     """Update Program.
 
     Args:
@@ -122,33 +129,43 @@ def update_program(program):
         something from wget_program().
 
     """
-    if config.db["programs"][program]["git_installed"]:
-        status = update_git_program(program)
-        if config.db["programs"][program]["post_upgrade_script"] is None:
-            return status
-        elif status != "Success":
-            return status
-    if config.db["programs"][program]["update_url"] is not None:
-        status = wget_program(program)
-        if config.db["programs"][program]["post_upgrade_script"] is None:
-            return status
-        elif status != "Success":
-            return status
+    progs = 0
+    if config.db["programs"][program]["git_installed"] or config.db["programs"][program]["update_url"] is not None:
+        progs += 1
     if config.db["programs"][program]["post_upgrade_script"] is not None:
-        if not config.db["programs"][program]["post_upgrade_script"]:
+        if not config.exists(config.db["programs"][program]["post_upgrade_script"]):
             config.db["programs"][program]["post_upgrade_script"] = None
             config.write_db()
             return "No script"
         else:
-            try:
-                err = call(config.db["programs"][program]["post_upgrade_script"], 
-                cwd=config.full("~/.tarstall/bin/{}".format(program)), stdout=c_out)
-                if err != 0:
-                    return "Script error"
-                else:
-                    return "Success"
-            except OSError:
-                return "OSError"
+            progs += 1
+    if config.db["programs"][program]["git_installed"]:
+        status = update_git_program(program, show_progress, progs)
+        if status != "Success" and status != "No update":
+            return status
+        elif config.db["programs"][program]["post_upgrade_script"] is None:
+            return status
+        elif status == "No update":
+            generic.progress(100)
+            return status
+    elif config.db["programs"][program]["update_url"] is not None:
+        status = wget_program(program, show_progress, progs)
+        if status != "Success":
+            return status
+        elif config.db["programs"][program]["post_upgrade_script"] is None:
+            return status
+    if config.db["programs"][program]["post_upgrade_script"] is not None:
+        try:
+            generic.progress(50 * (progs - 1), show_progress)
+            err = call(config.db["programs"][program]["post_upgrade_script"], 
+            cwd=config.full("~/.tarstall/bin/{}".format(program)), stdout=c_out)
+            generic.progress(100, show_progress)
+            if err != 0:
+                return "Script error"
+            else:
+                return "Success"
+        except OSError:
+            return "OSError"
     return "Does not update"
 
 
@@ -175,11 +192,13 @@ def update_script(program, script_path):
     return "Success"
 
 
-def update_git_program(program):
+def update_git_program(program, show_progress=False, progress_modifier=1):
     """Update Git Program.
 
     Args:
         program (str): Name of program to update
+        show_progress (bool): Whether to display a progress bar. Defaults to False.
+        progress_modifier (int): The number to divide the total progress by. Defaults to 1.
 
     Returns:
         str: "No git" if git isn't found, "Error updating" on a generic failure, "Success" on a successful update, and
@@ -189,18 +208,23 @@ def update_git_program(program):
     if not config.check_bin("git"):
         config.vprint("git isn't installed!")
         return "No git"
+    generic.progress(5 / progress_modifier, show_progress)
     outp = run(["git", "pull"], cwd=config.full("~/.tarstall/bin/{}".format(program)), stdout=PIPE, stderr=PIPE)
+    generic.progress(95 / progress_modifier, show_progress)
     err = outp.returncode
     output = str(outp.stdout) + "\n\n\n" + str(outp.stderr)
     if err != 0:
         config.vprint("Failed updating: {}".format(program))
+        generic.progress(100 / progress_modifier, show_progress)
         return "Error updating"
     else:
         if "Already up to date." in output:
             config.vprint("{} is already up to date!".format(program))
+            generic.progress(100 / progress_modifier, show_progress)
             return "No update"
         else:
             config.vprint("Successfully updated: {}".format(program))
+            generic.progress(100 / progress_modifier, show_progress)
             return "Success"
 
 
