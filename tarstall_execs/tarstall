@@ -537,6 +537,8 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
                 os.chdir(config.full("~/.tarstall/bin/" + program + "/"))
                 if config.get_shell_file() == ".zshrc":
                     call(["/bin/zsh"])
+                elif "fish" in config.get_shell_file():
+                    call(["/usr/bin/fish"])
                 else:
                     call(["/bin/bash"])
         elif option == 'g' and g_msg == "g/":

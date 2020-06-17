@@ -23,7 +23,7 @@ import shutil
 ###VERSIONS###
 
 version = "1.5.4"
-prog_internal_version = 95
+prog_internal_version = 96
 file_version = 15
 
 #############
@@ -53,14 +53,40 @@ def get_shell_file():
 
     """
     shell = os.environ["SHELL"]
+    return ".config/fish/config.fish"
     if "bash" in shell:
         vprint("Auto-detected bash")
         return ".bashrc"
     elif "zsh" in shell:
         vprint("Auto-detected zsh")
         return ".zshrc"
+    elif "fish" in shell:
+        vprint("Auto-detected fish")
+        return ".config/fish/config.fish"
     else:
         vprint("Couldn't auto-detect shell environment!")
+        return None
+
+
+def get_shell_path():
+    """Get Shell Path.
+
+    Attempts to automatically obtain the file used by the user's shell for PATH,
+    variable exporting, etc.
+
+    Returns:
+        str: Full path to the shell file.
+
+    """
+    shell_file = get_shell_file()
+    if shell_file:
+        if shell_file == ".bashrc":
+            return full("~/.bashrc")
+        elif shell_file == ".zshrc":
+            return full("~/.zshrc")
+        elif "fish" in shell_file:
+            return full("~/.config/fish/config.fish")
+    else:
         return None
 
 

@@ -557,6 +557,7 @@ def remove_paths_and_binlinks(program):
     if not config.db["programs"][program]["has_path"] and config.db["programs"][program]["binlinks"] == []:
         return "None exist"
     config.remove_line(program, "~/.tarstall/.bashrc", 'poundword')
+    config.remove_line(program, "~/.tarstall/.fishrc", 'poundword')
     config.db["programs"][program]["has_path"] = False
     config.db["programs"][program]["binlinks"] = []
     config.write_db()
@@ -582,11 +583,16 @@ def rename(program, new_name):
     config.db["programs"][new_name] = config.db["programs"].pop(program)
     config.replace_in_file("export PATH=$PATH:~/.tarstall/bin/" + program, 
     "export PATH=$PATH:~/.tarstall/bin/" + new_name, "~/.tarstall/.bashrc")
+    config.replace_in_file("set PATH $PATH ~/.tarstall/bin/" + program + ' # ' + program,
+    "set PATH $PATH ~/.tarstall/bin/" + new_name + ' # ' + new_name, "~/.tarstall/.fishrc")
     generic.progress(50)
     config.replace_in_file("'cd " + config.full('~/.tarstall/bin/' + program),
     "'cd " + config.full('~/.tarstall/bin/' + new_name), "~/.tarstall/.bashrc")
+    config.replace_in_file(";cd " + config.full("~/.tarstall/bin/" + program) + "/;./",
+    ";cd " + config.full("~/.tarstall/bin/" + new_name) + "/;./", "~/.tarstall/.fishrc")
     generic.progress(75)
     config.replace_in_file("# " + program, "# " + new_name, "~/.tarstall/.bashrc")
+    config.replace_in_file("# " + program, "# " + new_name, "~/.tarstall/.fishrc")
     move(config.full("~/.tarstall/bin/" + program), config.full("~/.tarstall/bin/" + new_name))
     config.write_db()
     generic.progress(100)
@@ -749,8 +755,10 @@ def add_binlink(file_chosen, program_internal_name):
         return "Already there"
     line_to_add = '\nalias ' + name + "='cd " + config.full('~/.tarstall/bin/' + program_internal_name) + \
     '/ && ./' + file_chosen + "' # " + program_internal_name
-    config.vprint("Adding alias to bashrc")
+    config.vprint("Adding alias to bashrc and fishrc")
     config.add_line(line_to_add, "~/.tarstall/.bashrc")
+    line_to_add = "\nfunction " + name + ";cd " + config.full("~/.tarstall/bin/" + program_internal_name) + "/;./" + file_chosen + ";end # " + program_internal_name
+    config.add_line(line_to_add, "~/.tarstall/.fishrc")
     config.db["programs"][program_internal_name]["binlinks"].append(name)
     config.write_db()
     return "Added"
@@ -759,7 +767,7 @@ def add_binlink(file_chosen, program_internal_name):
 def pathify(program_internal_name):
     """Add Program to Path.
 
-    Adds a program to PATH through ~/.tarstall/.bashrc
+    Adds a program to PATH through ~/.tarstall/.bashrc and ~/.tarstall/.fishrc
 
     Args:
         program_internal_name (str): Name of program to add to PATH
@@ -773,7 +781,10 @@ def pathify(program_internal_name):
     config.vprint('Adding program to PATH')
     line_to_write = "\nexport PATH=$PATH:~/.tarstall/bin/" + program_internal_name + ' # ' + program_internal_name
     config.add_line(line_to_write, "~/.tarstall/.bashrc")
+    line_to_write = "\nset PATH $PATH ~/.tarstall/bin/" + program_internal_name + ' # ' + program_internal_name
+    config.add_line(line_to_write, "~/.tarstall/.fishrc")
     config.db["programs"][program_internal_name]["has_path"] = True
+    config.write_db()
     return "Complete"
 
 
@@ -874,12 +885,16 @@ def erase():
     """
     if not (config.exists(config.full("~/.tarstall/tarstall_execs/tarstall"))):
         return "Not installed"
-    config.vprint('Removing source line from bashrc')
-    try:
-        config.remove_line("~/.tarstall/.bashrc", "~/{}".format(config.read_config("ShellFile")), "word")
-        to_return = "Erased"
-    except FileNotFoundError:
+    config.vprint('Removing source line from bashrc and fishrc')
+    if config.get_shell_file() is not None:
+        if "fish" in config.get_shell_file():
+            path_to_remove = "fishrc"
+        else:
+            path_to_remove = "bashrc"
+        config.remove_line("~/.tarstall/.{}".format(path_to_remove), config.get_shell_path(), "word")
+    else:
         to_return = "No line"
+    to_return = "Erased"
     generic.progress(10)
     config.vprint("Removing .desktop files")
     for prog in config.db["programs"]:
@@ -942,6 +957,11 @@ def first_time_setup():
     config.create("~/.tarstall/database")
     create_db()
     config.create("~/.tarstall/.bashrc")  # Create directories and files
+    if not config.exists("~/.config/fish"):
+        os.mkdir(config.full("~/.config/fish"))
+    if not config.exists("~/.config/fish/config.fish"):
+        config.create("~/.config/fish/config.fish")
+    config.create("~/.tarstall/.fishrc")
     generic.progress(15)
     progress = 15
     files = os.listdir()
@@ -956,12 +976,12 @@ def first_time_setup():
         progress += prog_change
         generic.progress(progress)
     generic.progress(70)
-    shell_file = config.read_config("ShellFile")
+    shell_file = config.get_shell_path()
     if shell_file is None:
         to_return = "Unsupported shell"
     else:
         to_return = "Success"
-        config.add_line("source ~/.tarstall/.bashrc\n", "~/{}".format(shell_file))
+        config.add_line("source ~/.tarstall/.fishrc\n", shell_file)
     generic.progress(75)
     copytree(config.full("./tarstall_execs/"), config.full("~/.tarstall/tarstall_execs/"))  # Move tarstall.py to execs dir
     generic.progress(90)
@@ -970,6 +990,7 @@ def first_time_setup():
     generic.progress(92)
     config.add_line("export PATH=$PATH:{}".format(
                 config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")  # Add bashrc line
+    config.add_line("set PATH $PATH {}".format(config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.fishrc")
     generic.progress(95)
     os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
     config.unlock()

@@ -89,7 +89,7 @@ def setup():
     # Checks
     status("Checking for anything missing for tarstall setup")
     supported_package_managers = ["apt", "apt-get", "dnf", "pacman"]
-    supported_shells = ["bash", "zsh"]
+    supported_shells = ["bash", "zsh", "fish"]
     if which("sudo") is None:
         status("Please install 'sudo'!")
         sys.exit(1)
