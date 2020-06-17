@@ -843,7 +843,6 @@ def parse_args(args=None):
 
 
     elif not did_fts:
-        print(args.update_programs)
         generic.pprint("""
 tarstall. A Python based package manager to manage archives.
 Written by: hammy3502
