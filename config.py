@@ -23,7 +23,7 @@ import shutil
 ###VERSIONS###
 
 version = "1.5.4"
-prog_internal_version = 96
+prog_internal_version = 97
 file_version = 15
 
 #############
@@ -53,7 +53,6 @@ def get_shell_file():
 
     """
     shell = os.environ["SHELL"]
-    return ".config/fish/config.fish"
     if "bash" in shell:
         vprint("Auto-detected bash")
         return ".bashrc"

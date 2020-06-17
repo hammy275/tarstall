@@ -107,6 +107,7 @@ def setup():
         if sshell in shell:
             shell_supported = True
             break
+    msg = "All of the checks passed!"
     if not shell_supported:
         msg = "WARNING: YOUR SHELL IS NOT SUPPORTED!\n\nYOU WILL HAVE TO MANUALLY ADD ~/.tarstall/tarstall_execs TO YOUR PATH, " \
         "AND ANY PATH/BINLINK FUNCTIONS WILL NOT WORK!\nWOULD YOU LIKE TO PROCEED WITH INSTALLATION ANYWAYS?"
@@ -115,7 +116,8 @@ def setup():
         if should_proceed.lower() != "yes":
             status("Installation cancelled!")
             sys.exit(1)
-    print("All of the checks passed!\n\n\n")
+        msg = "All of the checks besides the shell check passed, while the shell check was skipped by the user!"
+    print("{}\n\n\n".format(msg))
 
     # User information
     status("Welcome!\nThis installer is going to install tarstall! You'll need to enter your sudo password at some points. " + 
