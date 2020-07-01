@@ -255,23 +255,26 @@ E - Exit branch wizard and don't change branches."""
 def configure():
     """Change tarstall Options."""
     while True:
-        msg = """
-Select an option:
-au - Enable/disable the ability to install updates when tarstall is run. Currently {au}.
-v - Enable/disable verbose mode, showing more output when tarstall commands are run. Currently {v}.
-b - Swap branches in tarstall. Allows you to get updates sooner at the cost of possible bugs. Current branch: {b}.
-m - Whether or not to use the GUI for tarstall. Currently {gui}.
-s - Whether or not to skip ending questions and confirmations. Currently {skip}.
-u - Whether or not to update programs that have a URL attatched to them for updating. Currently {url}.
-c - Whether or not to have some messages have you "Press ENTER to continue...". Currently {skipenter}.
-e - Exit tarstall""".format(
-            au=generic.endi(config.read_config("AutoInstall")), v=generic.endi(config.read_config("Verbose")),
-            b=config.db["version"]["branch"], gui=generic.endi(config.read_config("Mode") == "gui"),
-            skip=generic.endi(config.read_config("SkipQuestions")), url=generic.endi(config.read_config("UpdateURLPrograms")),
-            skipenter=generic.endi(config.read_config("PressEnterKey"))
-        )
-        option = generic.get_input(msg, ['au', 'v', 'b', 'm', 's', 'u', 'c', 'e'], 'e', 
-        ["Autoupdate", "Verbosity", "Change Branches", "Change Interaction Mode", "Skip Questions", "Update URL-Attatched Programs", "Exit"])
+        options = [
+            {"shorthand": 'au', "gui-label": "Autoupdate", "description": "Enable/disable the ability to install updates when tarstall is run. Currently {au}."},
+            {"shorthand": 'v', "gui-label": "Verbosity", "description": "Enable/disable verbose mode, showing more output when tarstall commands are run. Currently {v}."},
+            {"shorthand": 'b', "gui-label": "Change Branches", "description": "Swap branches in tarstall. Allows you to get updates sooner at the cost of possible bugs. Current branch: {b}."},
+            {"shorthand": 'm', "gui-label": "Change Interaction Mode", "description": "Whether or not to use the GUI for tarstall. Currently {gui}."},
+            {"shorthand": 's', "gui-label": "Skip Questions", "description": "Whether or not to skip ending questions and confirmations. Currently {skip}."},
+            {"shorthand": 'u', "gui-label": "Update URL-Attatched Programs", "description": "Whether or not to update programs that have a URL attatched to them for updating. Currently {url}."},
+            {"shorthand": 'c', "gui-label": "Press ENTER messages (CLI only)", "description": "Whether or not to have some messages have you \"Press ENTER to continue...\". Currently {skipenter}."},
+            {"shorthand": 'e', "gui-label": "Exit", "description": "Exit tarstall", "is-default": True},
+        ]
+        replacements = [
+            {"{au}": generic.endi(config.read_config("AutoInstall"))},
+            {"{v}": generic.endi(config.read_config("Verbose"))},
+            {"{b}": config.db["version"]["branch"]},
+            {"{gui}": generic.endi(config.read_config("Mode") == "gui")},
+            {"{skip}": generic.endi(config.read_config("SkipQuestions"))},
+            {"{url}": generic.endi(config.read_config("UpdateURLPrograms"))},
+            {"{skipenter}": generic.endi(config.read_config("PressEnterKey"))}
+        ]
+        option = generic.easy_get_action(options, replacements)
         if option == 'au':
             if not prog_manage.can_update:
                 generic.pprint("requests isn't installed, so AutoInstall cannot be enabled!")
@@ -449,51 +452,34 @@ def manage(program):
     if not program in config.db["programs"]:
         generic.pprint("{} not installed!".format(program))
         return
-    options = ['b', 'p', 'n', 'u', 'r', 'd', 'rd', 's', 'us', 'e']
-    option_strings = ["Create binlinks", "Add to PATH", "Rename", "Uninstall", "Remove all binlinks and PATHs",
-        "Create a .desktop file", "Remove a .desktop file", "Launch a shell inside the program's directory",
-        "Add upgrade script", "Exit"]
-    q_msg = ""
-    q = ""
-    if config.db["programs"][program]["git_installed"]:
-        git_msg = "\ng - Manage git-related settings for {program}".format(program=program)
-        g_msg = "g/"
-        options.append('g')
-        option_strings.append("Manage git settings")
+    options = [
+        {"shorthand": 'b', "gui-label": "Create binlinks", "description": "Create binlinks for {program}"},
+        {"shorthand": 'p', "gui-label": "Add to PATH", "description": "Add {program} to PATH"},
+        {"shorthand": 'n', "gui-label": "Rename", "description": "Rename {program}"},
+        {"shorthand": 'u', "gui-label": "Uninstall", "description": "Uninstall {program}"},
+        {"shorthand": 'r', "gui-label": "Remove all binlinks and PATHs", "description": "Remove all binlinks + PATHs for {program}"},
+        {"shorthand": 'd', "gui-label": "Create .desktop file", "description": "Create a .desktop file for {program}"},
+        {"shorthand": 'rd', "gui-label": "Remove .desktop file", "description": "Remove a .desktop file for {program}"},
+        {"shorthand": 's', "gui-label": "Launch shell", "description": "Launch a shell inside {program}'s directory"},
+        {"shorthand": 'us', "gui-label": "Add upgrade script", "description": "Add {us} script for {program}"}
+    ]
+    can_update = config.db["programs"][program]["git_installed"] or config.db["programs"][program]["post_upgrade_script"] or config.db["programs"][program]["update_url"]
+    is_git = config.db["programs"][program]["git_installed"]
+    is_wget = config.db["programs"][program]["update_url"]
+    if is_git:
+        options.append({"shorthand": 'g', "gui-label": "Manage git settings", "description": "Manage git-related settings for {program}"})
         us = "a post-upgrade"
-        q_msg = "\nq - Upgrade {program}".format(program=program)
-        q = "q/"
-        options.append('q')
-        option_strings.append("Upgrade program")
     else:
-        git_msg = "\nw - Add/remove an update URL for {}".format(program)
-        g_msg = "w/"
-        options.append('w')
-        option_strings.append("Add/remove update URL")
-        if config.db["programs"][program]["update_url"]:
+        options.append({"shorthand": 'w', "gui-label": "Add/remove update URL", "description": "Add/remove an update URL for {program}"})
+        if is_wget:
             us = "a post-upgrade"
         else:
             us = "an upgrade"
-    if q == "" and (config.db["programs"][program]["post_upgrade_script"] or config.db["programs"][program]["update_url"]):
-        q_msg = "\nq - Upgrade {program}".format(program=program)
-        q = "q/"
-        options.append('q')
-        option_strings.append("Upgrade program")
+    if can_update:
+        options.append({"shorthand": 'q', "gui-label": "Upgrade program", "description": "Upgrade {program}"})
+    options.append({"shorthand": 'e', "gui-label": "Exit", "description": "Exit program management", "is-default": True})
     while True:
-        msg = """
-Enter an option to manage program:
-b - Create binlinks for {program}
-p - Add {program} to PATH
-n - Rename {program}
-u - Uninstall {program}
-r - Remove all binlinks + PATHs for {program}
-d - Create a .desktop file for {program}
-rd - Remove a .desktop file for {program}
-s - Launch a shell inside {program}'s directory{git}
-us - Add {us} script to program{q_msg}
-E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=us,
-        q_msg=q_msg)
-        option = generic.get_input(msg, options, 'e', option_strings)
+        option = generic.easy_get_action(options, [{"{program}": program}, {"{us}": us}])
         if option == 'b':
             binlink(program)
         elif option == 'p':
@@ -541,11 +527,11 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
                     call(["/usr/bin/fish"])
                 else:
                     call(["/bin/bash"])
-        elif option == 'g' and g_msg == "g/":
+        elif option == 'g' and is_git:
             git_wizard(program)
-        elif option == 'w' and g_msg == "w/":
+        elif option == 'w' and is_wget:
             wget_wizard(program)
-        elif option == 'q' and q != "":
+        elif option == 'q' and can_update:
             update_program_gui(program)
         elif option == 'us':
             msg = """
