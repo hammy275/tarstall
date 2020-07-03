@@ -130,7 +130,7 @@ def update_program(program, show_progress=False):
 
     """
     progs = 0
-    if config.db["programs"][program]["git_installed"] or config.db["programs"][program]["update_url"] is not None:
+    if config.db["programs"][program]["install_type"] == "git" or config.db["programs"][program]["update_url"] is not None:
         progs += 1
     if config.db["programs"][program]["post_upgrade_script"] is not None:
         if not config.exists(config.db["programs"][program]["post_upgrade_script"]):
@@ -139,7 +139,7 @@ def update_program(program, show_progress=False):
             return "No script"
         else:
             progs += 1
-    if config.db["programs"][program]["git_installed"]:
+    if config.db["programs"][program]["install_type"] == "git":
         status = update_git_program(program, show_progress, progs)
         if status != "Success" and status != "No update":
             return status
@@ -245,7 +245,7 @@ def update_programs():
     statuses = {}
     generic.progress(progress)
     for p in config.db["programs"].keys():
-        if not config.db["programs"][p]["update_url"] and (config.db["programs"][p]["git_installed"] or config.db["programs"][p]["post_upgrade_script"]):
+        if not config.db["programs"][p]["update_url"] and (config.db["programs"][p]["install_type"] == "git" or config.db["programs"][p]["post_upgrade_script"]):
             statuses[p] = update_program(p)
         elif (config.db["programs"][p]["update_url"] and config.read_config("UpdateURLPrograms")):
             statuses[p] = update_program(p)
@@ -405,6 +405,15 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
         elif file_version == 14:
             config.vprint("Adding 'PressEnterKey' to config database.")
             config.db["options"]["PressEnterKey"] = True
+        
+        elif file_version == 15:
+            config.vprint("Swapping to new saving of program type")
+            for program in config.db["programs"]:
+                if config.db["programs"][program]["git_installed"]:
+                    config.db["programs"][program]["install_type"] = "git"
+                else:
+                    config.db["programs"][program]["install_type"] = "default"
+                del config.db["programs"][program]["git_installed"]
 
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
@@ -451,6 +460,20 @@ def pre_install(program, overwrite=None, show_progress=True):
                 return install(program, True, True, show_progress)
     else:
         return install(program, show_progress=show_progress)  # No reinstall needed to be asked, install program
+    config.write_db()
+
+
+def pre_singleinstall(program, reinstall=None):
+    if not config.exists(program):
+        return "Bad file"
+    program_internal_name = config.name(program)
+    if program_internal_name in config.db["programs"]:  # Reinstall check
+        if reinstall is None:
+            return "Application exists"
+        else:
+            return single_install(program, program_internal_name, True)
+    else:
+        return single_install(program, program_internal_name)  # No reinstall needed to be asked, install program
     config.write_db()
 
 
@@ -574,38 +597,59 @@ def rename(program, new_name):
         str/None: New program name or None if program already exists
 
     """
+    is_single = config.db["programs"][program]["install_type"] == "single"
+    config.vprint("Checking that program name isn't already in use")
     if new_name in config.db["programs"]:
         return None
+    config.vprint("Updating .desktop files")
     for d in config.db["programs"][program]["desktops"]:
         config.replace_in_file("/.tarstall/bin/{}".format(program), "/.tarstall/bin/{}".format(new_name), 
         "~/.local/share/applications/{}.desktop".format(d))
+        if is_single:
+            config.replace_in_file("/.tarstall/bin/{}/{}".format(new_name, program), "/.tarstall/bin/{}/{}".format(new_name, new_name), 
+        "~/.local/share/applications/{}.desktop".format(d))
+            move(config.full("~/.local/share/applications/{p}-{p}.desktop".format(p=program)), 
+            config.full("~/.local/share/applications/{p}-{p}.desktop".format(p=new_name)))
     generic.progress(25)
+    config.vprint("Replacing PATHs")
     config.db["programs"][new_name] = config.db["programs"].pop(program)
     config.replace_in_file("export PATH=$PATH:~/.tarstall/bin/" + program, 
     "export PATH=$PATH:~/.tarstall/bin/" + new_name, "~/.tarstall/.bashrc")
     config.replace_in_file("set PATH $PATH ~/.tarstall/bin/" + program + ' # ' + program,
     "set PATH $PATH ~/.tarstall/bin/" + new_name + ' # ' + new_name, "~/.tarstall/.fishrc")
     generic.progress(50)
+    config.vprint("Replacing binlinks")
     config.replace_in_file("'cd " + config.full('~/.tarstall/bin/' + program),
     "'cd " + config.full('~/.tarstall/bin/' + new_name), "~/.tarstall/.bashrc")
     config.replace_in_file(";cd " + config.full("~/.tarstall/bin/" + program) + "/;./",
     ";cd " + config.full("~/.tarstall/bin/" + new_name) + "/;./", "~/.tarstall/.fishrc")
+    if is_single:
+        config.replace_in_file("./" + program, "./" + new_name, "~/.tarstall/.bashrc")
+        config.replace_in_file("alias " + program, "alias " + new_name, "~/.tarstall/.bashrc")
+        config.replace_in_file("./" + program, "./" + new_name, "~/.tarstall/.fishrc")
+        config.replace_in_file("function " + program, "function " + new_name, "~/.tarstall/.fishrc")
     generic.progress(75)
+    config.vprint("Replacing program recognisers")
     config.replace_in_file("# " + program, "# " + new_name, "~/.tarstall/.bashrc")
     config.replace_in_file("# " + program, "# " + new_name, "~/.tarstall/.fishrc")
     move(config.full("~/.tarstall/bin/" + program), config.full("~/.tarstall/bin/" + new_name))
     config.write_db()
+    generic.progress(90)
+    if is_single:
+        config.vprint("Renaming single-file")
+        move(config.full("~/.tarstall/bin/{}/{}".format(new_name, program)), config.full("~/.tarstall/bin/{}/{}".format(new_name, new_name)))
     generic.progress(100)
     return new_name
 
 
-def finish_install(program_internal_name, is_git=False):
+def finish_install(program_internal_name, install_type="default"):
     """End of Install.
 
     Ran after every program install.
 
     Args:
         program_internal_name (str): Name of program as stored in the database
+        install_type (str): Type of install. Should be 'default', 'git', or 'single'. Defaults to "default"
 
     Returns:
         str: "Installed".
@@ -619,7 +663,7 @@ def finish_install(program_internal_name, is_git=False):
         pass
     config.vprint("Adding program to tarstall list of programs")
     generic.progress(95)
-    config.db["programs"].update({program_internal_name: {"git_installed": is_git, "desktops": [], 
+    config.db["programs"].update({program_internal_name: {"install_type": install_type, "desktops": [], 
     "post_upgrade_script": None, "update_url": None, "has_path": False, "binlinks": []}})
     config.write_db()
     generic.progress(100)
@@ -730,7 +774,7 @@ def gitinstall(git_url, program_internal_name, overwrite=False, reinstall=False)
     if overwrite:
         call(["rsync", "-a", "/tmp/tarstall-temp/{}/".format(program_internal_name), config.full("~/.tarstall/bin/{}".format(program_internal_name))], stdout=c_out)
     if not overwrite:
-        return finish_install(program_internal_name, True)
+        return finish_install(program_internal_name, "git")
     else:
         generic.progress(100)
         return "Installed"
@@ -1142,6 +1186,39 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
     else:
         generic.progress(100, show_progress)
         return "Installed"
+
+
+def single_install(program, program_internal_name, reinstall=False):
+    """Install Single File.
+
+    Will create a folder to put the single file in.
+
+    Args:
+        program (str): Path to file to install
+        program_internal_name (str): Name to use internally for program
+        reinstall (bool, optional): Whether to reinstall or not. Defaults to False.
+
+    """
+    if not reinstall:
+        config.vprint("Creating folder to house file in")
+        os.mkdir(config.full("~/.tarstall/bin/{}".format(program_internal_name)))
+    generic.progress(5)
+    config.vprint("Marking executable as... executable")
+    os.system('sh -c "chmod +x {}"'.format(program))
+    generic.progress(10)
+    if reinstall:
+        config.vprint("Deleting old single-executable...")
+        os.remove(config.full("~/.tarstall/bin/{p}/{p}".format(p=program_internal_name)))
+    generic.progress(15)
+    config.vprint("Moving to tarstall directory and renaming...")
+    move(config.full(program), config.full("~/.tarstall/bin/{p}/{p}".format(p=program_internal_name)))
+    generic.progress(90)
+    if not reinstall:
+        return finish_install(program_internal_name, "single")
+    else:
+        generic.progress(100)
+        return "Installed"
+
 
 
 def dirinstall(program_path, program_internal_name, overwrite=False, reinstall=False):

@@ -22,9 +22,9 @@ import shutil
 
 ###VERSIONS###
 
-version = "1.5.4"
-prog_internal_version = 99
-file_version = 15
+version = "1.6.0"
+prog_internal_version = 100
+file_version = 16
 
 #############
 
@@ -275,9 +275,11 @@ def extension(program):
         return program[-3:].lower()
     elif program[-4:].lower() in ['.zip', '.rar', '.git']:
         return program[-4:]
-    else:
-        # Default to returning the last 7 characters
+    elif program[-7:].lower() in ['.tar.gz', '.tar.xz']:
         return program[-7:]
+    else:
+        # Default to returning everything after the last .
+        return program[program.rfind("."):]
 
 
 def exists(file_name):
@@ -476,7 +478,7 @@ Database structure
     }
     "programs": {
         "package": {
-            "git_installed": False,
+            "install_type": "default",
             "post_upgrade_script": None,
             "desktops": [
                 "desktop_file_name"

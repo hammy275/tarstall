@@ -12,5 +12,5 @@ def pre_test(monkeypatch):
 
     prog_manage.verbose_toggle()
 
-    monkeypatch.setattr('sys.stdin', StringIO("n\nn\nn\nn\nn\nn\nn\nn\nn\nn\nn\nn\nn\n"))
+    monkeypatch.setattr('sys.stdin', StringIO("n\n"*3))
     prog_manage.install("./tests/fake_packages/package.tar.gz")

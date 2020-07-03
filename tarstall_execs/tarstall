@@ -341,14 +341,17 @@ def binlink(program):
         yn = generic.get_input('Would you like to add another binlink?', ['y', 'n'], 'n')
 
 
-def desktop_wizard(program):
+def desktop_wizard(program, is_single=False):
     """Desktop Creation Wizard.
 
     Args:
         program (str): Program to create .desktop file of
 
     """
-    program_file = generic.file_browser(config.full('~/.tarstall/bin/' + program + '/'))
+    if is_single:
+        program_file = program
+    else:
+        program_file = generic.file_browser(config.full('~/.tarstall/bin/' + program + '/'))
     if program_file is None:
         return
     comment = "/"
@@ -388,7 +391,7 @@ def desktop_wizard(program):
         generic.ppause(".desktop file already exists!")
 
 
-def install_wrap_up(program):
+def install_wrap_up(program, is_single=False):
     """End of Install.
 
     Runs at the end of an install to ask users about different "shortcut" creations/PATH creation
@@ -398,15 +401,24 @@ def install_wrap_up(program):
 
     """
     if not config.read_config("SkipQuestions"):
-        yn = generic.get_input('Would you like to add the program to your PATH?', ['y', 'n'], 'y', ["Yes", "No"])
-        if yn == 'y':
-            pathify(program)
-        yn = generic.get_input('Would you like to create a binlink?', ['y', 'n'], 'n', ["Yes", "No"])
-        if yn == 'y':
-            binlink(program)
-        yn = generic.get_input('Would you like to create a desktop file?', ['y', 'n'], 'n', ["Yes", "No"])
-        if yn == 'y':
-            desktop_wizard(program)
+        if is_single:
+            yn = generic.get_input('Would you like to create the binlink for this program?', ['y', 'n'], 'n', ["Yes", "No"])
+            if yn == 'y':
+                prog_manage.add_binlink(program, program)
+                generic.ppause("Binlink created!")
+            yn = generic.get_input('Would you like to create the desktop file for this program?', ['y', 'n'], 'n', ["Yes", "No"])
+            if yn == 'y':
+                desktop_wizard(program, True)
+        else:
+            yn = generic.get_input('Would you like to add the program to your PATH?', ['y', 'n'], 'y', ["Yes", "No"])
+            if yn == 'y':
+                pathify(program)
+            yn = generic.get_input('Would you like to create a binlink?', ['y', 'n'], 'n', ["Yes", "No"])
+            if yn == 'y':
+                binlink(program)
+            yn = generic.get_input('Would you like to create a desktop file?', ['y', 'n'], 'n', ["Yes", "No"])
+            if yn == 'y':
+                desktop_wizard(program)
     generic.pprint("Installation complete!")
 
 
@@ -452,19 +464,32 @@ def manage(program):
     if not program in config.db["programs"]:
         generic.pprint("{} not installed!".format(program))
         return
-    options = [
-        {"shorthand": 'b', "gui-label": "Create binlinks", "description": "Create binlinks for {program}"},
-        {"shorthand": 'p', "gui-label": "Add to PATH", "description": "Add {program} to PATH"},
-        {"shorthand": 'n', "gui-label": "Rename", "description": "Rename {program}"},
-        {"shorthand": 'u', "gui-label": "Uninstall", "description": "Uninstall {program}"},
-        {"shorthand": 'r', "gui-label": "Remove all binlinks and PATHs", "description": "Remove all binlinks + PATHs for {program}"},
-        {"shorthand": 'd', "gui-label": "Create .desktop file", "description": "Create a .desktop file for {program}"},
-        {"shorthand": 'rd', "gui-label": "Remove .desktop file", "description": "Remove a .desktop file for {program}"},
-        {"shorthand": 's', "gui-label": "Launch shell", "description": "Launch a shell inside {program}'s directory"},
-        {"shorthand": 'us', "gui-label": "Add upgrade script", "description": "Add {us} script for {program}"}
-    ]
-    can_update = config.db["programs"][program]["git_installed"] or config.db["programs"][program]["post_upgrade_script"] or config.db["programs"][program]["update_url"]
-    is_git = config.db["programs"][program]["git_installed"]
+    if config.db["programs"][program]["install_type"] == "single":
+        options = [
+            {"shorthand": 'b', "gui-label": "Create binlink", "description": "Create binlink for {program}"}, 
+            {"shorthand": 'n', "gui-label": "Rename", "description": "Rename {program}"},
+            {"shorthand": 'u', "gui-label": "Uninstall", "description": "Uninstall {program}"},
+            {"shorthand": 'r', "gui-label": "Remove binlink", "description": "Remove binlink for {program}"},
+            {"shorthand": 'd', "gui-label": "Create .desktop file", "description": "Create the .desktop file for {program}"},
+            {"shorthand": 'rd', "gui-label": "Remove .desktop file", "description": "Remove the .desktop file for {program}"},
+            {"shorthand": 's', "gui-label": "Launch shell", "description": "Launch a shell inside {program}'s directory"},
+            {"shorthand": 'us', "gui-label": "Add upgrade script", "description": "Add {us} script for {program}"}
+        ]
+    else:
+        options = [
+            {"shorthand": 'b', "gui-label": "Create binlinks", "description": "Create binlinks for {program}"},
+            {"shorthand": 'p', "gui-label": "Add to PATH", "description": "Add {program} to PATH"},
+            {"shorthand": 'n', "gui-label": "Rename", "description": "Rename {program}"},
+            {"shorthand": 'u', "gui-label": "Uninstall", "description": "Uninstall {program}"},
+            {"shorthand": 'r', "gui-label": "Remove all binlinks and PATHs", "description": "Remove all binlinks + PATHs for {program}"},
+            {"shorthand": 'd', "gui-label": "Create .desktop file", "description": "Create a .desktop file for {program}"},
+            {"shorthand": 'rd', "gui-label": "Remove .desktop file", "description": "Remove a .desktop file for {program}"},
+            {"shorthand": 's', "gui-label": "Launch shell", "description": "Launch a shell inside {program}'s directory"},
+            {"shorthand": 'us', "gui-label": "Add upgrade script", "description": "Add {us} script for {program}"}
+        ]
+    can_update = config.db["programs"][program]["install_type"] == "git" or config.db["programs"][program]["post_upgrade_script"] or config.db["programs"][program]["update_url"]
+    is_git = config.db["programs"][program]["install_type"] == "git"
+    is_single = config.db["programs"][program]["install_type"] == "single"
     is_wget = config.db["programs"][program]["update_url"]
     if is_git:
         options.append({"shorthand": 'g', "gui-label": "Manage git settings", "description": "Manage git-related settings for {program}"})
@@ -481,8 +506,12 @@ def manage(program):
     while True:
         option = generic.easy_get_action(options, [{"{program}": program}, {"{us}": us}])
         if option == 'b':
-            binlink(program)
-        elif option == 'p':
+            if is_single:
+                prog_manage.add_binlink(program, program)
+                generic.ppause("Binlink created!")
+            else:
+                binlink(program)
+        elif option == 'p' and not is_single:
             pathify(program)
         elif option == 'n':
             new_name = "!"
@@ -501,20 +530,29 @@ def manage(program):
         elif option == 'r':
             status = prog_manage.remove_paths_and_binlinks(program)
             if status == "Complete":
-                generic.ppause("Removal of PATHs and binlinks complete!")
+                if is_single:
+                    generic.ppause("Binlink removal complete!")
+                else:
+                    generic.ppause("Removal of PATHs and binlinks complete!")
             elif status == "None exist":
-                generic.ppause("The program isn't added to PATH and has no binlinks, so none removed!")
+                if is_single:
+                    generic.ppause("The program doesn't have their binlink assigned!")
+                else:
+                    generic.ppause("The program isn't added to PATH and has no binlinks, so none removed!")
         elif option == 'd':
-            desktop_wizard(program)
+            desktop_wizard(program, is_single)
         elif option == 'rd':
-            msg = "Desktops:\n"
-            for d in config.db["programs"][program]["desktops"]:
-                msg += d + "\n"
-            inp = "/ choose desktop"
-            while not (inp in config.db["programs"][program]["desktops"]) and inp != "exit":
-                inp = generic.ask(msg + "\nPlease enter the desktop you would like to remove or type \"exit\" to exit: ")
-            if inp != "exit":
-                prog_manage.remove_desktop(program, inp)
+            if is_single:
+                prog_manage.remove_desktop(program, "{p}-{p}".format(p=program))
+            else:
+                msg = "Desktops:\n"
+                for d in config.db["programs"][program]["desktops"]:
+                    msg += d + "\n"
+                inp = "/ choose desktop"
+                while not (inp in config.db["programs"][program]["desktops"]) and inp != "exit":
+                    inp = generic.ask(msg + "\nPlease enter the desktop you would like to remove or type \"exit\" to exit: ")
+                if inp != "exit":
+                    prog_manage.remove_desktop(program, inp)
         elif option == 's':
             if mode == "gui":
                 generic.pprint("This feature can only be used from the command line version of tarstall!")
@@ -593,6 +631,7 @@ def parse_args(args=None):
     group.add_argument('-i', "--install", help="Install a .tar.gz, .tar.xz, or .zip")
     group.add_argument('-d', "--dirinstall", help="Install a directory")
     group.add_argument('-g', '--gitinstall', help="Install by retrieving a git repository")
+    group.add_argument('-s', '--singleinstall', help="Install a program stored as a single executable file")
     group.add_argument('-r', "--remove", help="Remove an insatlled program")
     group.add_argument('-l', "--list", help="List installed programs", action="store_true")
     group.add_argument('-f', "--first", help="Run first time setup", action="store_true")
@@ -701,6 +740,33 @@ def parse_args(args=None):
             exit_code = 1
         elif status == "Error":
             generic.pprint("An error occured while attempting to git clone!")
+            exit_code = 1
+    
+
+    elif args.singleinstall is not None:
+        status = prog_manage.pre_singleinstall(args.singleinstall)
+        if status == "Bad file":
+            generic.pprint("The specified file does not exist!")
+            exit_code = 1
+        elif status == "Application exists":
+            reinstall = generic.get_input("Application already exists! Would you like to reinstall?",
+                                      ["r", "n"], "n", ["Reinstall", "Cancel"])  # Ask to reinstall
+            if reinstall == "r":
+                status = prog_manage.pre_singleinstall(args.singleinstall, True)
+            else:
+                generic.pprint("Reinstall cancelled.")
+        elif status == "Installed":
+            install_wrap_up(config.name(args.singleinstall), True)
+        elif status.startswith("No"):
+            generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
+        elif status == "No rsync":
+            generic.pprint("rsync not installed! Please install it!")
+            exit_code = 1
+        elif status == "Bad name":
+            generic.pprint("Archive name cannot contain a space or #!")
+            exit_code = 1
+        elif status == "Error":
+            generic.pprint("Error occured while extracting archive!")
             exit_code = 1
 
 

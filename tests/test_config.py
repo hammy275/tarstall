@@ -70,7 +70,7 @@ def test_get_db():
         },
         "programs": {
             "package": {
-                "git_installed": False,
+                "install_type": "default",
                 "desktops": [],
                 "post_upgrade_script": None,
                 "update_url": None,

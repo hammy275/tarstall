@@ -100,7 +100,7 @@ def test_create_db():
     }
 
 
-def atest_erase():
+def test_erase():
     assert prog_manage.erase() == "Erased"
     assert os.path.isfile(config.full("~/.tarstall/tarstall.py")) is False
     try:
