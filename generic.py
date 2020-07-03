@@ -250,8 +250,7 @@ def endi(state):
     """
     if state:
         return "enabled"
-    else:
-        return "disabled"
+    return "disabled"
 
 
 def pprint(st, title="tarstall-gui"):

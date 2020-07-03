@@ -1025,7 +1025,10 @@ def first_time_setup():
         to_return = "Unsupported shell"
     else:
         to_return = "Success"
-        config.add_line("source ~/.tarstall/.fishrc\n", shell_file)
+        if "shrc" in config.get_shell_file():
+            config.add_line("source ~/.tarstall/.bashrc\n", shell_file)
+        elif "fish" in config.get_shell_file():
+            config.add_line("source ~/.tarstall/.fishrc\n", shell_file)
     generic.progress(75)
     copytree(config.full("./tarstall_execs/"), config.full("~/.tarstall/tarstall_execs/"))  # Move tarstall.py to execs dir
     generic.progress(90)
