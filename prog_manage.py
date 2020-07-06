@@ -41,6 +41,19 @@ if config.verbose:
 else:
     c_out = DEVNULL
 
+def repair_tarstall():
+    """Attempts to Repair Tarstall.
+
+    Unlike the Database repair-er, this won't have the user lose any data.
+
+    Returns:
+        str: Any string from update()
+
+    """
+    config.vprint("Forcing tarstall update to repair tarstall!")
+    return update(True, True)
+    
+
 def repair_db():
     """Attempts to Repair Tarstall DB.
 
@@ -401,7 +414,7 @@ def change_branch(branch, reset=False):
             return "Waiting"
 
 
-def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
+def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_fix=False):
     """Run on Startup.
 
     Runs on tarstall startup to perform any required checks and upgrades.
@@ -415,7 +428,8 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
         str: One of many different values indicating the status of tarstall. Those include:
         "Not installed", "Locked", "Good" (nothing bad happened), "Root", "Old" (happens
         when upgrading from tarstall prog_version 1), and "Unlocked" if tarstall 
-        was successfully unlocked. Can also return a string from first_time_setup.
+        was successfully unlocked. Can also return a string from first_time_setup or
+        "DB Broken" if the database is corrupt.
 
     """
     if config.locked():  # Lock check
@@ -444,6 +458,12 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False):
         os.mkdir(config.full("~/.tarstall/bin"))
         generic.progress(100)
         print("We're done! Continuing tarstall execution...")
+    
+    if config.db == {}:
+        if force_fix:
+            pass
+        else:
+            return "DB Broken"
 
     if start_fts:  # Check if -f or --first is supplied
         return first_time_setup()
@@ -911,6 +931,10 @@ def update(force_update=False, show_progress=True):
 
     Checks to see if we should update tarstall, then does so if one is available
 
+    Args:
+        force_update (bool): Whether or not to force an update to happen. Defaults to False.
+        show_progress (bool): Whether or not to show progress to the user. Defaults to True.
+
     Returns:
         str: "No requests" if requests isn't installed, "No internet if there isn't
         an internet connection, "Newer version" if the installed
@@ -959,7 +983,7 @@ def update(force_update=False, show_progress=True):
         config.vprint("Removing old tarstall files")
         os.chdir(config.full("~/.tarstall/"))
         files = os.listdir()
-        to_keep = ["bin", "database", ".bashrc"]
+        to_keep = ["bin", "database", ".bashrc", ".fishrc"]
         for f in files:
             if f not in to_keep:
                 if os.path.isdir(config.full("~/.tarstall/{}".format(f))):
@@ -970,7 +994,7 @@ def update(force_update=False, show_progress=True):
         config.vprint("Moving in new tarstall files")
         os.chdir("/tmp/tarstall-update/tarstall/")
         files = os.listdir()
-        to_ignore = [".git", ".gitignore", "README.md", "readme-images", "COPYING", "requirements.txt", "requirements-gui.txt", "tests", "install_tarstall"]
+        to_ignore = [".git", ".gitignore", "README.md", "readme-images", "COPYING", "requirements.txt", "requirements-gui.txt", "tests", "install_tarstall", "version"]
         for f in files:
             if f not in to_ignore:
                 move("/tmp/tarstall-update/tarstall/{}".format(f), config.full("~/.tarstall/{}".format(f)))

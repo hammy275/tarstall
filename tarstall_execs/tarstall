@@ -124,6 +124,48 @@ def gui_loop():
                 window.Element("manage").Update(disabled=False)
 
 
+def process_update_status(status):
+    """Show End User Status from prog_manage.update().
+
+    Args:
+        status (str): Status from prog_manage.update()
+
+    """
+    if status == "No git":
+        generic.pprint("git isn't installed, please install it!")
+        exit_code = 1
+    elif status == "No requests":
+        generic.pprint("requests isn't installed, please install it!")
+        exit_code = 1
+    elif status == "Newer version":
+        generic.pprint("The installed version is newer than the one found online!")
+    elif status == "No update":
+        generic.pprint("No update was found!")
+    elif status == "Failed":
+        generic.pprint("tarstall update failed!")
+        exit_code = 1
+    elif status == "No internet":
+        generic.pprint("Failed to connect to the internet!")
+        exit_code = 1
+    elif status == "Updated":
+        generic.pprint("tarstall successfully updated!")
+    elif status == "Repaired":
+        generic.pprint("tarstall successfully repaired!")
+        config.unlock()
+        sys.exit(0)
+
+
+def repair_tarstall():
+    yn = generic.get_input("Would you like to repair tarstall? This process does require internet access!", ['y', 'n'], 'n', ["Yes", "No"])
+    if yn != 'y':
+        generic.ppause("Repairs not attempted!")
+    else:
+        status = prog_manage.repair_tarstall()
+        if status == "Updated":
+            status = "Repaired"
+        process_update_status(status)
+
+
 def possibly_repair_db(possibly_corrupt=False):
     if not possibly_corrupt:
         msg = """
@@ -136,6 +178,7 @@ WARNING: This feature should ONLY be used if your database is corrupt in some ma
 - Upgrade scripts/post-upgrade scripts will no longer be linked to their respective programs!
 - The program type (default vs. git-installed vs. single-file) may be mis-recognized/misconfigured!
 - tarstall will assume you're on the master branch! If you're currently on beta, you will have to wait until the master branch surpasses your current version, or you have to switch to the beta branch after repairs!
+- Any update URLs programs have will no longer have them!
 
 If ~/.tarstall or ~/.tarstall/bin were tampered with, than database recovery may have invalid information mixed in!
 
@@ -298,7 +341,8 @@ def configure():
             {"shorthand": 's', "gui-label": "Skip Questions", "description": "Whether or not to skip ending questions and confirmations. Currently {skip}."},
             {"shorthand": 'u', "gui-label": "Update URL-Attatched Programs", "description": "Whether or not to update programs that have a URL attatched to them for updating. Currently {url}."},
             {"shorthand": 'c', "gui-label": "Press ENTER messages (CLI only)", "description": "Whether or not to have some messages have you \"Press ENTER to continue...\". Currently {skipenter}."},
-            {"shorthand": 'rd', "gui-label": "Attempt Database Repair", "description": "Attempt to repiar tarstall's database."},
+            {"shorthand": 'rd', "gui-label": "Attempt Database Repair", "description": "Attempt to repiar tarstall's database. Only use as a last resort!"},
+            {"shorthand": 'rt', "gui-label": "Attempt tarstall Repair", "description": "Attempt to repiar tarstall itself."},
             {"shorthand": 'e', "gui-label": "Exit", "description": "Exit tarstall", "is-default": True},
         ]
         replacements = [
@@ -340,6 +384,9 @@ def configure():
             key = "PressEnterKey"
         elif option == 'rd':
             possibly_repair_db()
+            key = None
+        elif option == 'rt':
+            repair_tarstall()
             key = None
         elif option == 'e':
             return
@@ -726,6 +773,17 @@ def parse_args(args=None):
     elif status == "Old upgrade":
         generic.ppause("You are upgrading from a VERY old version of tarstall. Upgradiing will wipe your database! To upgrade: ")
         prog_manage.tarstall_startup(start_fts=args.first, del_lock=args.remove_lock, old_upgrade=True)
+    
+    elif status == "DB Broken":
+        yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as knowledge of .desktop files, update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"])
+        if yn != 'y':
+            config.unlock()
+            generic.pprint("Not upgrading.")
+            sys.exit(1)
+        else:
+            prog_manage.repair_db()
+            config.unlock()
+            sys.exit(0)
 
     if args.install is not None:
         status = prog_manage.pre_install(args.install)
@@ -877,24 +935,7 @@ def parse_args(args=None):
 
     elif args.update:
         status = prog_manage.update()
-        if status == "No git":
-            generic.pprint("git isn't installed, please install it!")
-            exit_code = 1
-        elif status == "No requests":
-            generic.pprint("requests isn't installed, please install it!")
-            exit_code = 1
-        elif status == "Newer version":
-            generic.pprint("The installed version is newer than the one found online!")
-        elif status == "No update":
-            generic.pprint("No update was found!")
-        elif status == "Updated":
-            generic.pprint("tarstall successfully updated!")
-        elif status == "Failed":
-            generic.pprint("tarstall update failed!")
-            exit_code = 1
-        elif status == "No internet":
-            generic.pprint("Failed to connect to the internet!")
-            exit_code = 1
+        process_update_status(status)
 
     elif args.config:
         configure()
