@@ -124,6 +124,41 @@ def gui_loop():
                 window.Element("manage").Update(disabled=False)
 
 
+def possibly_repair_db(possibly_corrupt=False):
+    if not possibly_corrupt:
+        msg = """
+#########################################
+#################WARNING#################
+#########################################
+WARNING: This feature should ONLY be used if your database is corrupt in some manner, as information can and will be lost:
+
+- .desktop files previously made will no longer be tracked, and must be either deleted and re-created, or managed manually! They can be found at ~/.local/share/applications/ .
+- Upgrade scripts/post-upgrade scripts will no longer be linked to their respective programs!
+- The program type (default vs. git-installed vs. single-file) may be mis-recognized/misconfigured!
+- tarstall will assume you're on the master branch! If you're currently on beta, you will have to wait until the master branch surpasses your current version, or you have to switch to the beta branch after repairs!
+
+If ~/.tarstall or ~/.tarstall/bin were tampered with, than database recovery may have invalid information mixed in!
+
+Are you sure you would like to attempt repairing?
+#########################################"""
+    yn = generic.get_input(msg, ['y', 'n'], 'n', ["Yes", "No"])
+    if yn != 'y':
+        generic.ppause("Repairs not attempted!")
+    else:
+        yn = generic.get_input("Are you SURE you would like to attempt database repair?", ['y', 'n'], 'n', ["Yes", "No"])
+        if yn != 'y':
+            generic.ppause("Repairs not attempted!")
+        else:
+            yn = generic.get_input("If you proceed, .desktop data, (post-)upgrade script references will be lost, and programs may be misconfigured? Are you SURE you would like to continue?", ['y', 'n'], 'n', ["Yes", "No"])
+            if yn != 'y':
+                generic.ppause("Repairs not attempted!")
+            else:
+                prog_manage.repair_db()
+                generic.ppause("Database repair complete!")
+                config.unlock()
+                sys.exit(0)
+
+
 def wget_wizard(program):
     if not config.check_bin("wget"):
         generic.ppause("You must have 'wget' installed to use this feature!")
@@ -263,6 +298,7 @@ def configure():
             {"shorthand": 's', "gui-label": "Skip Questions", "description": "Whether or not to skip ending questions and confirmations. Currently {skip}."},
             {"shorthand": 'u', "gui-label": "Update URL-Attatched Programs", "description": "Whether or not to update programs that have a URL attatched to them for updating. Currently {url}."},
             {"shorthand": 'c', "gui-label": "Press ENTER messages (CLI only)", "description": "Whether or not to have some messages have you \"Press ENTER to continue...\". Currently {skipenter}."},
+            {"shorthand": 'rd', "gui-label": "Attempt Database Repair", "description": "Attempt to repiar tarstall's database."},
             {"shorthand": 'e', "gui-label": "Exit", "description": "Exit tarstall", "is-default": True},
         ]
         replacements = [
@@ -302,6 +338,9 @@ def configure():
             key = "UpdateURLPrograms"
         elif option == 'c':
             key = "PressEnterKey"
+        elif option == 'rd':
+            possibly_repair_db()
+            key = None
         elif option == 'e':
             return
         if key is not None:

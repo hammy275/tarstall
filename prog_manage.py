@@ -20,6 +20,7 @@ from subprocess import call, run, DEVNULL, PIPE
 import sys
 import re
 import getpass
+import datetime
 
 try:
     import requests
@@ -39,6 +40,73 @@ if config.verbose:
     c_out = None
 else:
     c_out = DEVNULL
+
+def repair_db():
+    """Attempts to Repair Tarstall DB.
+
+    WARNING: THIS SHOULD NOT BE USED UNLESS THE DATABASE CANNOT BE RECOVERED OTHERWISE
+    BECAUSE OF LIMITED KNOWLEDGE OF THE CODE ITSELF, THINGS SUCH AS PROGRAM TYPE HAVE TO BE ASSUMEDF
+    THIS ONLY EXISTS AS A LAST RESORT OPTION!!!!!!!
+    """
+    config.vprint("Attempting repair of database, things are going to get crazy!")
+
+    config.vprint("Getting stock database to build off of")
+    new_db = get_default_db()
+    generic.progress(5)
+
+    config.vprint("Re-discovering programs:")
+    for pf in os.listdir(config.full("~/.tarstall/bin/")):
+        print("Re-discovering " + pf, end="\r")
+        prog_info = {pf: {"install_type": "default", "desktops": [], 
+        "post_upgrade_script": None, "update_url": None, "has_path": False, "binlinks": []}}
+        if ".git" in os.listdir(config.full("~/.tarstall/bin/{}".format(pf))):
+            prog_info[pf]["install_type"] = "git"
+        elif len(os.listdir(config.full("~/.tarstall/bin/{}".format(pf)))) == 1:
+            prog_info[pf]["install_type"] = "single"
+        new_db["programs"].update(prog_info)
+    
+    generic.progress(20)
+    
+    config.vprint("Reading tarstall's bashrc file for further operations...")
+    with open(config.full("~/.tarstall/.bashrc")) as f:
+        bashrc_lines = f.readlines()
+    
+    generic.progress(25)
+
+    config.vprint("Re-registering PATHs")
+    for l in bashrc_lines:
+        if l.startswith("export PATH=$PATH") and '#' in l:
+            program = l[l.find("#")+2:].rstrip()
+            print("Re-registering PATH for " + program, end="\r")
+            new_db["programs"][program]["has_path"] = True
+    
+    generic.progress(45)
+    
+    config.vprint("Re-registering binlinks")
+    for l in bashrc_lines:
+        if l.startswith("alias ") and '#' in l:
+            program = l[l.find("#")+2:].rstrip()
+            print("Re-registering a binlink or binlinks for " + program, end="\r")
+            binlinked_file = l[6:l.find("=")]
+            new_db["programs"][program]["binlinks"].append(binlinked_file)
+    
+    generic.progress(70)
+    
+    config.vprint("Backing up old database...")
+    date_str = datetime.datetime.today().strftime("%d-%m-%Y-%H-%M-%S")
+    move(config.full("~/.tarstall/database"), config.full("~/.tarstall/database-backup-{}.bak".format(date_str)))
+
+    generic.progress(95)
+
+    config.vprint("Writing new database...")
+    config.db = new_db
+    config.write_db()
+
+    config.vprint("Database write complete!")
+    generic.progress(100)
+    return
+
+
 
 def add_upgrade_url(program, url):
     """Adds an Upgrade URL to a Program.
@@ -525,8 +593,8 @@ def pre_dirinstall(program, overwrite=None):
     config.write_db()
 
 
-def create_db():
-    """Creates Database."""
+def get_default_db():
+    """Get Default DB"""
     db_template = {
         "options": {
             "Verbose": False,
@@ -544,7 +612,13 @@ def create_db():
         "programs": {
         }
     }
-    config.db = db_template
+    return db_template
+
+
+
+def create_db():
+    """Creates Database."""
+    config.db = get_default_db()
     config.write_db()
 
 
