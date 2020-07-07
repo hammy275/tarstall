@@ -23,7 +23,7 @@ import shutil
 ###VERSIONS###
 
 version = "1.6.0"
-prog_internal_version = 103
+prog_internal_version = 104
 file_version = 16
 
 #############
@@ -239,7 +239,7 @@ def name(program):
     """
     program_internal_name = re.sub(r'.*/', '/', program)
     extension_length = len(extension(program))
-    program_internal_name = program_internal_name[1:(len(program_internal_name) - extension_length)]
+    program_internal_name = program_internal_name[program_internal_name.find('/')+1:(len(program_internal_name) - extension_length)]
     return program_internal_name
 
 
