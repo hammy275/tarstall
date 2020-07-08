@@ -23,7 +23,7 @@ import shutil
 ###VERSIONS###
 
 version = "1.6.0"
-prog_internal_version = 104
+prog_internal_version = 105
 file_version = 16
 
 #############

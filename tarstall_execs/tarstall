@@ -653,7 +653,7 @@ def manage(program):
                     call(["/bin/bash"])
         elif option == 'g' and is_git:
             git_wizard(program)
-        elif option == 'w' and is_wget:
+        elif option == 'w' and not is_git:
             wget_wizard(program)
         elif option == 'q' and can_update:
             update_program_gui(program)
