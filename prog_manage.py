@@ -27,11 +27,6 @@ try:
     can_update = True
 except ImportError:
     can_update = False
-    print("##########WARNING##########")
-    print("requests library not installed! Ability to update tarstall")
-    print("has been disabled! Use `pip3 install requests` or ")
-    print("`python3 -m pip install requests` to install it!")
-    print("###########################")
 
 import config
 import generic
@@ -40,6 +35,45 @@ if config.verbose:
     c_out = None
 else:
     c_out = DEVNULL
+
+
+def reinstall_deps():
+    """Reinstall Dependencies
+
+    Install the dependencies for tarstall by using the installer.
+
+    Returns:
+        str: "No wget", "Wget error", "Installer error", or "Success"
+
+    """
+    if which("wget") is None:
+        return "No wget"
+    config.vprint("Deleting and re-creating temp directory")
+    try:
+        rmtree("/tmp/tarstall-temp")
+    except FileNotFoundError:
+        pass
+    os.mkdir("/tmp/tarstall-temp/")
+    os.chdir("/tmp/tarstall-temp/")
+    generic.progress(5)
+    config.vprint("Obtaining tarstall installer...")
+    url = "https://raw.githubusercontent.com/hammy3502/tarstall/{}/install_tarstall".format(config.db["version"]["branch"])
+    err = call(["wget", url], stdout=c_out, stderr=c_out)
+    if err != 0:
+        return "Wget error"
+    generic.progress(60)
+    config.vprint("Creating file to skip tarstall's installer prompt")
+    config.create("/tmp/dont-ask-me")
+    config.vprint("Running tarstall setup to (re)-install dependencies")
+    err = call([sys.executable, "install_tarstall"], stdout=c_out, stderr=c_out)
+    generic.progress(95)
+    config.vprint("Removing installer skip file")
+    os.remove("/tmp/dont-ask-me")
+    generic.progress(100)
+    if err != 0:
+        return "Installer error"
+    return "Success"
+
 
 def repair_tarstall():
     """Attempts to Repair Tarstall.
@@ -440,10 +474,26 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
         str: One of many different values indicating the status of tarstall. Those include:
         "Not installed", "Locked", "Good" (nothing bad happened), "Root", "Old" (happens
         when upgrading from tarstall prog_version 1), and "Unlocked" if tarstall 
-        was successfully unlocked. Can also return a string from first_time_setup or
-        "DB Broken" if the database is corrupt.
+        was successfully unlocked. Can also return a string from first_time_setup, 
+        "DB Broken" if the database is corrupt, or "Missing Deps" if missing one or more dependencies.
 
     """
+    final_status = "Good"
+    missing_deps = False
+    try:
+        import tkinter
+    except (ModuleNotFoundError, ImportError):
+        missing_deps = True
+    try:
+        import PySimpleGUI
+    except (ModuleNotFoundError, ImportError):
+        missing_deps = True
+    try:
+        import requests
+    except (ModuleNotFoundError, ImportError):
+        missing_deps = True
+    if missing_deps:
+        final_status = "Missing Deps"
     if config.locked():  # Lock check
         config.vprint("Lock file detected at /tmp/tarstall-lock.")
         if del_lock:
@@ -514,6 +564,10 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
                 else:
                     config.db["programs"][program]["install_type"] = "default"
                 del config.db["programs"][program]["git_installed"]
+        
+        elif file_version == 16:
+            config.vprint("Adding WarnMissingDeps key...")
+            config.db["options"]["WarnMissingDeps"] = True
 
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
@@ -530,7 +584,7 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
         config.vprint("We're running as root!")
         return "Root"
     
-    return "Good"
+    return final_status
 
 
 def pre_install(program, overwrite=None, show_progress=True):

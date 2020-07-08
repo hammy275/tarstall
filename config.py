@@ -23,8 +23,8 @@ import shutil
 ###VERSIONS###
 
 version = "1.6.0"
-prog_internal_version = 107
-file_version = 16
+prog_internal_version = 108
+file_version = 17
 
 #############
 
@@ -103,7 +103,7 @@ def read_config(key):
     except KeyError:
         if key in ["Verbose", "AutoInstall", "SkipQuestions", "UpdateURLPrograms"]:
             return False
-        elif key in ["PressEnterKey"]:
+        elif key in ["PressEnterKey", "WarnMissingDeps"]:
             return True
         elif key == "ShellFile":
             return get_shell_file()

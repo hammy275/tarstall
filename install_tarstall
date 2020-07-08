@@ -120,12 +120,13 @@ def setup():
     print("{}\n\n\n".format(msg))
 
     # User information
-    status("Welcome!\nThis installer is going to install tarstall! You'll need to enter your sudo password at some points. " + 
-    "This will use your distro's package manager along with pip to install the dependencies required for tarstall!")
-    cancel = input("When you're ready to start installation, press ENTER! If you would like to cancel, type 'c', then press ENTER!")
-    if cancel.lower() == 'c':
-        status("Cancelling tarstall setup...")
-        sys.exit()
+    if not os.path.isfile("/tmp/dont-ask-me"):
+        status("Welcome!\nThis installer is going to install tarstall! You'll need to enter your sudo password at some points. " + 
+        "This will use your distro's package manager along with pip to install the dependencies required for tarstall!")
+        cancel = input("When you're ready to start installation, press ENTER! If you would like to cancel, type 'c', then press ENTER!")
+        if cancel.lower() == 'c':
+            status("Cancelling tarstall setup...")
+            sys.exit()
 
     # Install requirements obtained through package manager
     status("Installing tarstall's package requirements")

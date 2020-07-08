@@ -343,6 +343,7 @@ def configure():
             {"shorthand": 'c', "gui-label": "Press ENTER messages (CLI only)", "description": "Whether or not to have some messages have you \"Press ENTER to continue...\". Currently {skipenter}."},
             {"shorthand": 'rd', "gui-label": "Attempt Database Repair", "description": "Attempt to repiar tarstall's database. Only use as a last resort!"},
             {"shorthand": 'rt', "gui-label": "Attempt tarstall Repair", "description": "Attempt to repiar tarstall itself."},
+            {"shorthand": 'w', "gui-label": "Skip Missing Dependency Warnings", "description": "Whether or not to skip missing dependency warning. Currently {depen}"},
             {"shorthand": 'e', "gui-label": "Exit", "description": "Exit tarstall", "is-default": True},
         ]
         replacements = [
@@ -352,7 +353,8 @@ def configure():
             {"{gui}": generic.endi(config.read_config("Mode") == "gui")},
             {"{skip}": generic.endi(config.read_config("SkipQuestions"))},
             {"{url}": generic.endi(config.read_config("UpdateURLPrograms"))},
-            {"{skipenter}": generic.endi(config.read_config("PressEnterKey"))}
+            {"{skipenter}": generic.endi(config.read_config("PressEnterKey"))},
+            {"{depen}": generic.endi(config.read_config("WarnMissingDeps"))}
         ]
         option = generic.easy_get_action(options, replacements)
         if option == 'au':
@@ -388,6 +390,8 @@ def configure():
         elif option == 'rt':
             repair_tarstall()
             key = None
+        elif option == 'w':
+            key = "WarnMissingDeps"
         elif option == 'e':
             return
         if key is not None:
@@ -784,6 +788,23 @@ def parse_args(args=None):
             prog_manage.repair_db()
             config.unlock()
             sys.exit(0)
+
+    if status == "Missing Deps" and config.read_config("WarnMissingDeps"):
+        yn = generic.get_input("You are missing some dependencies to allow full usage of tarstall! Would you like to re-run the installer to install the dependencies?", ['y', 'n'], 'y', ["Yes", "No"])
+        if yn == 'y':
+            exit_code = 1
+            status = prog_manage.reinstall_deps()
+            if status == "Success":
+                generic.pprint("Successfully re-installed dependencies!")
+                exit_code = 0
+            elif status == "No wget":
+                generic.pprint("You don't have wget, please install it!")
+            elif status == "Wget error":
+                generic.pprint("An error occured while trying to obtain the tarstall installer. Are you connected to the internet?")
+            elif status == "Installer error":
+                generic.pprint("An error occured while running the installer")
+            config.unlock()
+            sys.exit(exit_code)
 
     if args.install is not None:
         overwrite = False
