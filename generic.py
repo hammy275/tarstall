@@ -136,7 +136,48 @@ def ask_file(question):
                 return values["answer"]
 
 
-def get_input(question, options, default, gui_labels=[]):
+def easy_get_action(options, replacements=[]):
+    """Easy get_input()
+
+    options should contain a list of dictionaries, each representing an option.
+    Dictionary should be layed out as such:
+    {
+        "shorthand": "b",  # One or two letters representing the option (the selector in CLI mode)
+        "gui-label": "Create binlinks",  # The label for the option to show in the GUI
+        "description": "Create binlinks for {program}",  # The description of the action being performed
+        "is-default": False  # Optional. If specified and set to True, will be the default option on an enter press.*
+    }
+
+    *: Note: If multiple parameters are passed in as default, only the first one will actually be the default.
+    Note: If default is not specified for any options, the last option will be the default.
+
+    Args:
+        options (dict[]): See dictionary format above.
+        replacements (dict[]): The key should be what you want to replace and the value be what you're replacing with.
+
+    """
+    gui_labels = []
+    options_list = []
+    default = None
+    msg = "Select an option:"
+    for option in options:
+        selector = option["shorthand"].lower()
+        try:
+            is_default = option["is-default"]
+        except KeyError:
+            is_default = False
+        if is_default or (default is None and option is options[len(options) - 1]):
+            default = option["shorthand"]
+            selector = selector.upper()
+        gui_labels.append(option["gui-label"])
+        options_list.append(option["shorthand"])
+        msg += "\n" + selector + " - " + option["description"]
+    for replacement in replacements:
+        msg = msg.replace(list(replacement.keys())[0], list(replacement.values())[0])
+    return get_input(msg, options_list, default, gui_labels, True)
+
+
+def get_input(question, options, default, gui_labels=[], from_easy=False):
     """Get User Input.
 
     Get user input, except make sure the input provided matches one of the options we're looking for
@@ -154,7 +195,7 @@ def get_input(question, options, default, gui_labels=[]):
     if config.mode == "cli":
         options_form = list(options)  # Otherwise, Python would "link" options_form with options
         options_form[options_form.index(default)] = options_form[options_form.index(default)].upper()
-        if len(options) > 3:
+        if len(options) > 3 or from_easy:
             question += "\n[" + "/".join(options_form) + "]"
         else:
             question += " [" + "/".join(options_form) + "]"
@@ -209,8 +250,7 @@ def endi(state):
     """
     if state:
         return "enabled"
-    else:
-        return "disabled"
+    return "disabled"
 
 
 def pprint(st, title="tarstall-gui"):

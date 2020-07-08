@@ -124,6 +124,84 @@ def gui_loop():
                 window.Element("manage").Update(disabled=False)
 
 
+def process_update_status(status):
+    """Show End User Status from prog_manage.update().
+
+    Args:
+        status (str): Status from prog_manage.update()
+
+    """
+    if status == "No git":
+        generic.pprint("git isn't installed, please install it!")
+        exit_code = 1
+    elif status == "No requests":
+        generic.pprint("requests isn't installed, please install it!")
+        exit_code = 1
+    elif status == "Newer version":
+        generic.pprint("The installed version is newer than the one found online!")
+    elif status == "No update":
+        generic.pprint("No update was found!")
+    elif status == "Failed":
+        generic.pprint("tarstall update failed!")
+        exit_code = 1
+    elif status == "No internet":
+        generic.pprint("Failed to connect to the internet!")
+        exit_code = 1
+    elif status == "Updated":
+        generic.pprint("tarstall successfully updated!")
+    elif status == "Repaired":
+        generic.pprint("tarstall successfully repaired!")
+        config.unlock()
+        sys.exit(0)
+
+
+def repair_tarstall():
+    yn = generic.get_input("Would you like to repair tarstall? This process does require internet access!", ['y', 'n'], 'n', ["Yes", "No"])
+    if yn != 'y':
+        generic.ppause("Repairs not attempted!")
+    else:
+        status = prog_manage.repair_tarstall()
+        if status == "Updated":
+            status = "Repaired"
+        process_update_status(status)
+
+
+def possibly_repair_db(possibly_corrupt=False):
+    if not possibly_corrupt:
+        msg = """
+#########################################
+#################WARNING#################
+#########################################
+WARNING: This feature should ONLY be used if your database is corrupt in some manner, as information can and will be lost:
+
+- .desktop files previously made will no longer be tracked, and must be either deleted and re-created, or managed manually! They can be found at ~/.local/share/applications/ .
+- Upgrade scripts/post-upgrade scripts will no longer be linked to their respective programs!
+- The program type (default vs. git-installed vs. single-file) may be mis-recognized/misconfigured!
+- tarstall will assume you're on the master branch! If you're currently on beta, you will have to wait until the master branch surpasses your current version, or you have to switch to the beta branch after repairs!
+- Any update URLs programs have will no longer have them!
+
+If ~/.tarstall or ~/.tarstall/bin were tampered with, than database recovery may have invalid information mixed in!
+
+Are you sure you would like to attempt repairing?
+#########################################"""
+    yn = generic.get_input(msg, ['y', 'n'], 'n', ["Yes", "No"])
+    if yn != 'y':
+        generic.ppause("Repairs not attempted!")
+    else:
+        yn = generic.get_input("Are you SURE you would like to attempt database repair?", ['y', 'n'], 'n', ["Yes", "No"])
+        if yn != 'y':
+            generic.ppause("Repairs not attempted!")
+        else:
+            yn = generic.get_input("If you proceed, .desktop data, (post-)upgrade script references will be lost, and programs may be misconfigured? Are you SURE you would like to continue?", ['y', 'n'], 'n', ["Yes", "No"])
+            if yn != 'y':
+                generic.ppause("Repairs not attempted!")
+            else:
+                prog_manage.repair_db()
+                generic.ppause("Database repair complete!")
+                config.unlock()
+                sys.exit(0)
+
+
 def wget_wizard(program):
     if not config.check_bin("wget"):
         generic.ppause("You must have 'wget' installed to use this feature!")
@@ -255,23 +333,30 @@ E - Exit branch wizard and don't change branches."""
 def configure():
     """Change tarstall Options."""
     while True:
-        msg = """
-Select an option:
-au - Enable/disable the ability to install updates when tarstall is run. Currently {au}.
-v - Enable/disable verbose mode, showing more output when tarstall commands are run. Currently {v}.
-b - Swap branches in tarstall. Allows you to get updates sooner at the cost of possible bugs. Current branch: {b}.
-m - Whether or not to use the GUI for tarstall. Currently {gui}.
-s - Whether or not to skip ending questions and confirmations. Currently {skip}.
-u - Whether or not to update programs that have a URL attatched to them for updating. Currently {url}.
-c - Whether or not to have some messages have you "Press ENTER to continue...". Currently {skipenter}.
-e - Exit tarstall""".format(
-            au=generic.endi(config.read_config("AutoInstall")), v=generic.endi(config.read_config("Verbose")),
-            b=config.db["version"]["branch"], gui=generic.endi(config.read_config("Mode") == "gui"),
-            skip=generic.endi(config.read_config("SkipQuestions")), url=generic.endi(config.read_config("UpdateURLPrograms")),
-            skipenter=generic.endi(config.read_config("PressEnterKey"))
-        )
-        option = generic.get_input(msg, ['au', 'v', 'b', 'm', 's', 'u', 'c', 'e'], 'e', 
-        ["Autoupdate", "Verbosity", "Change Branches", "Change Interaction Mode", "Skip Questions", "Update URL-Attatched Programs", "Exit"])
+        options = [
+            {"shorthand": 'au', "gui-label": "Autoupdate", "description": "Enable/disable the ability to install updates when tarstall is run. Currently {au}."},
+            {"shorthand": 'v', "gui-label": "Verbosity", "description": "Enable/disable verbose mode, showing more output when tarstall commands are run. Currently {v}."},
+            {"shorthand": 'b', "gui-label": "Change Branches", "description": "Swap branches in tarstall. Allows you to get updates sooner at the cost of possible bugs. Current branch: {b}."},
+            {"shorthand": 'm', "gui-label": "Change Interaction Mode", "description": "Whether or not to use the GUI for tarstall. Currently {gui}."},
+            {"shorthand": 's', "gui-label": "Skip Questions", "description": "Whether or not to skip ending questions and confirmations. Currently {skip}."},
+            {"shorthand": 'u', "gui-label": "Update URL-Attatched Programs", "description": "Whether or not to update programs that have a URL attatched to them for updating. Currently {url}."},
+            {"shorthand": 'c', "gui-label": "Press ENTER messages (CLI only)", "description": "Whether or not to have some messages have you \"Press ENTER to continue...\". Currently {skipenter}."},
+            {"shorthand": 'rd', "gui-label": "Attempt Database Repair", "description": "Attempt to repiar tarstall's database. Only use as a last resort!"},
+            {"shorthand": 'rt', "gui-label": "Attempt tarstall Repair", "description": "Attempt to repiar tarstall itself."},
+            {"shorthand": 'w', "gui-label": "Skip Missing Dependency Warnings", "description": "Whether or not to skip missing dependency warning. Currently {depen}"},
+            {"shorthand": 'e', "gui-label": "Exit", "description": "Exit tarstall", "is-default": True},
+        ]
+        replacements = [
+            {"{au}": generic.endi(config.read_config("AutoInstall"))},
+            {"{v}": generic.endi(config.read_config("Verbose"))},
+            {"{b}": config.db["version"]["branch"]},
+            {"{gui}": generic.endi(config.read_config("Mode") == "gui")},
+            {"{skip}": generic.endi(config.read_config("SkipQuestions"))},
+            {"{url}": generic.endi(config.read_config("UpdateURLPrograms"))},
+            {"{skipenter}": generic.endi(config.read_config("PressEnterKey"))},
+            {"{depen}": generic.endi(config.read_config("WarnMissingDeps"))}
+        ]
+        option = generic.easy_get_action(options, replacements)
         if option == 'au':
             if not prog_manage.can_update:
                 generic.pprint("requests isn't installed, so AutoInstall cannot be enabled!")
@@ -299,6 +384,14 @@ e - Exit tarstall""".format(
             key = "UpdateURLPrograms"
         elif option == 'c':
             key = "PressEnterKey"
+        elif option == 'rd':
+            possibly_repair_db()
+            key = None
+        elif option == 'rt':
+            repair_tarstall()
+            key = None
+        elif option == 'w':
+            key = "WarnMissingDeps"
         elif option == 'e':
             return
         if key is not None:
@@ -338,14 +431,17 @@ def binlink(program):
         yn = generic.get_input('Would you like to add another binlink?', ['y', 'n'], 'n')
 
 
-def desktop_wizard(program):
+def desktop_wizard(program, is_single=False):
     """Desktop Creation Wizard.
 
     Args:
         program (str): Program to create .desktop file of
 
     """
-    program_file = generic.file_browser(config.full('~/.tarstall/bin/' + program + '/'))
+    if is_single:
+        program_file = program
+    else:
+        program_file = generic.file_browser(config.full('~/.tarstall/bin/' + program + '/'))
     if program_file is None:
         return
     comment = "/"
@@ -385,7 +481,7 @@ def desktop_wizard(program):
         generic.ppause(".desktop file already exists!")
 
 
-def install_wrap_up(program):
+def install_wrap_up(program, is_single=False):
     """End of Install.
 
     Runs at the end of an install to ask users about different "shortcut" creations/PATH creation
@@ -395,15 +491,24 @@ def install_wrap_up(program):
 
     """
     if not config.read_config("SkipQuestions"):
-        yn = generic.get_input('Would you like to add the program to your PATH?', ['y', 'n'], 'y', ["Yes", "No"])
-        if yn == 'y':
-            pathify(program)
-        yn = generic.get_input('Would you like to create a binlink?', ['y', 'n'], 'n', ["Yes", "No"])
-        if yn == 'y':
-            binlink(program)
-        yn = generic.get_input('Would you like to create a desktop file?', ['y', 'n'], 'n', ["Yes", "No"])
-        if yn == 'y':
-            desktop_wizard(program)
+        if is_single:
+            yn = generic.get_input('Would you like to create the binlink for this program?', ['y', 'n'], 'n', ["Yes", "No"])
+            if yn == 'y':
+                prog_manage.add_binlink(program, program)
+                generic.ppause("Binlink created!")
+            yn = generic.get_input('Would you like to create the desktop file for this program?', ['y', 'n'], 'n', ["Yes", "No"])
+            if yn == 'y':
+                desktop_wizard(program, True)
+        else:
+            yn = generic.get_input('Would you like to add the program to your PATH?', ['y', 'n'], 'y', ["Yes", "No"])
+            if yn == 'y':
+                pathify(program)
+            yn = generic.get_input('Would you like to create a binlink?', ['y', 'n'], 'n', ["Yes", "No"])
+            if yn == 'y':
+                binlink(program)
+            yn = generic.get_input('Would you like to create a desktop file?', ['y', 'n'], 'n', ["Yes", "No"])
+            if yn == 'y':
+                desktop_wizard(program)
     generic.pprint("Installation complete!")
 
 
@@ -414,7 +519,7 @@ def update_program_gui(program):
         program (str): Program to update.
 
     """
-    status = prog_manage.update_program(program)
+    status = prog_manage.update_program(program, True)
     if status == "Success":
         generic.ppause("Program upgrading successful!")
     elif status == "No update":
@@ -449,54 +554,54 @@ def manage(program):
     if not program in config.db["programs"]:
         generic.pprint("{} not installed!".format(program))
         return
-    options = ['b', 'p', 'n', 'u', 'r', 'd', 'rd', 's', 'us', 'e']
-    option_strings = ["Create binlinks", "Add to PATH", "Rename", "Uninstall", "Remove all binlinks and PATHs",
-        "Create a .desktop file", "Remove a .desktop file", "Launch a shell inside the program's directory",
-        "Add upgrade script", "Exit"]
-    q_msg = ""
-    q = ""
-    if config.db["programs"][program]["git_installed"]:
-        git_msg = "\ng - Manage git-related settings for {program}".format(program=program)
-        g_msg = "g/"
-        options.append('g')
-        option_strings.append("Manage git settings")
-        us = "a post-upgrade"
-        q_msg = "\nq - Upgrade {program}".format(program=program)
-        q = "q/"
-        options.append('q')
-        option_strings.append("Upgrade program")
+    if config.db["programs"][program]["install_type"] == "single":
+        options = [
+            {"shorthand": 'b', "gui-label": "Create binlink", "description": "Create binlink for {program}"}, 
+            {"shorthand": 'n', "gui-label": "Rename", "description": "Rename {program}"},
+            {"shorthand": 'u', "gui-label": "Uninstall", "description": "Uninstall {program}"},
+            {"shorthand": 'r', "gui-label": "Remove binlink", "description": "Remove binlink for {program}"},
+            {"shorthand": 'd', "gui-label": "Create .desktop file", "description": "Create the .desktop file for {program}"},
+            {"shorthand": 'rd', "gui-label": "Remove .desktop file", "description": "Remove the .desktop file for {program}"},
+            {"shorthand": 's', "gui-label": "Launch shell", "description": "Launch a shell inside {program}'s directory"},
+            {"shorthand": 'us', "gui-label": "Add upgrade script", "description": "Add {us} script for {program}"}
+        ]
     else:
-        git_msg = "\nw - Add/remove an update URL for {}".format(program)
-        g_msg = "w/"
-        options.append('w')
-        option_strings.append("Add/remove update URL")
-        if config.db["programs"][program]["update_url"]:
+        options = [
+            {"shorthand": 'b', "gui-label": "Create binlinks", "description": "Create binlinks for {program}"},
+            {"shorthand": 'p', "gui-label": "Add to PATH", "description": "Add {program} to PATH"},
+            {"shorthand": 'n', "gui-label": "Rename", "description": "Rename {program}"},
+            {"shorthand": 'u', "gui-label": "Uninstall", "description": "Uninstall {program}"},
+            {"shorthand": 'r', "gui-label": "Remove all binlinks and PATHs", "description": "Remove all binlinks + PATHs for {program}"},
+            {"shorthand": 'd', "gui-label": "Create .desktop file", "description": "Create a .desktop file for {program}"},
+            {"shorthand": 'rd', "gui-label": "Remove .desktop file", "description": "Remove a .desktop file for {program}"},
+            {"shorthand": 's', "gui-label": "Launch shell", "description": "Launch a shell inside {program}'s directory"},
+            {"shorthand": 'us', "gui-label": "Add upgrade script", "description": "Add {us} script for {program}"}
+        ]
+    can_update = config.db["programs"][program]["install_type"] == "git" or config.db["programs"][program]["post_upgrade_script"] or config.db["programs"][program]["update_url"]
+    is_git = config.db["programs"][program]["install_type"] == "git"
+    is_single = config.db["programs"][program]["install_type"] == "single"
+    is_wget = config.db["programs"][program]["update_url"]
+    if is_git:
+        options.append({"shorthand": 'g', "gui-label": "Manage git settings", "description": "Manage git-related settings for {program}"})
+        us = "a post-upgrade"
+    else:
+        options.append({"shorthand": 'w', "gui-label": "Add/remove update URL", "description": "Add/remove an update URL for {program}"})
+        if is_wget:
             us = "a post-upgrade"
         else:
             us = "an upgrade"
-    if q == "" and (config.db["programs"][program]["post_upgrade_script"] or config.db["programs"][program]["update_url"]):
-        q_msg = "\nq - Upgrade {program}".format(program=program)
-        q = "q/"
-        options.append('q')
-        option_strings.append("Upgrade program")
+    if can_update:
+        options.append({"shorthand": 'q', "gui-label": "Upgrade program", "description": "Upgrade {program}"})
+    options.append({"shorthand": 'e', "gui-label": "Exit", "description": "Exit program management", "is-default": True})
     while True:
-        msg = """
-Enter an option to manage program:
-b - Create binlinks for {program}
-p - Add {program} to PATH
-n - Rename {program}
-u - Uninstall {program}
-r - Remove all binlinks + PATHs for {program}
-d - Create a .desktop file for {program}
-rd - Remove a .desktop file for {program}
-s - Launch a shell inside {program}'s directory{git}
-us - Add {us} script to program{q_msg}
-E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=us,
-        q_msg=q_msg)
-        option = generic.get_input(msg, options, 'e', option_strings)
+        option = generic.easy_get_action(options, [{"{program}": program}, {"{us}": us}])
         if option == 'b':
-            binlink(program)
-        elif option == 'p':
+            if is_single:
+                prog_manage.add_binlink(program, program)
+                generic.ppause("Binlink created!")
+            else:
+                binlink(program)
+        elif option == 'p' and not is_single:
             pathify(program)
         elif option == 'n':
             new_name = "!"
@@ -515,20 +620,29 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
         elif option == 'r':
             status = prog_manage.remove_paths_and_binlinks(program)
             if status == "Complete":
-                generic.ppause("Removal of PATHs and binlinks complete!")
+                if is_single:
+                    generic.ppause("Binlink removal complete!")
+                else:
+                    generic.ppause("Removal of PATHs and binlinks complete!")
             elif status == "None exist":
-                generic.ppause("The program isn't added to PATH and has no binlinks, so none removed!")
+                if is_single:
+                    generic.ppause("The program doesn't have their binlink assigned!")
+                else:
+                    generic.ppause("The program isn't added to PATH and has no binlinks, so none removed!")
         elif option == 'd':
-            desktop_wizard(program)
+            desktop_wizard(program, is_single)
         elif option == 'rd':
-            msg = "Desktops:\n"
-            for d in config.db["programs"][program]["desktops"]:
-                msg += d + "\n"
-            inp = "/ choose desktop"
-            while not (inp in config.db["programs"][program]["desktops"]) and inp != "exit":
-                inp = generic.ask(msg + "\nPlease enter the desktop you would like to remove or type \"exit\" to exit: ")
-            if inp != "exit":
-                prog_manage.remove_desktop(program, inp)
+            if is_single:
+                prog_manage.remove_desktop(program, "{p}-{p}".format(p=program))
+            else:
+                msg = "Desktops:\n"
+                for d in config.db["programs"][program]["desktops"]:
+                    msg += d + "\n"
+                inp = "/ choose desktop"
+                while not (inp in config.db["programs"][program]["desktops"]) and inp != "exit":
+                    inp = generic.ask(msg + "\nPlease enter the desktop you would like to remove or type \"exit\" to exit: ")
+                if inp != "exit":
+                    prog_manage.remove_desktop(program, inp)
         elif option == 's':
             if mode == "gui":
                 generic.pprint("This feature can only be used from the command line version of tarstall!")
@@ -537,13 +651,15 @@ E - Exit program management""".format(program=program, git=git_msg, g=g_msg, us=
                 os.chdir(config.full("~/.tarstall/bin/" + program + "/"))
                 if config.get_shell_file() == ".zshrc":
                     call(["/bin/zsh"])
+                elif "fish" in config.get_shell_file():
+                    call(["/usr/bin/fish"])
                 else:
                     call(["/bin/bash"])
-        elif option == 'g' and g_msg == "g/":
+        elif option == 'g' and is_git:
             git_wizard(program)
-        elif option == 'w' and g_msg == "w/":
+        elif option == 'w' and not is_git:
             wget_wizard(program)
-        elif option == 'q' and q != "":
+        elif option == 'q' and can_update:
             update_program_gui(program)
         elif option == 'us':
             msg = """
@@ -605,6 +721,7 @@ def parse_args(args=None):
     group.add_argument('-i', "--install", help="Install a .tar.gz, .tar.xz, or .zip")
     group.add_argument('-d', "--dirinstall", help="Install a directory")
     group.add_argument('-g', '--gitinstall', help="Install by retrieving a git repository")
+    group.add_argument('-s', '--singleinstall', help="Install a program stored as a single executable file")
     group.add_argument('-r', "--remove", help="Remove an insatlled program")
     group.add_argument('-l', "--list", help="List installed programs", action="store_true")
     group.add_argument('-f', "--first", help="Run first time setup", action="store_true")
@@ -660,8 +777,37 @@ def parse_args(args=None):
     elif status == "Old upgrade":
         generic.ppause("You are upgrading from a VERY old version of tarstall. Upgradiing will wipe your database! To upgrade: ")
         prog_manage.tarstall_startup(start_fts=args.first, del_lock=args.remove_lock, old_upgrade=True)
+    
+    elif status == "DB Broken":
+        yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as knowledge of .desktop files, update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"])
+        if yn != 'y':
+            config.unlock()
+            generic.pprint("Not upgrading.")
+            sys.exit(1)
+        else:
+            prog_manage.repair_db()
+            config.unlock()
+            sys.exit(0)
+
+    if status == "Missing Deps" and config.read_config("WarnMissingDeps"):
+        yn = generic.get_input("You are missing some dependencies to allow full usage of tarstall! Would you like to re-run the installer to install the dependencies?", ['y', 'n'], 'y', ["Yes", "No"])
+        if yn == 'y':
+            exit_code = 1
+            status = prog_manage.reinstall_deps()
+            if status == "Success":
+                generic.pprint("Successfully re-installed dependencies!")
+                exit_code = 0
+            elif status == "No wget":
+                generic.pprint("You don't have wget, please install it!")
+            elif status == "Wget error":
+                generic.pprint("An error occured while trying to obtain the tarstall installer. Are you connected to the internet?")
+            elif status == "Installer error":
+                generic.pprint("An error occured while running the installer")
+            config.unlock()
+            sys.exit(exit_code)
 
     if args.install is not None:
+        overwrite = False
         status = prog_manage.pre_install(args.install)
         if status == "Bad file":
             generic.pprint("The specified file does not exist!")
@@ -673,9 +819,10 @@ def parse_args(args=None):
                 status = prog_manage.pre_install(args.install, False)
             elif reinstall == "o":
                 status = prog_manage.pre_install(args.install, True)
+                overwrite = True
             else:
                 generic.pprint("Reinstall cancelled.")
-        elif status == "Installed":
+        if status == "Installed" and not overwrite:
             install_wrap_up(config.name(args.install))
         elif status.startswith("No"):
             generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
@@ -690,6 +837,7 @@ def parse_args(args=None):
             exit_code = 1
 
     elif args.gitinstall is not None:
+        overwrite = False
         status = prog_manage.pre_gitinstall(args.gitinstall)
         if status == "No git":
             generic.pprint("git not installed! Please install it before using this feature!")
@@ -704,9 +852,10 @@ def parse_args(args=None):
                 status = prog_manage.pre_gitinstall(args.gitinstall, False)
             elif reinstall == "o":
                 status = prog_manage.pre_gitinstall(args.gitinstall, True)
+                overwrite = True
             else:
                 generic.pprint("Reinstall cancelled.")
-        if status == "Installed":
+        if status == "Installed" and not overwrite:
             install_wrap_up(config.name(args.gitinstall))
         elif status == "No rsync":
             generic.pprint("rsync not installed! Please install it!")
@@ -714,9 +863,37 @@ def parse_args(args=None):
         elif status == "Error":
             generic.pprint("An error occured while attempting to git clone!")
             exit_code = 1
+    
+
+    elif args.singleinstall is not None:
+        status = prog_manage.pre_singleinstall(args.singleinstall)
+        if status == "Bad file":
+            generic.pprint("The specified file does not exist!")
+            exit_code = 1
+        elif status == "Application exists":
+            reinstall = generic.get_input("Application already exists! Would you like to reinstall?",
+                                      ["r", "n"], "n", ["Reinstall", "Cancel"])  # Ask to reinstall
+            if reinstall == "r":
+                status = prog_manage.pre_singleinstall(args.singleinstall, True)
+            else:
+                generic.pprint("Reinstall cancelled.")
+        if status == "Installed":
+            install_wrap_up(config.name(args.singleinstall), True)
+        elif status.startswith("No"):
+            generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
+        elif status == "No rsync":
+            generic.pprint("rsync not installed! Please install it!")
+            exit_code = 1
+        elif status == "Bad name":
+            generic.pprint("Archive name cannot contain a space or #!")
+            exit_code = 1
+        elif status == "Error":
+            generic.pprint("Error occured while extracting archive!")
+            exit_code = 1
 
 
     elif args.dirinstall is not None:
+        overwrite = False
         status = prog_manage.pre_dirinstall(args.dirinstall)
         if status == "Bad folder":
             generic.pprint("Please specify a valid directory path that ends in a \"/\"!")
@@ -728,9 +905,10 @@ def parse_args(args=None):
                 status = prog_manage.pre_dirinstall(args.dirinstall, False)
             elif reinstall == 'o':
                 status = prog_manage.pre_dirinstall(args.dirinstall, True)
+                overwrite = True
             else:
                 generic.pprint("Reinstall cancelled.")
-        if status == "Installed":
+        if status == "Installed" and not overwrite:
             install_wrap_up(config.dirname(args.dirinstall))
         elif status == "No rsync":
             generic.pprint("rsync not installed! Please install it!")
@@ -784,24 +962,7 @@ def parse_args(args=None):
 
     elif args.update:
         status = prog_manage.update()
-        if status == "No git":
-            generic.pprint("git isn't installed, please install it!")
-            exit_code = 1
-        elif status == "No requests":
-            generic.pprint("requests isn't installed, please install it!")
-            exit_code = 1
-        elif status == "Newer version":
-            generic.pprint("The installed version is newer than the one found online!")
-        elif status == "No update":
-            generic.pprint("No update was found!")
-        elif status == "Updated":
-            generic.pprint("tarstall successfully updated!")
-        elif status == "Failed":
-            generic.pprint("tarstall update failed!")
-            exit_code = 1
-        elif status == "No internet":
-            generic.pprint("Failed to connect to the internet!")
-            exit_code = 1
+        process_update_status(status)
 
     elif args.config:
         configure()
@@ -841,7 +1002,6 @@ def parse_args(args=None):
 
 
     elif not did_fts:
-        print(args.update_programs)
         generic.pprint("""
 tarstall. A Python based package manager to manage archives.
 Written by: hammy3502

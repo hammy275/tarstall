@@ -89,7 +89,7 @@ def setup():
     # Checks
     status("Checking for anything missing for tarstall setup")
     supported_package_managers = ["apt", "apt-get", "dnf", "pacman"]
-    supported_shells = ["bash", "zsh"]
+    supported_shells = ["bash", "zsh", "fish"]
     if which("sudo") is None:
         status("Please install 'sudo'!")
         sys.exit(1)
@@ -107,6 +107,7 @@ def setup():
         if sshell in shell:
             shell_supported = True
             break
+    msg = "All of the checks passed!"
     if not shell_supported:
         msg = "WARNING: YOUR SHELL IS NOT SUPPORTED!\n\nYOU WILL HAVE TO MANUALLY ADD ~/.tarstall/tarstall_execs TO YOUR PATH, " \
         "AND ANY PATH/BINLINK FUNCTIONS WILL NOT WORK!\nWOULD YOU LIKE TO PROCEED WITH INSTALLATION ANYWAYS?"
@@ -115,15 +116,17 @@ def setup():
         if should_proceed.lower() != "yes":
             status("Installation cancelled!")
             sys.exit(1)
-    print("All of the checks passed!\n\n\n")
+        msg = "All of the checks besides the shell check passed, while the shell check was skipped by the user!"
+    print("{}\n\n\n".format(msg))
 
     # User information
-    status("Welcome!\nThis installer is going to install tarstall! You'll need to enter your sudo password at some points. " + 
-    "This will use your distro's package manager along with pip to install the dependencies required for tarstall!")
-    cancel = input("When you're ready to start installation, press ENTER! If you would like to cancel, type 'c', then press ENTER!")
-    if cancel.lower() == 'c':
-        status("Cancelling tarstall setup...")
-        sys.exit()
+    if not os.path.isfile("/tmp/dont-ask-me"):
+        status("Welcome!\nThis installer is going to install tarstall! You'll need to enter your sudo password at some points. " + 
+        "This will use your distro's package manager along with pip to install the dependencies required for tarstall!")
+        cancel = input("When you're ready to start installation, press ENTER! If you would like to cancel, type 'c', then press ENTER!")
+        if cancel.lower() == 'c':
+            status("Cancelling tarstall setup...")
+            sys.exit()
 
     # Install requirements obtained through package manager
     status("Installing tarstall's package requirements")
