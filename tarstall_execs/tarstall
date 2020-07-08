@@ -786,6 +786,7 @@ def parse_args(args=None):
             sys.exit(0)
 
     if args.install is not None:
+        overwrite = False
         status = prog_manage.pre_install(args.install)
         if status == "Bad file":
             generic.pprint("The specified file does not exist!")
@@ -797,9 +798,10 @@ def parse_args(args=None):
                 status = prog_manage.pre_install(args.install, False)
             elif reinstall == "o":
                 status = prog_manage.pre_install(args.install, True)
+                overwrite = True
             else:
                 generic.pprint("Reinstall cancelled.")
-        elif status == "Installed":
+        if status == "Installed" and not overwrite:
             install_wrap_up(config.name(args.install))
         elif status.startswith("No"):
             generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
@@ -814,6 +816,7 @@ def parse_args(args=None):
             exit_code = 1
 
     elif args.gitinstall is not None:
+        overwrite = False
         status = prog_manage.pre_gitinstall(args.gitinstall)
         if status == "No git":
             generic.pprint("git not installed! Please install it before using this feature!")
@@ -828,9 +831,10 @@ def parse_args(args=None):
                 status = prog_manage.pre_gitinstall(args.gitinstall, False)
             elif reinstall == "o":
                 status = prog_manage.pre_gitinstall(args.gitinstall, True)
+                overwrite = True
             else:
                 generic.pprint("Reinstall cancelled.")
-        if status == "Installed":
+        if status == "Installed" and not overwrite:
             install_wrap_up(config.name(args.gitinstall))
         elif status == "No rsync":
             generic.pprint("rsync not installed! Please install it!")
@@ -852,7 +856,7 @@ def parse_args(args=None):
                 status = prog_manage.pre_singleinstall(args.singleinstall, True)
             else:
                 generic.pprint("Reinstall cancelled.")
-        elif status == "Installed":
+        if status == "Installed":
             install_wrap_up(config.name(args.singleinstall), True)
         elif status.startswith("No"):
             generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
@@ -868,6 +872,7 @@ def parse_args(args=None):
 
 
     elif args.dirinstall is not None:
+        overwrite = False
         status = prog_manage.pre_dirinstall(args.dirinstall)
         if status == "Bad folder":
             generic.pprint("Please specify a valid directory path that ends in a \"/\"!")
@@ -879,9 +884,10 @@ def parse_args(args=None):
                 status = prog_manage.pre_dirinstall(args.dirinstall, False)
             elif reinstall == 'o':
                 status = prog_manage.pre_dirinstall(args.dirinstall, True)
+                overwrite = True
             else:
                 generic.pprint("Reinstall cancelled.")
-        if status == "Installed":
+        if status == "Installed" and not overwrite:
             install_wrap_up(config.dirname(args.dirinstall))
         elif status == "No rsync":
             generic.pprint("rsync not installed! Please install it!")

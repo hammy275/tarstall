@@ -1294,7 +1294,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
         rmtree(config.full("/tmp/tarstall-temp"))
     except FileNotFoundError:
         config.vprint('Temp folder not found so not deleted!')
-    if not reinstall:
+    if not overwrite:
         return finish_install(program_internal_name)
     else:
         generic.progress(100, show_progress)
@@ -1326,12 +1326,7 @@ def single_install(program, program_internal_name, reinstall=False):
     config.vprint("Moving to tarstall directory and renaming...")
     move(config.full(program), config.full("~/.tarstall/bin/{p}/{p}".format(p=program_internal_name)))
     generic.progress(90)
-    if not reinstall:
-        return finish_install(program_internal_name, "single")
-    else:
-        generic.progress(100)
-        return "Installed"
-
+    return finish_install(program_internal_name, "single")
 
 
 def dirinstall(program_path, program_internal_name, overwrite=False, reinstall=False):
@@ -1357,7 +1352,7 @@ def dirinstall(program_path, program_internal_name, overwrite=False, reinstall=F
         rmtree(program_path)
     else:
         move(program_path, config.full("~/.tarstall/bin/"))
-    if not reinstall:
+    if not overwrite:
         return finish_install(program_internal_name)
     else:
         return "Installed"
