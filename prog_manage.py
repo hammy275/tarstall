@@ -16,7 +16,7 @@
 
 import os
 from shutil import copyfile, rmtree, move, which, copy, copytree
-from subprocess import call, run, DEVNULL, PIPE
+from subprocess import call, run, DEVNULL, PIPE, Popen, STDOUT
 import sys
 import re
 import getpass
@@ -170,9 +170,21 @@ def wget_program(program, show_progress=False, progress_modifier=1):
         config.vprint("Downloading archive...")
         url = config.db["programs"][program]["update_url"]
         if config.verbose:
-            err = call(["wget", url])
+            process = Popen(["wget", url])
         else:
-            err = call(["wget", url], stdout=DEVNULL, stderr=DEVNULL)
+            process = Popen(["wget", url], stdout=PIPE, stderr=STDOUT)
+        if not config.verbose:
+            while process.poll() is None:
+                p_status = process.stdout.readline().decode("utf-8")
+                try:
+                    percent_complete = int(p_status[p_status.rfind("%")-2:p_status.rfind("%")].strip())
+                    if percent_complete > 0:
+                        generic.progress((10 + (55 * (percent_complete / 100))) / progress_modifier, show_progress)
+                except (TypeError, ValueError):
+                    pass
+        else:
+            process.wait()
+        err = process.poll()
         if err != 0:
             return "Wget error"
         generic.progress(65 / progress_modifier, show_progress)
