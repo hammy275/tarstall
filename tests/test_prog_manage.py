@@ -78,6 +78,11 @@ def test_install(monkeypatch):
     assert os.path.isfile(os.path.expanduser("~/.tarstall/bin/package/test.sh"))
 
 
+def test_repair_db():
+    prog_manage.repair_db()
+    assert config.db["programs"]["package"]["install_type"] == "single"  # Since the archive only contains one file, it gets re-detected as single-file
+
+
 def test_create_db():
     prog_manage.create_db()
     #TODO: Fake os so we can test get_shell_file in any environment
