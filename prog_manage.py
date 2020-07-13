@@ -37,6 +37,46 @@ else:
     c_out = DEVNULL
 
 
+def git_clone_with_progress(url, start_percent, end_percent, branch=None):
+    """Performs a Git Clone with Progress.
+
+    Args:
+        url (str): URL to git clone from
+        start_percent (int): Starting value for generic.progress()
+        end_percent (int): Ending value for generic.progress()
+        branch (str): If specified, use a custom branch to clone from. Defaults to None.
+
+    Returns:
+        [int: Exit code from git
+    """
+    command = ["git", "clone"]
+    if branch is not None:
+        command.append("--branch")
+        command.append(branch)
+    command.append(url)
+    if config.verbose:
+        err = call(command)
+    else:
+        command.append("--progress")
+        process = Popen(command, stderr=STDOUT, stdout=PIPE, universal_newlines=True)
+        multiplier = end_percent - start_percent
+        while process.poll() is None:
+            p_status = process.stdout.readline()
+            try:
+                percent_complete = int(p_status[p_status.rfind("%")-2:p_status.rfind("%")].strip())
+                if percent_complete > 0:
+                    if "Resolving deltas:" in p_status:
+                        generic.progress(start_percent + int(multiplier * 0.6) + (int(multiplier * 0.4) * (percent_complete / 100)))
+                    elif "Receiving objects:" in p_status:
+                        generic.progress(start_percent + (int(multiplier * 0.6) * (percent_complete / 100)))
+                    elif "Unpacking objects:" in p_status:
+                        generic.progress(start_percent + (multiplier * (percent_complete / 100)))
+            except (TypeError, ValueError):
+                    pass
+        err = process.poll()
+    return err
+
+
 def reinstall_deps():
     """Reinstall Dependencies
 
@@ -521,17 +561,17 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
         generic.progress(100)
         print("We're done! Continuing tarstall execution...")
     
-    if config.db == {}:
-        if force_fix:
-            pass
-        else:
-            return "DB Broken"
-
     if start_fts:  # Check if -f or --first is supplied
         return first_time_setup()
 
     if not(config.exists('~/.tarstall/tarstall_execs/tarstall')):  # Make sure tarstall is installed
         return "Not installed"
+
+    if config.db == {}:
+        if force_fix:
+            pass
+        else:
+            return "DB Broken"
 
     file_version = get_file_version('file')
     while config.get_version('file_version') > file_version:  # Lingering upgrades check
@@ -924,10 +964,7 @@ def gitinstall(git_url, program_internal_name, overwrite=False, reinstall=False)
     else:
         os.chdir(config.full("~/.tarstall/bin"))
     generic.progress(5)
-    if config.verbose:
-        err = call(["git", "clone", git_url])
-    else:
-        err = call(["git", "clone", git_url], stderr=DEVNULL)
+    err = git_clone_with_progress(git_url, 5, 65)
     if err != 0:
         return "Error"
     generic.progress(65)
@@ -1038,10 +1075,7 @@ def update(force_update=False, show_progress=True):
         os.mkdir("tarstall-update")
         os.chdir("/tmp/tarstall-update")
         config.vprint("Cloning tarstall repository from git")
-        if config.verbose:
-            err = call(["git", "clone", "--branch", config.branch, "https://github.com/hammy3502/tarstall.git"])
-        else:
-            err = call(["git", "clone", "--branch", config.branch, "https://github.com/hammy3502/tarstall.git"], stderr=c_out)
+        err = git_clone_with_progress("https://github.com/hammy3502/tarstall.git", 10, 55, config.branch)
         if err != 0:
             generic.progress(100, show_progress)
             return "Failed"
