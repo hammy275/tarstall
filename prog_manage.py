@@ -60,9 +60,11 @@ def wget_with_progress(url, start_percent, end_percent, show_progress=True):
         while process.poll() is None:
             p_status = process.stdout.readline().decode("utf-8")
             try:
-                percent_complete = int(p_status[p_status.rfind("%")-2:p_status.rfind("%")].strip())
-                if percent_complete > 0:
-                    generic.progress(start_percent + ((end_percent - start_percent) * (percent_complete / 100)))
+                index = p_status.rfind("%")
+                if index != -1:
+                    percent_complete = int(p_status[index-2:index].strip())
+                    if percent_complete > 0:
+                        generic.progress(start_percent + ((end_percent - start_percent) * (percent_complete / 100)))
             except (TypeError, ValueError):
                 pass
     else:
