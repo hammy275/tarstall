@@ -171,6 +171,8 @@ def easy_get_action(options, replacements=[]):
             selector = selector.upper()
         gui_labels.append(option["gui-label"])
         options_list.append(option["shorthand"])
+        if config.mode == "gui":
+            selector = option["gui-label"]
         msg += "\n" + selector + " - " + option["description"]
     for replacement in replacements:
         msg = msg.replace(list(replacement.keys())[0], list(replacement.values())[0])
@@ -289,7 +291,7 @@ def progress(val, should_show=True):
     Updates a progress bar (if we have a GUI) as tarstall processes run
 
     Args:
-        val (int): Value to update the progress bar to.
+        val (int/float): Value to update the progress bar to.
         should_show (bool): If set to False, don't show the bar in CLI. Defaults to True.
 
     """
@@ -299,7 +301,7 @@ def progress(val, should_show=True):
     elif config.mode == "cli" and not config.verbose and should_show:
         try:
             columns = int(os.popen('stty size', 'r').read().split()[1])
-            start_chars = "Progress: "
+            start_chars = "Progress ({}%): ".format(str(int(val)))
             end_chars = "   "
             full_squares = int(val * 0.01 * (columns - len(start_chars) - len(end_chars)))
             empty_squares = columns - len(start_chars) - len(end_chars) - full_squares

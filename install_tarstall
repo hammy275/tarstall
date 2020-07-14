@@ -173,7 +173,9 @@ def setup():
 
     # Pass control to tarstall
     status("Running tarstall installation")
-    run([sys.executable, "./tarstall_execs/tarstall", "-f"])
+    if not run([sys.executable, "./tarstall_execs/tarstall", "-f"]):
+        status("Error installing tarstall! Please view the information above!!!")
+        sys.exit(1)
 
     # Removing tarstall setup directory
     try:
