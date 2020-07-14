@@ -1,5 +1,7 @@
 # tarstall
 
+Feature-rich package management for archives!
+
 ![tarstall Terminal Interface](readme-images/terminal.png)
 ![tarstall GUI Interface](readme-images/gui.png)
 

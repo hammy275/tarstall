@@ -171,6 +171,8 @@ def easy_get_action(options, replacements=[]):
             selector = selector.upper()
         gui_labels.append(option["gui-label"])
         options_list.append(option["shorthand"])
+        if config.mode == "gui":
+            selector = option["gui-label"]
         msg += "\n" + selector + " - " + option["description"]
     for replacement in replacements:
         msg = msg.replace(list(replacement.keys())[0], list(replacement.values())[0])

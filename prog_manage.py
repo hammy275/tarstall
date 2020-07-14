@@ -37,6 +37,39 @@ else:
     c_out = DEVNULL
 
 
+def wget_with_progress(url, start_percent, end_percent, show_progress=True):
+    """Wget with Progress.
+
+    The wget version of git_clone_with_progress()
+
+    Args:
+        url (str): URL to file to grab
+        start_percent (int): Where generic.progress() last was
+        end_percent (int): Where generic.progress() should end up
+        show_progress (bool, optional): Whether to show progress if not verbose. Defaults to True.
+
+    Returns:
+        int: Exit code from wget
+
+    """
+    if config.verbose:
+        process = Popen(["wget", url])
+    else:
+        process = Popen(["wget", url], stdout=PIPE, stderr=STDOUT)
+    if not config.verbose and show_progress:
+        while process.poll() is None:
+            p_status = process.stdout.readline().decode("utf-8")
+            try:
+                percent_complete = int(p_status[p_status.rfind("%")-2:p_status.rfind("%")].strip())
+                if percent_complete > 0:
+                    generic.progress(start_percent + ((end_percent - start_percent) * (percent_complete / 100)))
+            except (TypeError, ValueError):
+                pass
+    else:
+        process.wait()
+    return process.poll()
+
+
 def git_clone_with_progress(url, start_percent, end_percent, branch=None):
     """Performs a Git Clone with Progress.
 
@@ -98,7 +131,7 @@ def reinstall_deps():
     generic.progress(5)
     config.vprint("Obtaining tarstall installer...")
     url = "https://raw.githubusercontent.com/hammy3502/tarstall/{}/install_tarstall".format(config.db["version"]["branch"])
-    err = call(["wget", url], stdout=c_out, stderr=c_out)
+    err = wget_with_progress(url, 5, 60)
     if err != 0:
         return "Wget error"
     generic.progress(60)
@@ -132,7 +165,7 @@ def repair_db():
     """Attempts to Repair Tarstall DB.
 
     WARNING: THIS SHOULD NOT BE USED UNLESS THE DATABASE CANNOT BE RECOVERED OTHERWISE
-    BECAUSE OF LIMITED KNOWLEDGE OF THE CODE ITSELF, THINGS SUCH AS PROGRAM TYPE HAVE TO BE ASSUMEDF
+    BECAUSE OF LIMITED KNOWLEDGE OF THE CODE ITSELF, THINGS SUCH AS PROGRAM TYPE HAVE TO BE ASSUMED
     THIS ONLY EXISTS AS A LAST RESORT OPTION!!!!!!!
     """
     config.vprint("Attempting repair of database, things are going to get crazy!")
@@ -243,22 +276,7 @@ def wget_program(program, show_progress=False, progress_modifier=1):
         generic.progress(10 / progress_modifier, show_progress)
         config.vprint("Downloading archive...")
         url = config.db["programs"][program]["update_url"]
-        if config.verbose:
-            process = Popen(["wget", url])
-        else:
-            process = Popen(["wget", url], stdout=PIPE, stderr=STDOUT)
-        if not config.verbose:
-            while process.poll() is None:
-                p_status = process.stdout.readline().decode("utf-8")
-                try:
-                    percent_complete = int(p_status[p_status.rfind("%")-2:p_status.rfind("%")].strip())
-                    if percent_complete > 0:
-                        generic.progress((10 + (55 * (percent_complete / 100))) / progress_modifier, show_progress)
-                except (TypeError, ValueError):
-                    pass
-        else:
-            process.wait()
-        err = process.poll()
+        err = wget_with_progress(url, 10 / progress_modifier, 65 / progress_modifier, show_progress=show_progress)
         if err != 0:
             return "Wget error"
         generic.progress(65 / progress_modifier, show_progress)
@@ -903,7 +921,7 @@ def create_desktop(program_internal_name, name, program_file, comment="", should
         desktop_name = name
         path = config.full(path)
     if config.exists("~/.local/share/applications/{}.desktop".format(desktop_name)):
-        print("Desktop file already exists!")
+        config.vprint("Desktop file already exists!")
         return "Already exists"
     if "Video" in cats or "Audio" in cats and "AudioVideo" not in cats:
         cats.append("AudioVideo")
@@ -1046,7 +1064,7 @@ def update(force_update=False, show_progress=True):
         or "Failed" if it failed.
 
     """
-    if not can_update:
+    if not can_update and not force_update:
         config.vprint("requests isn't installed.")
         return "No requests"
     elif not config.check_bin("git"):
@@ -1054,9 +1072,9 @@ def update(force_update=False, show_progress=True):
         return "No git"
     generic.progress(5, show_progress)
     prog_version_internal = config.get_version('prog_internal_version')
-    config.vprint("Checking version on GitHub")
-    final_version = get_online_version('prog')
     if not force_update:
+        config.vprint("Checking version on GitHub")
+        final_version = get_online_version('prog')
         if final_version == -1:
             generic.progress(100, show_progress)
             return "No requests"
@@ -1084,29 +1102,38 @@ def update(force_update=False, show_progress=True):
         os.chdir(config.full("~/.tarstall/"))
         files = os.listdir()
         to_keep = ["bin", "database", ".bashrc", ".fishrc"]
+        progress = 55
+        adder = 15 / int(len(files) - len(to_keep))
         for f in files:
             if f not in to_keep:
                 if os.path.isdir(config.full("~/.tarstall/{}".format(f))):
                     rmtree(config.full("~/.tarstall/{}".format(f)))
                 else:
                     os.remove(config.full("~/.tarstall/{}".format(f)))
+                progress += adder
+                generic.progress(progress, show_progress)
         generic.progress(70, show_progress)
         config.vprint("Moving in new tarstall files")
         os.chdir("/tmp/tarstall-update/tarstall/")
         files = os.listdir()
         to_ignore = [".git", ".gitignore", "README.md", "readme-images", "COPYING", "requirements.txt", "requirements-gui.txt", "tests", "install_tarstall", "version"]
+        progress = 70
+        adder = 25 / int(len(files) - len(to_ignore))
         for f in files:
             if f not in to_ignore:
                 move("/tmp/tarstall-update/tarstall/{}".format(f), config.full("~/.tarstall/{}".format(f)))
-        generic.progress(85, show_progress)
+                progress += adder
+                generic.progress(progress, show_progress)
+        generic.progress(95, show_progress)
         config.vprint("Removing old tarstall temp directory")
         os.chdir(config.full("~/.tarstall/"))
         try:
             rmtree("/tmp/tarstall-update")
         except FileNotFoundError:
             pass
-        config.db["version"]["prog_internal_version"] = final_version
-        config.write_db()
+        if not force_update:
+            config.db["version"]["prog_internal_version"] = final_version
+            config.write_db()
         generic.progress(100, show_progress)
         return "Updated"
     elif final_version < prog_version_internal:
@@ -1287,23 +1314,25 @@ def create_command(file_extension, program):
     if file_extension == '.tar.gz' or file_extension == '.tar.xz':
         command_to_go = "tar " + vflag + "xf " + program + " -C /tmp/tarstall-temp/"
         if which("tar") is None:
-            print("tar not installed; please install it to install .tar.gz and .tar.xz files!")
+            config.vprint("tar not installed!")
             return "No tar"
     elif file_extension == '.zip':
         command_to_go = 'unzip ' + vflag + ' ' + program + ' -d /tmp/tarstall-temp/'
         if which("unzip") is None:
-            print("unzip not installed; please install it to install ZIP files!")
+            config.vprint("unzip not installed!")
             return "No unzip"
     elif file_extension == '.7z':
         command_to_go = '7z x ' + vflag + program + ' -o/tmp/tarstall-temp/'
         if which("7z") is None:
+            config.vprint("7z not installed!")
             return "No 7z"
     elif file_extension == '.rar':
         command_to_go = 'unrar x ' + vflag + program + ' /tmp/tarstall-temp/'
         if which("unrar") is None:
+            config.vprint("unrar not installed!")
             return "No unrar"
     else:
-        print('Error! File type not supported!')
+        config.vprint("Filetype {} not supported!".format(file_extension))
         return "Bad Filetype"
     config.vprint("Running command: " + command_to_go)
     return command_to_go
@@ -1346,8 +1375,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
     try:
         os.system(command_to_go)  # Extracts program archive
     except:
-        print('Failed to run command: ' + command_to_go + "!")
-        print("Program installation halted!")
+        config.vprint('Failed to run command: ' + command_to_go + "! Program installation halted!")
         return "Error"
     generic.progress(50, show_progress)
     config.vprint('Checking for folder in folder')
@@ -1460,17 +1488,21 @@ def uninstall(program):
         return "Not installed"
     config.vprint("Removing program files")
     rmtree(config.full("~/.tarstall/bin/" + program + '/'))
-    generic.progress(20)
+    generic.progress(40)
     config.vprint("Removing program from PATH and any binlinks for the program")
     config.remove_line(program, "~/.tarstall/.bashrc", 'poundword')
-    generic.progress(30)
+    generic.progress(50)
     config.vprint("Removing program desktop files")
     if config.db["programs"][program]["desktops"]:
+        progress = 50
+        adder = int(30 / len(config.db["programs"][program]["desktops"]))
         for d in config.db["programs"][program]["desktops"]:
             try:
                 os.remove(config.full("~/.local/share/applications/{}.desktop".format(d)))
             except FileNotFoundError:
                 pass
+            progress += adder
+            generic.progress(progress)
     generic.progress(80)
     config.vprint("Removing program from tarstall list of programs")
     del config.db["programs"][program]
@@ -1500,7 +1532,7 @@ def get_online_version(type_of_replacement, branch=config.branch):
         int: The specified version, -1 if requests is missing, or -2 if not connected to the internet.
     """
     if not can_update:
-        print("requests library not installed! Exiting...")
+        config.vprint("requests library not installed! Exiting...")
         return -1
     version_url = "https://raw.githubusercontent.com/hammy3502/tarstall/{}/version".format(branch)
     try:
