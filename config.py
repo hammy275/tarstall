@@ -23,7 +23,7 @@ import shutil
 ###VERSIONS###
 
 version = "1.6.2"
-prog_internal_version = 111
+prog_internal_version = 112
 file_version = 17
 
 #############
@@ -154,15 +154,18 @@ def vcheck():
     return read_config('Verbose')
 
 
-def vprint(to_print):
+def vprint(to_print, end=None):
     """Print a message only if we're verbose"""
     global verbose
     if verbose:
         if mode == "cli":
-            print(to_print)
+            print(to_print, end=end)
         elif mode == "gui":
             try:
-                output_area.Update(to_print)
+                if end is not None:
+                    output_area.Update(to_print)
+                else:
+                    output_area.Update(to_print + end.replace("\n", "").replace("\r", ""))
             except AttributeError:
                 pass  # GUI hasn't loaded yet
 
