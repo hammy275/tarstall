@@ -60,9 +60,11 @@ def wget_with_progress(url, start_percent, end_percent, show_progress=True):
         while process.poll() is None:
             p_status = process.stdout.readline().decode("utf-8")
             try:
-                percent_complete = int(p_status[p_status.rfind("%")-2:p_status.rfind("%")].strip())
-                if percent_complete > 0:
-                    generic.progress(start_percent + ((end_percent - start_percent) * (percent_complete / 100)))
+                index = p_status.rfind("%")
+                if index != -1:
+                    percent_complete = int(p_status[index-2:index].strip())
+                    if percent_complete > 0:
+                        generic.progress(start_percent + ((end_percent - start_percent) * (percent_complete / 100)))
             except (TypeError, ValueError):
                 pass
     else:
@@ -176,7 +178,7 @@ def repair_db():
 
     config.vprint("Re-discovering programs:")
     for pf in os.listdir(config.full("~/.tarstall/bin/")):
-        print("Re-discovering " + pf, end="\r")
+        config.vprint("Re-discovering " + pf, end="\r")
         prog_info = {pf: {"install_type": "default", "desktops": [], 
         "post_upgrade_script": None, "update_url": None, "has_path": False, "binlinks": []}}
         if ".git" in os.listdir(config.full("~/.tarstall/bin/{}".format(pf))):
@@ -197,7 +199,7 @@ def repair_db():
     for l in bashrc_lines:
         if l.startswith("export PATH=$PATH") and '#' in l:
             program = l[l.find("#")+2:].rstrip()
-            print("Re-registering PATH for " + program, end="\r")
+            config.vprint("Re-registering PATH for " + program, end="\r")
             new_db["programs"][program]["has_path"] = True
     
     generic.progress(45)
@@ -206,7 +208,7 @@ def repair_db():
     for l in bashrc_lines:
         if l.startswith("alias ") and '#' in l:
             program = l[l.find("#")+2:].rstrip()
-            print("Re-registering a binlink or binlinks for " + program, end="\r")
+            config.vprint("Re-registering a binlink or binlinks for " + program, end="\r")
             binlinked_file = l[6:l.find("=")]
             new_db["programs"][program]["binlinks"].append(binlinked_file)
     
@@ -565,7 +567,7 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
         config.lock()
 
     if config.db == {"refresh": True}:  # Downgrade check
-        print("Hang tight! We're finishing up your downgrade...")
+        config.vprint("Finishing downgrade")
         generic.progress(5)
         config.create("~/.tarstall/database")
         create_db()
@@ -577,7 +579,7 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
         generic.progress(90)
         os.mkdir(config.full("~/.tarstall/bin"))
         generic.progress(100)
-        print("We're done! Continuing tarstall execution...")
+        config.vprint("Downgrade complete, returning back to tarstall execution...")
     
     if start_fts:  # Check if -f or --first is supplied
         return first_time_setup()
