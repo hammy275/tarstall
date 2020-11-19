@@ -1228,6 +1228,8 @@ def first_time_setup():
     config.create("~/.tarstall/database")
     create_db()
     config.create("~/.tarstall/.bashrc")  # Create directories and files
+    if not config.exists("~/.config"):
+        os.mkdir(config.full("~/.config"))
     if not config.exists("~/.config/fish"):
         os.mkdir(config.full("~/.config/fish"))
     if not config.exists("~/.config/fish/config.fish"):
