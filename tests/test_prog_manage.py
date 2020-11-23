@@ -51,17 +51,17 @@ def test_list_programs(capsys):
 
 def test_create_desktop(monkeypatch):
     prog_manage.create_desktop("package", "Name", "test.sh", "Comment here", "False")
-    assert config.exists("~/.local/share/applications/test.sh-package.desktop")
+    assert config.exists("~/.local/share/applications/tarstall/test.sh-package.desktop")
 
 
 def test_remove_desktop():
     prog_manage.create_desktop("package", "Name", "test.sh", "Comment here", "False")
     try:
-        assert config.exists("~/.local/share/applications/test.sh-package.desktop")
+        assert config.exists("~/.local/share/applications/tarstall/test.sh-package.desktop")
     except AssertionError:
         print("create_desktop() failure, remove_desktop() might be okay.")
     prog_manage.remove_desktop("package", "test.sh-package")
-    assert not config.exists("~/.local/share/applications/test.sh-package.desktop")
+    assert not config.exists("~/.local/share/applications/tarstall/test.sh-package.desktop")
 
 
 def test_uninstall():

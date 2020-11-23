@@ -3,7 +3,6 @@ import os
 import prog_manage
 import json
 
-
 def test_check_bin():
     assert config.check_bin("sh") is True
     assert config.check_bin("agtasdytfhgasdfsudyghaushdgj") is False
