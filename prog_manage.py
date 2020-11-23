@@ -166,11 +166,11 @@ def repair_tarstall():
 def repair_db():
     """Attempts to Repair Tarstall DB.
 
-    WARNING: THIS SHOULD NOT BE USED UNLESS THE DATABASE CANNOT BE RECOVERED OTHERWISE
-    BECAUSE OF LIMITED KNOWLEDGE OF THE CODE ITSELF, THINGS SUCH AS PROGRAM TYPE HAVE TO BE ASSUMED
-    THIS ONLY EXISTS AS A LAST RESORT OPTION!!!!!!!
+    WARNING: THIS SHOULD NOT BE USED UNLESS THE DATABASE CANNOT BE RECOVERED OTHERWISE!!!
+    BECAUSE AN EMPTY DATABASE ONLY HAS LIMITED KNOWLEDGE OF PAST OPERATIONS, SEVERAL THINGS CANNOT
+    AND WILL NOT BE RECOVERED!!!!!!
     """
-    config.vprint("Attempting repair of database, things are going to get crazy!")
+    config.vprint("Attempting repair of database...")
 
     config.vprint("Getting stock database to build off of")
     new_db = get_default_db()
@@ -202,7 +202,7 @@ def repair_db():
             config.vprint("Re-registering PATH for " + program, end="\r")
             new_db["programs"][program]["has_path"] = True
     
-    generic.progress(45)
+    generic.progress(35)
     
     config.vprint("Re-registering binlinks")
     for l in bashrc_lines:
@@ -212,11 +212,21 @@ def repair_db():
             binlinked_file = l[6:l.find("=")]
             new_db["programs"][program]["binlinks"].append(binlinked_file)
     
-    generic.progress(70)
+    generic.progress(60)
     
     config.vprint("Backing up old database...")
     date_str = datetime.datetime.today().strftime("%d-%m-%Y-%H-%M-%S")
     move(config.full("~/.tarstall/database"), config.full("~/.tarstall/database-backup-{}.bak".format(date_str)))
+
+    generic.progress(80)
+
+    config.vprint("Re-discovering .desktop files...")
+    for d in os.listdir(config.full("~/.local/share/applications/tarstall")):
+        # File name: {program}-{package}.desktop
+        # Stored in DB as {program}-package
+        desktop_name = config.name(config.full("~/.local/share/applications/tarstall/{}".format(d)))  # Returns "{program}-{package}"
+        desktop_info = desktop_name.split("-")
+        new_db["programs"][desktop_info[1]]["desktops"].append("{}-{}".format(desktop_info[0], desktop_info[1]))
 
     generic.progress(95)
 
@@ -224,7 +234,7 @@ def repair_db():
     config.db = new_db
     config.write_db()
 
-    config.vprint("Database write complete!")
+    config.vprint("Database repair complete!")
     generic.progress(100)
     return
 
@@ -628,6 +638,19 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
         elif file_version == 16:
             config.vprint("Adding WarnMissingDeps key...")
             config.db["options"]["WarnMissingDeps"] = True
+        
+        elif file_version == 17:
+            config.vprint("Moving .desktop files to tarstall subdirectory")
+            if not config.exists("~/.local/share/applications/tarstall"):
+                config.vprint("Creating tarstall .desktop directory")
+                os.mkdir(config.full("~/.local/share/applications/tarstall"))
+            for program in config.db["programs"]:
+                for desktop in config.db["programs"][program]["desktops"]:
+                    if config.exists("~/.local/share/applications/{}.desktop".format(desktop)):
+                        config.vprint("Moving {} to tarstall subdirectory".format(desktop))
+                        move(config.full("~/.local/share/applications/{}.desktop".format(desktop)), config.full("~/.local/share/applications/tarstall/{}.desktop".format(desktop)))
+                    elif config.exists("~/.local/share/applications/tarstall/{}.desktop".format(desktop)):
+                        config.vprint("Not moving {}, it's already in our new directory!".format(desktop))
 
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')

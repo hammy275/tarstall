@@ -23,8 +23,8 @@ import shutil
 ###VERSIONS###
 
 version = "1.7.0"
-prog_internal_version = 114
-file_version = 17
+prog_internal_version = 115
+file_version = 18
 
 #############
 
