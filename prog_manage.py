@@ -504,7 +504,7 @@ def change_branch(branch, reset=False):
                 if config.db["programs"][prog]["desktops"]:
                     for d in config.db["programs"][prog]["desktops"]:
                         try:
-                            os.remove(config.full("~/.local/share/applications/{}.desktop".format(d)))
+                            os.remove(config.full("~/.local/share/applications/tarstall/{}.desktop".format(d)))
                         except FileNotFoundError:
                             pass
             generic.progress(85)
@@ -780,7 +780,7 @@ def remove_desktop(program, desktop):
 
     """
     try:
-        os.remove(config.full("~/.local/share/applications/{}.desktop".format(desktop)))
+        os.remove(config.full("~/.local/share/applications/tarstall/{}.desktop".format(desktop)))
     except FileNotFoundError:
         pass
     config.db["programs"][program]["desktops"].remove(desktop)
@@ -824,12 +824,12 @@ def rename(program, new_name):
     config.vprint("Updating .desktop files")
     for d in config.db["programs"][program]["desktops"]:
         config.replace_in_file("/.tarstall/bin/{}".format(program), "/.tarstall/bin/{}".format(new_name), 
-        "~/.local/share/applications/{}.desktop".format(d))
+        "~/.local/share/applications/tarstall/{}.desktop".format(d))
         if is_single:
             config.replace_in_file("/.tarstall/bin/{}/{}".format(new_name, program), "/.tarstall/bin/{}/{}".format(new_name, new_name), 
-        "~/.local/share/applications/{}.desktop".format(d))
-            move(config.full("~/.local/share/applications/{p}-{p}.desktop".format(p=program)), 
-            config.full("~/.local/share/applications/{p}-{p}.desktop".format(p=new_name)))
+        "~/.local/share/applications/tarstall/{}.desktop".format(d))
+            move(config.full("~/.local/share/applications/tarstall/{p}-{p}.desktop".format(p=program)), 
+            config.full("~/.local/share/applications/tarstall/{p}-{p}.desktop".format(p=new_name)))
     generic.progress(25)
     config.vprint("Replacing PATHs")
     config.db["programs"][new_name] = config.db["programs"].pop(program)
@@ -922,7 +922,7 @@ def create_desktop(program_internal_name, name, program_file, comment="", should
         exec_path = config.full(program_file)
         desktop_name = name
         path = config.full(path)
-    if config.exists("~/.local/share/applications/{}.desktop".format(desktop_name)):
+    if config.exists("~/.local/share/applications/tarstall/{}.desktop".format(desktop_name)):
         config.vprint("Desktop file already exists!")
         return "Already exists"
     if "Video" in cats or "Audio" in cats and "AudioVideo" not in cats:
@@ -947,7 +947,7 @@ Categories={categories}
 """.format(name=name, comment=comment, exec_path=exec_path,
            should_terminal=should_terminal, categories=cats,
            icon=icon, path=path)
-    os.chdir(config.full("~/.local/share/applications/"))
+    os.chdir(config.full("~/.local/share/applications/tarstall"))
     config.create("./{}.desktop".format(desktop_name))
     with open(config.full("./{}.desktop".format(desktop_name)), 'w') as f:
         f.write(to_write)
@@ -1172,7 +1172,7 @@ def erase():
         if config.db["programs"][prog]["desktops"]:
             for d in config.db["programs"][prog]["desktops"]:
                 try:
-                    os.remove(config.full("~/.local/share/applications/{}.desktop".format(d)))
+                    os.remove(config.full("~/.local/share/applications/tarstall/{}.desktop".format(d)))
                 except FileNotFoundError:
                     pass
     generic.progress(40)
@@ -1190,7 +1190,7 @@ def erase():
         pass
     generic.progress(98)
     try:
-        os.remove(config.full("~/.local/share/applications/tarstall.desktop"))
+        os.remove(config.full("~/.local/share/applications/tarstall/tarstall.desktop"))
     except FileNotFoundError:
         pass
     config.unlock()
@@ -1263,6 +1263,8 @@ def first_time_setup():
     generic.progress(90)
     if not config.exists("~/.local/share/applications"):
         os.mkdir(config.full("~/.local/share/applications"))
+    if not config.exists("~/.local/share/applications/tarstall"):
+        os.mkdir(config.full("~/.local/share/applications/tarstall"))
     generic.progress(92)
     config.add_line("export PATH=$PATH:{}".format(
                 config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")  # Add bashrc line
@@ -1502,7 +1504,7 @@ def uninstall(program):
         adder = int(30 / len(config.db["programs"][program]["desktops"]))
         for d in config.db["programs"][program]["desktops"]:
             try:
-                os.remove(config.full("~/.local/share/applications/{}.desktop".format(d)))
+                os.remove(config.full("~/.local/share/applications/tarstall/{}.desktop".format(d)))
             except FileNotFoundError:
                 pass
             progress += adder

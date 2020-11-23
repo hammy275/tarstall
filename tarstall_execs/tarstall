@@ -174,7 +174,7 @@ def possibly_repair_db(possibly_corrupt=False):
 #########################################
 WARNING: This feature should ONLY be used if your database is corrupt in some manner, as information can and will be lost:
 
-- .desktop files previously made will no longer be tracked, and must be either deleted and re-created, or managed manually! They can be found at ~/.local/share/applications/ .
+- .desktop files previously made will no longer be tracked, and must be either deleted and re-created, or managed manually! They can be found at ~/.local/share/applications/tarstall .
 - Upgrade scripts/post-upgrade scripts will no longer be linked to their respective programs!
 - The program type (default vs. git-installed vs. single-file) may be mis-recognized/misconfigured!
 - tarstall will assume you're on the master branch! If you're currently on beta, you will have to wait until the master branch surpasses your current version, or you have to switch to the beta branch after repairs!
@@ -375,7 +375,7 @@ def configure():
                 generic.ppause("Changed to GUI mode! Restart tarstall to confirm your changes!")
             else:
                 config.change_config("Mode", "change", "cli")
-                os.remove(config.full("~/.local/share/applications/tarstall.desktop"))
+                os.remove(config.full("~/.local/share/applications/tarstall/tarstall.desktop"))
                 generic.ppause("Changed to CLI mode! Restart tarstall to confirm your changes!")
             key = None
         elif option == 's':
@@ -782,7 +782,7 @@ def parse_args(args=None):
         yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as knowledge of .desktop files, update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"])
         if yn != 'y':
             config.unlock()
-            generic.pprint("Not upgrading.")
+            generic.pprint("Not repairing DB.")
             sys.exit(1)
         else:
             prog_manage.repair_db()
