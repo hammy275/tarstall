@@ -1251,12 +1251,13 @@ def first_time_setup():
     config.create("~/.tarstall/database")
     create_db()
     config.create("~/.tarstall/.bashrc")  # Create directories and files
-    if not config.exists("~/.config"):
-        os.mkdir(config.full("~/.config"))
-    if not config.exists("~/.config/fish"):
-        os.mkdir(config.full("~/.config/fish"))
-    if not config.exists("~/.config/fish/config.fish"):
-        config.create("~/.config/fish/config.fish")
+    if sys.platform != "win32":
+        if not config.exists("~/.config"):
+            os.mkdir(config.full("~/.config"))
+        if not config.exists("~/.config/fish"):
+            os.mkdir(config.full("~/.config/fish"))
+        if not config.exists("~/.config/fish/config.fish"):
+            config.create("~/.config/fish/config.fish")
     config.create("~/.tarstall/.fishrc")
     generic.progress(15)
     progress = 15
@@ -1284,16 +1285,21 @@ def first_time_setup():
     generic.progress(75)
     copytree(config.full("./tarstall_execs/"), config.full("~/.tarstall/tarstall_execs/"))  # Move tarstall.py to execs dir
     generic.progress(90)
-    if not config.exists("~/.local/share/applications"):
-        os.mkdir(config.full("~/.local/share/applications"))
-    if not config.exists("~/.local/share/applications/tarstall"):
-        os.mkdir(config.full("~/.local/share/applications/tarstall"))
+    if sys.platform != "win32":
+        if not config.exists("~/.local/share/applications"):
+            os.mkdir(config.full("~/.local/share/applications"))
+        if not config.exists("~/.local/share/applications/tarstall"):
+            os.mkdir(config.full("~/.local/share/applications/tarstall"))
     generic.progress(92)
     config.add_line("export PATH=$PATH:{}".format(
                 config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")  # Add bashrc line
     config.add_line("set PATH $PATH {}".format(config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.fishrc")
     generic.progress(95)
-    os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
+    if sys.platform == "win32":
+        # TODO: Windows-specific code here
+        pass
+    else:
+        os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
     config.unlock()
     generic.progress(100)
     return to_return

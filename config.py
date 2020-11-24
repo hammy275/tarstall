@@ -52,6 +52,9 @@ def get_shell_file():
         str: File name in home directory to store PATHs, variables, etc.
 
     """
+    if sys.platform == "win32":
+        vprint("Windows has no .bashrc equivalent! Returning None")
+        return None
     shell = os.environ["SHELL"]
     if "bash" in shell:
         vprint("Auto-detected bash")
