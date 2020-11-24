@@ -300,6 +300,8 @@ def progress(val, should_show=True):
             config.install_bar.UpdateBar(val)
     elif config.mode == "cli" and not config.verbose and should_show:
         try:
+            if sys.platform == "win32":
+                raise IndexError
             columns = int(os.popen('stty size', 'r').read().split()[1])
             start_chars = "Progress ({}%): ".format(str(int(val)))
             end_chars = "   "
@@ -311,6 +313,6 @@ def progress(val, should_show=True):
                 print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="")
         except IndexError:
             if val < 100:
-                print("{}% complete".format(val), end="\r")
+                print("{}% complete".format(int(val)), end="\r")
             else:
-                print("{}% complete".format(val), end="")
+                print("{}% complete".format(int(val)))

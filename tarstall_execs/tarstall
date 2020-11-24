@@ -717,7 +717,8 @@ def parse_args(args=None):
     exit_code = 0
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-i', "--install", help="Install a .tar.gz, .tar.xz, or .zip")
+    if sys.platform != "win32":
+        group.add_argument('-i', "--install", help="Install a .tar.gz, .tar.xz, or .zip")
     group.add_argument('-d', "--dirinstall", help="Install a directory")
     group.add_argument('-g', '--gitinstall', help="Install by retrieving a git repository")
     group.add_argument('-s', '--singleinstall', help="Install a program stored as a single executable file")
@@ -805,7 +806,7 @@ def parse_args(args=None):
             config.unlock()
             sys.exit(exit_code)
 
-    if args.install is not None:
+    if sys.platform != "win32" and args.install is not None:
         overwrite = False
         status = prog_manage.pre_install(args.install)
         if status == "Bad file":
@@ -919,6 +920,8 @@ def parse_args(args=None):
             generic.pprint("Successfully uninstalled {}!".format(args.remove))
         elif status == "Not installed":
             generic.pprint("{} isn't an installed program!".format(args.remove))
+        elif status == "Delete fail":
+            generic.pprint("Failed to delete program directory! Are you currently using a file from inside it?")
 
     elif args.manage is not None:
         manage(args.manage)

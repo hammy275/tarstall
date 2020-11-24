@@ -683,6 +683,8 @@ def pre_install(program, overwrite=None, show_progress=True):
         str: Status of the installation. Possible returns are: "Bad file", and "Application exists".
 
     """
+    if sys.platform == "win32":
+        return "Windows not supported"
     if not config.exists(program):
         return "Bad file"
     program_internal_name = config.name(program)  # Get the program name
@@ -1499,10 +1501,10 @@ def dirinstall(program_path, program_internal_name, overwrite=False, reinstall=F
         return "No rsync"
     config.vprint("Moving folder to tarstall destination")
     if overwrite:
-        call(["rsync", "-a", program_path, config.full("~/.tarstall/bin/{}".format(program_internal_name))], stdout=c_out)
-        rmtree(program_path)
+        call(["rsync", "-a", config.full(program_path), config.full("~/.tarstall/bin/{}".format(program_internal_name))], stdout=c_out)
+        rmtree(config.full(program_path))
     else:
-        move(program_path, config.full("~/.tarstall/bin/"))
+        move(config.full(program_path), config.full("~/.tarstall/bin/"))
     if not overwrite:
         return finish_install(program_internal_name)
     else:
@@ -1522,7 +1524,12 @@ def uninstall(program):
     if not program in config.db["programs"]:
         return "Not installed"
     config.vprint("Removing program files")
-    rmtree(config.full("~/.tarstall/bin/" + program + '/'))
+    try:
+        rmtree(config.full("~/.tarstall/bin/" + program + '/'))
+    except PermissionError:
+        ecode = os.system("rmdir /s /q {}".format(config.full("~/.tarstall/bin/" + program + '/')))
+        if ecode:
+            return "Delete fail"
     generic.progress(40)
     config.vprint("Removing program from PATH and any binlinks for the program")
     config.remove_line(program, "~/.tarstall/.bashrc", 'poundword')
