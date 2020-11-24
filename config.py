@@ -323,7 +323,13 @@ def full(file_name):
         str: Converted path
 
     """
-    return os.path.abspath(os.path.expanduser(file_name))
+    to_ret = file_name
+    if "win32" in sys.platform:
+        if to_ret.startswith("/tmp"):
+            to_ret = to_ret.replace("/tmp", "%userprofile%/.tarstall-temp")  # %temp% has really weird permissions, so for the time being, will use a different folder.
+            if not exists("%userprofile%/.tarstall-temp/"):
+                os.mkdir(full("%userprofile%/.tarstall-temp/"))
+    return os.path.abspath(os.path.expanduser(os.path.expandvars(to_ret)))
 
 
 def spaceify(file_name):

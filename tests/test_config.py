@@ -9,19 +9,19 @@ def test_check_bin():
 
 
 def test_replace_in_file():
-    with open("/tmp/tarstall-test-temp", "w") as f:
+    with open(config.full("/tmp/tarstall-test-temp"), "w") as f:
         f.write("Test Line.")
     config.replace_in_file("Test Line.", "TestHere", "/tmp/tarstall-test-temp")
-    with open("/tmp/tarstall-test-temp", "r") as f:
+    with open(config.full("/tmp/tarstall-test-temp"), "r") as f:
         assert f.readline() == "TestHere"
     
-    with open("/tmp/tarstall-test-temp-two", "w") as f:
+    with open(config.full("/tmp/tarstall-test-temp-two"), "w") as f:
         f.write("Test Line.")
     config.replace_in_file("No Replace.", "TestHere", "/tmp/tarstall-test-temp")
-    with open("/tmp/tarstall-test-temp-two", "r") as f:
+    with open(config.full("/tmp/tarstall-test-temp-two"), "r") as f:
         assert f.readline() == "Test Line."
-    os.remove("/tmp/tarstall-test-temp-two")
-    os.remove("/tmp/tarstall-test-temp")
+    os.remove(config.full("/tmp/tarstall-test-temp-two"))
+    os.remove(config.full("/tmp/tarstall-test-temp"))
 
 
 def test_read_config():
@@ -41,16 +41,16 @@ def test_vcheck():
 
 def test_lock():
     config.lock()
-    assert os.path.isfile("/tmp/tarstall-lock")
+    assert os.path.isfile(config.full("/tmp/tarstall-lock"))
 
 
 def test_locked():
-    assert config.locked() == os.path.isfile("/tmp/tarstall-lock")
+    assert config.locked() == os.path.isfile(config.full("/tmp/tarstall-lock"))
 
 
 def test_unlock():
     config.unlock()
-    assert not os.path.isfile("/tmp/tarstall-lock")
+    assert not os.path.isfile(config.full("/tmp/tarstall-lock"))
 
 def test_get_db():
     assert config.get_db() == {

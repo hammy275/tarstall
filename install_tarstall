@@ -5,7 +5,21 @@ import os
 from subprocess import call
 from shutil import which, rmtree
 
-columns = int(os.popen('stty size', 'r').read().split()[1])
+try:
+    columns = int(os.popen('stty size', 'r').read().split()[1])
+except Exception:
+    columns = 24
+
+def full(file_name):
+    """Full Path.
+
+    Taken from tarstall's config.py. Take a look at it for docstring info.
+    """
+    to_ret = file_name
+    if "win32" in sys.platform:
+        if to_ret.startswith("/tmp"):
+            to_ret = to_ret.replace("/tmp", "%temp%")
+    return os.path.abspath(os.path.expanduser(os.path.expandvars(to_ret)))
 
 def status(msg):
     """Print Status Message.
@@ -88,39 +102,51 @@ def install_package(pkg):
 def setup():
     # Checks
     status("Checking for anything missing for tarstall setup")
-    supported_package_managers = ["apt", "apt-get", "dnf", "pacman"]
-    supported_shells = ["bash", "zsh", "fish"]
-    if which("sudo") is None:
-        status("Please install 'sudo'!")
+    if sys.platform == "darwin":
+        print("tarstall does not support your operating system!")
         sys.exit(1)
-    supported = False
-    for manager in supported_package_managers:
-        if which(manager) is not None:
-            supported = True
-            break
-    if not supported:
-        status("You currently don't have a supported package manager! Currently supported package managers are: " + ", ".join(supported_package_managers))
-        sys.exit(1)
-    shell = os.environ["SHELL"]
-    shell_supported = False
-    for sshell in supported_shells:
-        if sshell in shell:
-            shell_supported = True
-            break
-    msg = "All of the checks passed!"
-    if not shell_supported:
-        msg = "WARNING: YOUR SHELL IS NOT SUPPORTED!\n\nYOU WILL HAVE TO MANUALLY ADD ~/.tarstall/tarstall_execs TO YOUR PATH, " \
-        "AND ANY PATH/BINLINK FUNCTIONS WILL NOT WORK!\nWOULD YOU LIKE TO PROCEED WITH INSTALLATION ANYWAYS?"
-        status(msg)
-        should_proceed = input("Type 'YES' to continue; anything else to exit... ")
-        if should_proceed.lower() != "yes":
-            status("Installation cancelled!")
+    elif sys.platform == "linux":
+        supported_package_managers = ["apt", "apt-get", "dnf", "pacman"]
+        supported_shells = ["bash", "zsh", "fish"]
+        if which("sudo") is None:
+            status("Please install 'sudo'!")
             sys.exit(1)
-        msg = "All of the checks besides the shell check passed, while the shell check was skipped by the user!"
+        supported = False
+        for manager in supported_package_managers:
+            if which(manager) is not None:
+                supported = True
+                break
+        if not supported:
+            status("You currently don't have a supported package manager! Currently supported package managers are: " + ", ".join(supported_package_managers))
+            sys.exit(1)
+        shell = os.environ["SHELL"]
+        shell_supported = False
+        for sshell in supported_shells:
+            if sshell in shell:
+                shell_supported = True
+                break
+        msg = "All of the checks passed!"
+        if not shell_supported:
+            msg = "WARNING: YOUR SHELL IS NOT SUPPORTED!\n\nYOU WILL HAVE TO MANUALLY ADD ~/.tarstall/tarstall_execs TO YOUR PATH, " \
+            "AND ANY PATH/BINLINK FUNCTIONS WILL NOT WORK!\nWOULD YOU LIKE TO PROCEED WITH INSTALLATION ANYWAYS?"
+            status(msg)
+            should_proceed = input("Type 'YES' to continue; anything else to exit... ")
+            if should_proceed.lower() != "yes":
+                status("Installation cancelled!")
+                sys.exit(1)
+            msg = "All of the checks besides the shell check passed, while the shell check was skipped by the user!"
+    elif sys.platform == "win32":
+        if which("python") is None and which("python3") is None:
+            status("Python must be added to your PATH for tarstall to work!")
+            sys.exit(1)
+        if which("git") is None:
+            status("Git is not installed! Please install it using the default options from https://git-scm.com/downloads")
+            print("If you're comfortable with customizing Git SCM, please make sure checkout for Windows-style line endings is selected!!!")
+        msg = "All checks passed!"
     print("{}\n\n\n".format(msg))
 
     # User information
-    if not os.path.isfile("/tmp/dont-ask-me"):
+    if not os.path.isfile(full("/tmp/dont-ask-me")):
         status("Welcome!\nThis installer is going to install tarstall! You'll need to enter your sudo password at some points. " + 
         "This will use your distro's package manager along with pip to install the dependencies required for tarstall!")
         cancel = input("When you're ready to start installation, press ENTER! If you would like to cancel, type 'c', then press ENTER!")
@@ -129,38 +155,39 @@ def setup():
             sys.exit()
 
     # Install requirements obtained through package manager
-    status("Installing tarstall's package requirements")
-    if which("git") is None:
-        install_package("git")
-    else:
-        print("git is already installed!")
-    if which("wget") is None:
-        install_package("wget")
-    else:
-        print("wget is already installed!")
-    try:
-        import tkinter
-        del tkinter
-        print("Thanks for having tkinter already installed!")
-    except ImportError:
-        install_package({"apt": "python3-tk", "dnf": "python3-tkinter", "pacman": "tk"})
+    if sys.platform == "linux":
+        status("Installing tarstall's package requirements")
+        if which("git") is None:
+            install_package("git")
+        else:
+            print("git is already installed!")
+        if which("wget") is None:
+            install_package("wget")
+        else:
+            print("wget is already installed!")
+        try:
+            import tkinter
+            del tkinter
+            print("Thanks for having tkinter already installed!")
+        except ImportError:
+            install_package({"apt": "python3-tk", "dnf": "python3-tkinter", "pacman": "tk"})
 
     # Clone repository
     status("Getting a copy of tarstall")
     try:
-        rmtree("/tmp/tarstall-setup")
+        rmtree(full("/tmp/tarstall-setup"))
     except FileNotFoundError:
         pass
-    os.mkdir("/tmp/tarstall-setup")
-    os.chdir("/tmp/tarstall-setup")
+    os.mkdir(full("/tmp/tarstall-setup"))
+    os.chdir(full("/tmp/tarstall-setup"))
     if not run(["git", "clone", "https://github.com/hammy3502/tarstall.git"]):
         status("Error while getting the tarstall repository!")
         try:
-            rmtree("/tmp/tarstall-setup")
+            rmtree(full("/tmp/tarstall-setup"))
         except FileNotFoundError:
             pass
         sys.exit(1)
-    os.chdir("/tmp/tarstall-setup/tarstall")
+    os.chdir(full("/tmp/tarstall-setup/tarstall"))
 
     # Install Python requirements
     status("Installing tarstall's Python requirements")
@@ -179,7 +206,7 @@ def setup():
 
     # Removing tarstall setup directory
     try:
-        rmtree("/tmp/tarstall-setup")
+        rmtree(full("/tmp/tarstall-setup"))
     except FileNotFoundError:
         pass
 

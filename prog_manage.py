@@ -125,11 +125,11 @@ def reinstall_deps():
         return "No wget"
     config.vprint("Deleting and re-creating temp directory")
     try:
-        rmtree("/tmp/tarstall-temp")
+        rmtree(config.full("/tmp/tarstall-temp"))
     except FileNotFoundError:
         pass
-    os.mkdir("/tmp/tarstall-temp/")
-    os.chdir("/tmp/tarstall-temp/")
+    os.mkdir(config.full("/tmp/tarstall-temp/"))
+    os.chdir(config.full("/tmp/tarstall-temp/"))
     generic.progress(5)
     config.vprint("Obtaining tarstall installer...")
     url = "https://raw.githubusercontent.com/hammy3502/tarstall/{}/install_tarstall".format(config.db["version"]["branch"])
@@ -143,7 +143,7 @@ def reinstall_deps():
     err = call([sys.executable, "install_tarstall"], stdout=c_out, stderr=c_out)
     generic.progress(95)
     config.vprint("Removing installer skip file")
-    os.remove("/tmp/dont-ask-me")
+    os.remove(config.full("/tmp/dont-ask-me"))
     generic.progress(100)
     if err != 0:
         return "Installer error"
@@ -283,8 +283,8 @@ def wget_program(program, show_progress=False, progress_modifier=1):
             rmtree(config.full("/tmp/tarstall-temp2"))
         except FileNotFoundError:
             pass
-        os.mkdir("/tmp/tarstall-temp2")
-        os.chdir("/tmp/tarstall-temp2")
+        os.mkdir(config.full("/tmp/tarstall-temp2"))
+        os.chdir(config.full("/tmp/tarstall-temp2"))
         generic.progress(10 / progress_modifier, show_progress)
         config.vprint("Downloading archive...")
         url = config.db["programs"][program]["update_url"]
@@ -294,11 +294,11 @@ def wget_program(program, show_progress=False, progress_modifier=1):
         generic.progress(65 / progress_modifier, show_progress)
         files = os.listdir()
         config.vprint("Renaming archive")
-        os.rename("/tmp/tarstall-temp2/{}".format(files[0]), "/tmp/tarstall-temp2/{}".format(program + ".tar.gz"))
-        os.chdir("/tmp/")
+        os.rename(config.full("/tmp/tarstall-temp2/{}".format(files[0])), config.full("/tmp/tarstall-temp2/{}".format(program + ".tar.gz")))
+        os.chdir(config.full("/tmp/"))
         generic.progress(70 / progress_modifier, show_progress)
         config.vprint("Using install to install the program.")
-        inst_status = pre_install("/tmp/tarstall-temp2/{}".format(program + ".tar.gz"), True, show_progress=False)
+        inst_status = pre_install(config.full("/tmp/tarstall-temp2/{}".format(program + ".tar.gz")), True, show_progress=False)
         generic.progress(95 / progress_modifier, show_progress)
         try:
             rmtree(config.full("/tmp/tarstall-temp2"))
@@ -901,7 +901,7 @@ def finish_install(program_internal_name, install_type="default"):
     generic.progress(90)
     config.vprint("Removing temporary install directory (if it exists)")
     try:
-        rmtree("/tmp/tarstall-temp")
+        rmtree(config.full("/tmp/tarstall-temp"))
     except FileNotFoundError:
         pass
     config.vprint("Adding program to tarstall list of programs")
@@ -1002,8 +1002,8 @@ def gitinstall(git_url, program_internal_name, overwrite=False, reinstall=False)
             rmtree(config.full("/tmp/tarstall-temp"))  # Removes temp directory (used during installs)
         except FileNotFoundError:
             pass
-        os.mkdir("/tmp/tarstall-temp")
-        os.chdir("/tmp/tarstall-temp")
+        os.mkdir(config.full("/tmp/tarstall-temp"))
+        os.chdir(config.full("/tmp/tarstall-temp"))
     else:
         os.chdir(config.full("~/.tarstall/bin"))
     generic.progress(5)
@@ -1012,7 +1012,7 @@ def gitinstall(git_url, program_internal_name, overwrite=False, reinstall=False)
         return "Error"
     generic.progress(65)
     if overwrite:
-        call(["rsync", "-a", "/tmp/tarstall-temp/{}/".format(program_internal_name), config.full("~/.tarstall/bin/{}".format(program_internal_name))], stdout=c_out)
+        call(["rsync", "-a", config.full("/tmp/tarstall-temp/{}/".format(program_internal_name)), config.full("~/.tarstall/bin/{}".format(program_internal_name))], stdout=c_out)
     if not overwrite:
         return finish_install(program_internal_name, "git")
     else:
@@ -1111,12 +1111,12 @@ def update(force_update=False, show_progress=True):
     generic.progress(10, show_progress)
     if force_update or final_version > prog_version_internal:
         try:
-            rmtree("/tmp/tarstall-update")
+            rmtree(config.full("/tmp/tarstall-update"))
         except FileNotFoundError:
             pass
-        os.chdir("/tmp/")
+        os.chdir(config.full("/tmp/"))
         os.mkdir("tarstall-update")
-        os.chdir("/tmp/tarstall-update")
+        os.chdir(config.full("/tmp/tarstall-update"))
         config.vprint("Cloning tarstall repository from git")
         err = git_clone_with_progress("https://github.com/hammy3502/tarstall.git", 10, 55, config.branch)
         if err != 0:
@@ -1139,21 +1139,21 @@ def update(force_update=False, show_progress=True):
                 generic.progress(progress, show_progress)
         generic.progress(70, show_progress)
         config.vprint("Moving in new tarstall files")
-        os.chdir("/tmp/tarstall-update/tarstall/")
+        os.chdir(config.full("/tmp/tarstall-update/tarstall/"))
         files = os.listdir()
         to_ignore = [".git", ".gitignore", "README.md", "readme-images", "COPYING", "requirements.txt", "requirements-gui.txt", "tests", "install_tarstall", "version"]
         progress = 70
         adder = 25 / int(len(files) - len(to_ignore))
         for f in files:
             if f not in to_ignore:
-                move("/tmp/tarstall-update/tarstall/{}".format(f), config.full("~/.tarstall/{}".format(f)))
+                move(config.full("/tmp/tarstall-update/tarstall/{}".format(f)), config.full("~/.tarstall/{}".format(f)))
                 progress += adder
                 generic.progress(progress, show_progress)
         generic.progress(95, show_progress)
         config.vprint("Removing old tarstall temp directory")
         os.chdir(config.full("~/.tarstall/"))
         try:
-            rmtree("/tmp/tarstall-update")
+            rmtree(config.full("/tmp/tarstall-update"))
         except FileNotFoundError:
             pass
         if not force_update:
@@ -1203,12 +1203,12 @@ def erase():
     rmtree(config.full('~/.tarstall'))
     generic.progress(90)
     try:
-        rmtree("/tmp/tarstall-temp")
+        rmtree(config.full("/tmp/tarstall-temp"))
     except FileNotFoundError:
         pass
     generic.progress(95)
     try:
-        rmtree("/tmp/tarstall-temp2")
+        rmtree(config.full("/tmp/tarstall-temp2"))
     except FileNotFoundError:
         pass
     generic.progress(98)
@@ -1408,7 +1408,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
         return "Error"
     generic.progress(50, show_progress)
     config.vprint('Checking for folder in folder')
-    os.chdir("/tmp/tarstall-temp/")
+    os.chdir(config.full("/tmp/tarstall-temp/"))
     if os.path.isdir(config.full('/tmp/tarstall-temp/' + program_internal_name + '/')):
         config.vprint('Folder in folder detected! Using that directory instead...')
         source = config.full('/tmp/tarstall-temp/' + program_internal_name) + '/'
@@ -1434,7 +1434,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
     generic.progress(80, show_progress)
     config.vprint("Adding program to tarstall list of programs")
     config.vprint('Removing old temp directory...')
-    os.chdir("/tmp")
+    os.chdir(config.full("/tmp/"))
     try:
         rmtree(config.full("/tmp/tarstall-temp"))
     except FileNotFoundError:
