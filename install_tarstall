@@ -197,6 +197,10 @@ def setup():
     run([sys.executable, "-m", "pip", "install", "-r", "requirements-gui.txt", "--user"]):
         status("An error occured while installing the GUI requirements!")
         sys.exit(1)
+    if sys.platform == "win32":
+        if not run([sys.executable, "-m", "pip", "install", "-r", "requirements-win.txt", "--user"]):
+            status("An error occured while installing the Windows-specific requirements!")
+            sys.exit(1)
 
     # Pass control to tarstall
     status("Running tarstall installation")
