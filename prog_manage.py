@@ -30,6 +30,7 @@ except ImportError:
 
 import config
 import generic
+import json
 
 if config.verbose:
     c_out = None
@@ -1563,17 +1564,13 @@ def get_online_version(type_of_replacement, branch=config.branch):
     if not can_update:
         config.vprint("requests library not installed! Exiting...")
         return -1
-    version_url = "https://raw.githubusercontent.com/hammy3502/tarstall/{}/version".format(branch)
+    version_url = "https://raw.githubusercontent.com/hammy3502/tarstall/{}/version.json".format(branch)
     try:
         version_raw = requests.get(version_url)
     except requests.ConnectionError:
         return -2
-    version = version_raw.text
-    spot = version.find(".")
-    if type_of_replacement == 'file':
-        return int(version[0:spot])
-    elif type_of_replacement == 'prog':
-        return int(version[spot + 1:])
+    version = json.loads(version_raw.text)["versions"]
+    return version[type_of_replacement]
 
 
 def get_file_version(version_type):
