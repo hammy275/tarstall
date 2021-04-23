@@ -18,7 +18,6 @@
 
 import sys
 import os
-import argparse
 import sys
 import getpass
 import shutil
@@ -708,6 +707,32 @@ def fts_status(status):
     else:
         return
 
+
+def help():
+    """Prints Help."""
+    generic.pprint(
+    """Usage: tarstall [COMMAND] [OPTION]
+
+Commands:
+\t-h, --help\tDisplays this help prompt
+\t-i, --install [ARCHIVE]\tInstalls the archive located at [ARCHIVE]
+\t-d, --dirinstall [DIRECTORY]\tInstalls the directory located at [DIRECTORY]
+\t-g, --gitinstall [URL]\tInstalls the git repository at [URL]
+\t-s, --singleinstall [EXECUTABLE]\tInstalls the program [EXECUTABLE] as a standalone executable
+\t-r, --remove [PROGRAM]\tUninstalls [PROGRAM] from tarstall
+\t-l, --list\tLists all installed programs
+\t-f, --first\tRuns first-time setup
+\t-e, --erase\tRemoves tarstall from your system
+\t-v, --verbose\tToggles verbose mode for tarstall
+\t-u, --update\tUpdates tarstall if an update is available
+\t-m, --manage\t [PROGRAM] Manage the program named [PROGRAM]
+\t-k, --remove-lock\tRemoves tarstall's lock (only do this if tarstall isn't already running)ls
+\t-c, --config\tConfigure tarstall
+\t-q, --update-programs [PROGRAM]\tUpdates [PROGRAM], or all programs if [PROGRAM] is not specified
+    """
+    )
+
+
 def parse_args(args=None):
     """Argument Parsing.
 
@@ -715,33 +740,15 @@ def parse_args(args=None):
 
     """
     exit_code = 0
-    parser = argparse.ArgumentParser()
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('-i', "--install", help="Install a .tar.gz, .tar.xz, or .zip")
-    group.add_argument('-d', "--dirinstall", help="Install a directory")
-    group.add_argument('-g', '--gitinstall', help="Install by retrieving a git repository")
-    group.add_argument('-s', '--singleinstall', help="Install a program stored as a single executable file")
-    group.add_argument('-r', "--remove", help="Remove an insatlled program")
-    group.add_argument('-l', "--list", help="List installed programs", action="store_true")
-    group.add_argument('-f', "--first", help="Run first time setup", action="store_true")
-    group.add_argument('-e', "--erase", help="Delete tarstall from your system", action="store_true")
-    group.add_argument('-v', "--verbose", help="Toggle verbose mode", action="store_true")
-    group.add_argument('-u', '--update', help="Update tarstall if an update is available", action="store_true")
-    group.add_argument('-m', '--manage', help="Manage an installed program")
-    group.add_argument('-k', '--remove-lock', help="Remove tarstall lock file (only do this if tarstall isn't already "
-                                                "running)", action="store_true")
-    group.add_argument('-c', '--config', help="Change tarstall options", action="store_true")
-    group.add_argument('-q', '--update-programs', help="Update programs that can be updated, or a single program if supplied.", nargs='?', const=True, type=str)
     if args is None:
-        args = parser.parse_args()
-    else:
-        args = parser.parse_args(args)
+        args = sys.argv[1:]
 
-    status = prog_manage.tarstall_startup(start_fts=args.first, del_lock=args.remove_lock)
+    did_fts = generic.has_argument("f", "first")
+    unlock_flag = generic.has_argument("k", "remove-lock")
+
+    status = prog_manage.tarstall_startup(start_fts=did_fts, del_lock=unlock_flag)
 
     fts_status(status)
-
-    did_fts = args.first
 
     if status == "Locked":
         if mode == "cli":
@@ -775,7 +782,7 @@ def parse_args(args=None):
     
     elif status == "Old upgrade":
         generic.ppause("You are upgrading from a VERY old version of tarstall. Upgradiing will wipe your database! To upgrade: ")
-        prog_manage.tarstall_startup(start_fts=args.first, del_lock=args.remove_lock, old_upgrade=True)
+        prog_manage.tarstall_startup(start_fts=did_fts, del_lock=unlock_flag, old_upgrade=True)
     
     elif status == "DB Broken":
         yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as program update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"])
@@ -805,125 +812,158 @@ def parse_args(args=None):
             config.unlock()
             sys.exit(exit_code)
 
-    if args.install is not None:
-        overwrite = False
-        status = prog_manage.pre_install(args.install)
-        if status == "Bad file":
-            generic.pprint("The specified file does not exist!")
-            exit_code = 1
-        elif status == "Application exists":
-            reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?",
-                                      ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"])  # Ask to reinstall
-            if reinstall == "r":
-                status = prog_manage.pre_install(args.install, False)
-            elif reinstall == "o":
-                status = prog_manage.pre_install(args.install, True)
-                overwrite = True
-            else:
-                generic.pprint("Reinstall cancelled.")
-        if status == "Installed" and not overwrite:
-            install_wrap_up(config.name(args.install))
-        elif status.startswith("No"):
-            generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
-        elif status == "No rsync":
-            generic.pprint("rsync not installed! Please install it!")
-            exit_code = 1
-        elif status == "Bad name":
-            generic.pprint("Archive name cannot contain a space or #!")
-            exit_code = 1
-        elif status == "Error":
-            generic.pprint("Error occured while extracting archive!")
-            exit_code = 1
+    if generic.has_argument("h", "help"):
+        help()
 
-    elif args.gitinstall is not None:
-        overwrite = False
-        status = prog_manage.pre_gitinstall(args.gitinstall)
-        if status == "No git":
-            generic.pprint("git not installed! Please install it before using this feature!")
+    elif generic.get_arg_extra("i", "install") is not None:
+        install_arg = generic.get_arg_extra("i", "install")
+        if install_arg == -1:
+            generic.pprint("Please specify an archive to install!")
             exit_code = 1
-        elif status == "Bad URL":
-            generic.pprint("Invalid URL supplied; make sure it ends in .git!")
+        else:
+            overwrite = False
+            status = prog_manage.pre_install(install_arg)
+            if status == "Bad file":
+                generic.pprint("The specified file does not exist!")
+                exit_code = 1
+            elif status == "Application exists":
+                reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?",
+                                        ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"])  # Ask to reinstall
+                if reinstall == "r":
+                    status = prog_manage.pre_install(install_arg, False)
+                elif reinstall == "o":
+                    status = prog_manage.pre_install(install_arg, True)
+                    overwrite = True
+                else:
+                    generic.pprint("Reinstall cancelled.")
+            if status == "Installed" and not overwrite:
+                install_wrap_up(config.name(install_arg))
+            elif status.startswith("No"):
+                generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
+            elif status == "No rsync":
+                generic.pprint("rsync not installed! Please install it!")
+                exit_code = 1
+            elif status == "Bad name":
+                generic.pprint("Archive name cannot contain a space or #!")
+                exit_code = 1
+            elif status == "Error":
+                generic.pprint("Error occured while extracting archive!")
+                exit_code = 1
+
+    elif generic.get_arg_extra("g", "gitinstall") is not None:
+        gitinstall_arg = generic.get_arg_extra("g", "gitinstall")
+        if gitinstall_arg == -1:
+            generic.pprint("Please specify a URL to install!")
             exit_code = 1
-        elif status == "Application exists":
-            reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?",
-                                            ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"])  # Ask to reinstall
-            if reinstall == "r":
-                status = prog_manage.pre_gitinstall(args.gitinstall, False)
-            elif reinstall == "o":
-                status = prog_manage.pre_gitinstall(args.gitinstall, True)
-                overwrite = True
-            else:
-                generic.pprint("Reinstall cancelled.")
-        if status == "Installed" and not overwrite:
-            install_wrap_up(config.name(args.gitinstall))
-        elif status == "No rsync":
-            generic.pprint("rsync not installed! Please install it!")
-            exit_code = 1
-        elif status == "Error":
-            generic.pprint("An error occured while attempting to git clone!")
-            exit_code = 1
+        else:
+            overwrite = False
+            status = prog_manage.pre_gitinstall(gitinstall_arg)
+            if status == "No git":
+                generic.pprint("git not installed! Please install it before using this feature!")
+                exit_code = 1
+            elif status == "Bad URL":
+                generic.pprint("Invalid URL supplied; make sure it ends in .git!")
+                exit_code = 1
+            elif status == "Application exists":
+                reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?",
+                                                ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"])  # Ask to reinstall
+                if reinstall == "r":
+                    status = prog_manage.pre_gitinstall(gitinstall_arg, False)
+                elif reinstall == "o":
+                    status = prog_manage.pre_gitinstall(gitinstall_arg, True)
+                    overwrite = True
+                else:
+                    generic.pprint("Reinstall cancelled.")
+            if status == "Installed" and not overwrite:
+                install_wrap_up(config.name(gitinstall_arg))
+            elif status == "No rsync":
+                generic.pprint("rsync not installed! Please install it!")
+                exit_code = 1
+            elif status == "Error":
+                generic.pprint("An error occured while attempting to git clone!")
+                exit_code = 1
     
 
-    elif args.singleinstall is not None:
-        status = prog_manage.pre_singleinstall(args.singleinstall)
-        if status == "Bad file":
-            generic.pprint("The specified file does not exist!")
+    elif generic.get_arg_extra("s", "singleinstall") is not None:
+        singlefile_arg = generic.get_arg_extra("s", "singleinstall")
+        if singlefile_arg == -1:
+            generic.pprint("Please specify a file to install!")
             exit_code = 1
-        elif status == "Application exists":
-            reinstall = generic.get_input("Application already exists! Would you like to reinstall?",
-                                      ["r", "n"], "n", ["Reinstall", "Cancel"])  # Ask to reinstall
-            if reinstall == "r":
-                status = prog_manage.pre_singleinstall(args.singleinstall, True)
-            else:
-                generic.pprint("Reinstall cancelled.")
-        if status == "Installed":
-            install_wrap_up(config.name(args.singleinstall), True)
-        elif status.startswith("No"):
-            generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
-        elif status == "No rsync":
-            generic.pprint("rsync not installed! Please install it!")
-            exit_code = 1
-        elif status == "Bad name":
-            generic.pprint("Archive name cannot contain a space or #!")
-            exit_code = 1
-        elif status == "Error":
-            generic.pprint("Error occured while extracting archive!")
-            exit_code = 1
+        else:
+            status = prog_manage.pre_singleinstall(singlefile_arg)
+            if status == "Bad file":
+                generic.pprint("The specified file does not exist!")
+                exit_code = 1
+            elif status == "Application exists":
+                reinstall = generic.get_input("Application already exists! Would you like to reinstall?",
+                                        ["r", "n"], "n", ["Reinstall", "Cancel"])  # Ask to reinstall
+                if reinstall == "r":
+                    status = prog_manage.pre_singleinstall(singlefile_arg, True)
+                else:
+                    generic.pprint("Reinstall cancelled.")
+            if status == "Installed":
+                install_wrap_up(config.name(singlefile_arg), True)
+            elif status.startswith("No"):
+                generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
+            elif status == "No rsync":
+                generic.pprint("rsync not installed! Please install it!")
+                exit_code = 1
+            elif status == "Bad name":
+                generic.pprint("Archive name cannot contain a space or #!")
+                exit_code = 1
+            elif status == "Error":
+                generic.pprint("Error occured while extracting archive!")
+                exit_code = 1
 
 
-    elif args.dirinstall is not None:
-        overwrite = False
-        status = prog_manage.pre_dirinstall(args.dirinstall)
-        if status == "Bad folder":
-            generic.pprint("Please specify a valid directory path that ends in a \"/\"!")
+    elif generic.get_arg_extra("d", "dirinstall") is not None:
+        dirinstall_arg = generic.get_arg_extra("d", "dirinstall")
+        if dirinstall_arg == -1:
+            generic.pprint("Please specify a directory to install!")
             exit_code = 1
-        elif status == "Application exists":
-            reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?", ["r", "o", "n"], "n", 
-            ["Reinstall", "Overwrite", "Cancel"])
-            if reinstall == 'r':
-                status = prog_manage.pre_dirinstall(args.dirinstall, False)
-            elif reinstall == 'o':
-                status = prog_manage.pre_dirinstall(args.dirinstall, True)
-                overwrite = True
-            else:
-                generic.pprint("Reinstall cancelled.")
-        if status == "Installed" and not overwrite:
-            install_wrap_up(config.dirname(args.dirinstall))
-        elif status == "No rsync":
-            generic.pprint("rsync not installed! Please install it!")
+        else:
+            overwrite = False
+            status = prog_manage.pre_dirinstall(dirinstall_arg)
+            if status == "Bad folder":
+                generic.pprint("Please specify a valid directory path that ends in a \"/\"!")
+                exit_code = 1
+            elif status == "Application exists":
+                reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?", ["r", "o", "n"], "n", 
+                ["Reinstall", "Overwrite", "Cancel"])
+                if reinstall == 'r':
+                    status = prog_manage.pre_dirinstall(dirinstall_arg, False)
+                elif reinstall == 'o':
+                    status = prog_manage.pre_dirinstall(dirinstall_arg, True)
+                    overwrite = True
+                else:
+                    generic.pprint("Reinstall cancelled.")
+            if status == "Installed" and not overwrite:
+                install_wrap_up(config.dirname(dirinstall_arg))
+            elif status == "No rsync":
+                generic.pprint("rsync not installed! Please install it!")
+                exit_code = 1
+
+    elif generic.get_arg_extra("r", "remove") is not None:
+        remove_arg = generic.get_arg_extra("r", "remove")
+        if remove_arg == -1:
+            generic.pprint("Please specify a program to remove!")
             exit_code = 1
+        else:
+            status = prog_manage.uninstall(remove_arg)
+            if status == "Success":
+                generic.pprint("Successfully uninstalled {}!".format(remove_arg))
+            elif status == "Not installed":
+                generic.pprint("{} isn't an installed program!".format(remove_arg))
 
-    elif args.remove is not None:
-        status = prog_manage.uninstall(args.remove)
-        if status == "Success":
-            generic.pprint("Successfully uninstalled {}!".format(args.remove))
-        elif status == "Not installed":
-            generic.pprint("{} isn't an installed program!".format(args.remove))
+    elif generic.get_arg_extra("m", "manage") is not None:
+        manage_arg = generic.get_arg_extra("m", "manage")
+        if manage_arg == -1:
+            generic.pprint("Please specify a program to manage!")
+            exit_code = 1
+        else:
+            manage(manage_arg)
 
-    elif args.manage is not None:
-        manage(args.manage)
-
-    elif args.list:
+    elif generic.has_argument("l", "list"):
         programs = prog_manage.list_programs()
         if programs == []:
             generic.pprint("No programs installed!")
@@ -931,9 +971,10 @@ def parse_args(args=None):
             msg = ""
             for p in programs:
                 msg += p + "\n"
+            msg = msg.rstrip()
             generic.pprint(msg)
 
-    elif args.erase:
+    elif generic.has_argument("e", "erase"):
         erase_sure = generic.get_input("Are you sure you would like to remove tarstall from your system?",
                                     ['y', 'n'], 'n', ["Yes", "No"])
         if erase_sure == 'y':
@@ -955,18 +996,26 @@ def parse_args(args=None):
         else:
             generic.pprint('Erase cancelled.')
 
-    elif args.verbose:
+    elif generic.has_argument("v", "verbose"):
         status = prog_manage.verbose_toggle()
         generic.pprint("Verbose mode {}".format(status))
 
-    elif args.update:
+    elif generic.has_argument("u", "update"):
         status = prog_manage.update()
         process_update_status(status)
 
-    elif args.config:
+    elif generic.has_argument("c", "config"):
         configure()
+
+    elif generic.get_arg_extra("q", "update-programs") is not None and generic.get_arg_extra("q", "update-programs") != -1:
+        program_update_arg = generic.get_arg_extra("q", "update-programs")
+        if not program_update_arg in config.db["programs"]:
+            generic.pprint("{} not installed!".format(program_update_arg))
+            exit_code = 1
+        else:
+            update_program_gui(program_update_arg)
     
-    elif args.update_programs is True:
+    elif generic.has_argument("q", "update-programs"):
         status = prog_manage.update_programs()
         if status == "No git":
             generic.pprint("git isn't installed, please install it!")
@@ -992,15 +1041,9 @@ def parse_args(args=None):
                     exit_code = 1
             generic.pprint(msg)
     
-    elif args.update_programs:
-        if not args.update_programs in config.db["programs"]:
-            generic.pprint("{} not installed!".format(args.update_programs))
-            exit_code = 1
-        else:
-            update_program_gui(args.update_programs)
 
 
-    elif not did_fts:
+    elif not did_fts and len(sys.argv) == 1:
         generic.pprint("""
 tarstall. A Python based package manager to manage archives.
 Written by: hammy3502
@@ -1017,11 +1060,16 @@ https://github.com/hammy3502/tarstall/wiki
         """.format(user_version=config.get_version("version"), file_version=config.get_version("file_version"),
                 prog_version=config.get_version("prog_internal_version"), branch=config.branch))
 
+    else:
+        generic.pprint('Invalid command(s)! Run "tarstall -h" for help!')
+        exit_code = 1
+
     config.unlock()
     if mode == "gui":
         return
     elif mode == "cli":
         sys.exit(exit_code)
+    
 
 
 if __name__ == "__main__":
