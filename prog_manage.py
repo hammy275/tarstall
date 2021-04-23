@@ -653,6 +653,11 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
                     elif config.exists("~/.local/share/applications/tarstall/{}.desktop".format(desktop)):
                         config.vprint("Not moving {}, it's already in our new directory!".format(desktop))
 
+        elif file_version == 18:
+            config.vprint("Deleting version.json (if it exists!)")
+            if config.exists("~/.tarstall/version.json"):
+                os.remove(config.full("~/.tarstall/version.json"))
+
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
         config.write_db()
@@ -1142,7 +1147,8 @@ def update(force_update=False, show_progress=True):
         config.vprint("Moving in new tarstall files")
         os.chdir("/tmp/tarstall-update/tarstall/")
         files = os.listdir()
-        to_ignore = [".git", ".gitignore", "README.md", "readme-images", "COPYING", "requirements.txt", "requirements-gui.txt", "tests", "install_tarstall", "version"]
+        to_ignore = [".git", ".gitignore", "README.md", "readme-images", "COPYING", "requirements.txt",
+                     "requirements-gui.txt", "tests", "install_tarstall", "version", "version.json"]
         progress = 70
         adder = 25 / int(len(files) - len(to_ignore))
         for f in files:
