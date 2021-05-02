@@ -21,6 +21,7 @@ import sys
 
 sys.path.insert(1, os.path.abspath(os.path.expanduser("{}/..".format(os.path.dirname(__file__)))))
 
+import generic_cli
 import file
 import tarstall_manage
 import config
@@ -742,8 +743,8 @@ def parse_args(args=None):
     if args is None:
         args = sys.argv[1:]
 
-    did_fts = generic.has_argument("f", "first")
-    unlock_flag = generic.has_argument("k", "remove-lock")
+    did_fts = generic_cli.has_argument("f", "first", args)
+    unlock_flag = generic_cli.has_argument("k", "remove-lock", args)
 
     status = tarstall_manage.tarstall_startup(start_fts=did_fts, del_lock=unlock_flag)
 
@@ -811,11 +812,11 @@ def parse_args(args=None):
             file.unlock()
             sys.exit(exit_code)
 
-    if generic.has_argument("h", "help"):
+    if generic_cli.has_argument("h", "help", args):
         help()
 
-    elif generic.get_arg_extra("i", "install") is not None:
-        install_arg = generic.get_arg_extra("i", "install")
+    elif generic_cli.get_arg_extra("i", "install", args) is not None:
+        install_arg = generic_cli.get_arg_extra("i", "install", args)
         if install_arg == -1:
             generic.pprint("Please specify an archive to install!")
             exit_code = 1
@@ -849,8 +850,8 @@ def parse_args(args=None):
                 generic.pprint("Error occured while extracting archive!")
                 exit_code = 1
 
-    elif generic.get_arg_extra("g", "gitinstall") is not None:
-        gitinstall_arg = generic.get_arg_extra("g", "gitinstall")
+    elif generic_cli.get_arg_extra("g", "gitinstall", args) is not None:
+        gitinstall_arg = generic_cli.get_arg_extra("g", "gitinstall", args)
         if gitinstall_arg == -1:
             generic.pprint("Please specify a URL to install!")
             exit_code = 1
@@ -883,8 +884,8 @@ def parse_args(args=None):
                 exit_code = 1
     
 
-    elif generic.get_arg_extra("s", "singleinstall") is not None:
-        singlefile_arg = generic.get_arg_extra("s", "singleinstall")
+    elif generic_cli.get_arg_extra("s", "singleinstall", args) is not None:
+        singlefile_arg = generic_cli.get_arg_extra("s", "singleinstall", args)
         if singlefile_arg == -1:
             generic.pprint("Please specify a file to install!")
             exit_code = 1
@@ -915,8 +916,8 @@ def parse_args(args=None):
                 exit_code = 1
 
 
-    elif generic.get_arg_extra("d", "dirinstall") is not None:
-        dirinstall_arg = generic.get_arg_extra("d", "dirinstall")
+    elif generic_cli.get_arg_extra("d", "dirinstall", args) is not None:
+        dirinstall_arg = generic_cli.get_arg_extra("d", "dirinstall", args)
         if dirinstall_arg == -1:
             generic.pprint("Please specify a directory to install!")
             exit_code = 1
@@ -942,8 +943,8 @@ def parse_args(args=None):
                 generic.pprint("rsync not installed! Please install it!")
                 exit_code = 1
 
-    elif generic.get_arg_extra("r", "remove") is not None:
-        remove_arg = generic.get_arg_extra("r", "remove")
+    elif generic_cli.get_arg_extra("r", "remove", args) is not None:
+        remove_arg = generic_cli.get_arg_extra("r", "remove", args)
         if remove_arg == -1:
             generic.pprint("Please specify a program to remove!")
             exit_code = 1
@@ -954,15 +955,15 @@ def parse_args(args=None):
             elif status == "Not installed":
                 generic.pprint("{} isn't an installed program!".format(remove_arg))
 
-    elif generic.get_arg_extra("m", "manage") is not None:
-        manage_arg = generic.get_arg_extra("m", "manage")
+    elif generic_cli.get_arg_extra("m", "manage", args) is not None:
+        manage_arg = generic_cli.get_arg_extra("m", "manage", args)
         if manage_arg == -1:
             generic.pprint("Please specify a program to manage!")
             exit_code = 1
         else:
             manage(manage_arg)
 
-    elif generic.has_argument("l", "list"):
+    elif generic_cli.has_argument("l", "list", args):
         programs = prog_manage.list_programs()
         if programs == []:
             generic.pprint("No programs installed!")
@@ -973,7 +974,7 @@ def parse_args(args=None):
             msg = msg.rstrip()
             generic.pprint(msg)
 
-    elif generic.has_argument("e", "erase"):
+    elif generic_cli.has_argument("e", "erase", args):
         erase_sure = generic.get_input("Are you sure you would like to remove tarstall from your system?",
                                     ['y', 'n'], 'n', ["Yes", "No"])
         if erase_sure == 'y':
@@ -995,26 +996,26 @@ def parse_args(args=None):
         else:
             generic.pprint('Erase cancelled.')
 
-    elif generic.has_argument("v", "verbose"):
+    elif generic_cli.has_argument("v", "verbose", args):
         status = tarstall_manage.verbose_toggle()
         generic.pprint("Verbose mode {}".format(status))
 
-    elif generic.has_argument("u", "update"):
+    elif generic_cli.has_argument("u", "update", args):
         status = tarstall_manage.update()
         process_update_status(status)
 
-    elif generic.has_argument("c", "config"):
+    elif generic_cli.has_argument("c", "config", args):
         configure()
 
-    elif generic.get_arg_extra("q", "update-programs") is not None and generic.get_arg_extra("q", "update-programs") != -1:
-        program_update_arg = generic.get_arg_extra("q", "update-programs")
+    elif generic_cli.get_arg_extra("q", "update-programs", args) is not None and generic_cli.get_arg_extra("q", "update-programs", args) != -1:
+        program_update_arg = generic_cli.get_arg_extra("q", "update-programs", args)
         if not program_update_arg in config.db["programs"]:
             generic.pprint("{} not installed!".format(program_update_arg))
             exit_code = 1
         else:
             update_program_gui(program_update_arg)
     
-    elif generic.has_argument("q", "update-programs"):
+    elif generic_cli.has_argument("q", "update-programs", args):
         status = prog_manage.update_programs()
         if status == "No git":
             generic.pprint("git isn't installed, please install it!")
