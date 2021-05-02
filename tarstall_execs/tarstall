@@ -21,6 +21,7 @@ import sys
 
 sys.path.insert(1, os.path.abspath(os.path.expanduser("{}/..".format(os.path.dirname(__file__)))))
 
+import file
 import tarstall_manage
 import config
 import generic
@@ -148,7 +149,7 @@ def process_update_status(status):
         generic.pprint("tarstall successfully updated!")
     elif status == "Repaired":
         generic.pprint("tarstall successfully repaired!")
-        config.unlock()
+        file.unlock()
         sys.exit(0)
 
 
@@ -194,12 +195,12 @@ Are you sure you would like to attempt repairing?
             else:
                 tarstall_manage.repair_db()
                 generic.ppause("Database repair complete!")
-                config.unlock()
+                file.unlock()
                 sys.exit(0)
 
 
 def wget_wizard(program):
-    if not config.check_bin("wget"):
+    if not file.check_bin("wget"):
         generic.ppause("You must have 'wget' installed to use this feature!")
         return
     while True:
@@ -318,7 +319,7 @@ E - Exit branch wizard and don't change branches."""
             elif status == "Reset":
                 generic.pprint("Successfully switched to the master branch and reset tarstall!" \
                 " Please run tarstall again to finish the downgrade process!")
-                config.unlock()
+                file.unlock()
                 sys.exit(0)
             elif status == "Waiting":
                 generic.pprint("Successfully switched to the master branch!" \
@@ -371,7 +372,7 @@ def configure():
                 generic.ppause("Changed to GUI mode! Restart tarstall to confirm your changes!")
             else:
                 config.change_config("Mode", "change", "cli")
-                os.remove(config.full("~/.local/share/applications/tarstall/tarstall.desktop"))
+                os.remove(file.full("~/.local/share/applications/tarstall/tarstall.desktop"))
                 generic.ppause("Changed to CLI mode! Restart tarstall to confirm your changes!")
             key = None
         elif option == 's':
@@ -437,7 +438,7 @@ def desktop_wizard(program, is_single=False):
     if is_single:
         program_file = program
     else:
-        program_file = generic.file_browser(config.full('~/.tarstall/bin/' + program + '/'))
+        program_file = generic.file_browser(file.full('~/.tarstall/bin/' + program + '/'))
     if program_file is None:
         return
     comment = "/"
@@ -644,10 +645,10 @@ def manage(program):
                 generic.pprint("This feature can only be used from the command line version of tarstall!")
             else:
                 generic.pprint("When you exit the shell, you will be returned to here.")
-                os.chdir(config.full("~/.tarstall/bin/" + program + "/"))
-                if config.get_shell_file() == ".zshrc":
+                os.chdir(file.full("~/.tarstall/bin/" + program + "/"))
+                if file.get_shell_file() == ".zshrc":
                     call(["/bin/zsh"])
-                elif "fish" in config.get_shell_file():
+                elif "fish" in file.get_shell_file():
                     call(["/usr/bin/fish"])
                 else:
                     call(["/bin/bash"])
@@ -768,7 +769,7 @@ def parse_args(args=None):
             did_fts = True
         else:
             generic.pprint('tarstall not installed.')
-            config.unlock()
+            file.unlock()
             sys.exit(1)
     
     elif status == "Root":
@@ -785,12 +786,12 @@ def parse_args(args=None):
     elif status == "DB Broken":
         yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as program update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"])
         if yn != 'y':
-            config.unlock()
+            file.unlock()
             generic.pprint("Not repairing DB.")
             sys.exit(1)
         else:
             tarstall_manage.repair_db()
-            config.unlock()
+            file.unlock()
             sys.exit(0)
 
     if status == "Missing Deps" and config.read_config("WarnMissingDeps"):
@@ -807,7 +808,7 @@ def parse_args(args=None):
                 generic.pprint("An error occured while trying to obtain the tarstall installer. Are you connected to the internet?")
             elif status == "Installer error":
                 generic.pprint("An error occured while running the installer")
-            config.unlock()
+            file.unlock()
             sys.exit(exit_code)
 
     if generic.has_argument("h", "help"):
@@ -835,7 +836,7 @@ def parse_args(args=None):
                 else:
                     generic.pprint("Reinstall cancelled.")
             if status == "Installed" and not overwrite:
-                install_wrap_up(config.name(install_arg))
+                install_wrap_up(file.name(install_arg))
             elif status.startswith("No"):
                 generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
             elif status == "No rsync":
@@ -873,7 +874,7 @@ def parse_args(args=None):
                 else:
                     generic.pprint("Reinstall cancelled.")
             if status == "Installed" and not overwrite:
-                install_wrap_up(config.name(gitinstall_arg))
+                install_wrap_up(file.name(gitinstall_arg))
             elif status == "No rsync":
                 generic.pprint("rsync not installed! Please install it!")
                 exit_code = 1
@@ -900,7 +901,7 @@ def parse_args(args=None):
                 else:
                     generic.pprint("Reinstall cancelled.")
             if status == "Installed":
-                install_wrap_up(config.name(singlefile_arg), True)
+                install_wrap_up(file.name(singlefile_arg), True)
             elif status.startswith("No"):
                 generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
             elif status == "No rsync":
@@ -936,7 +937,7 @@ def parse_args(args=None):
                 else:
                     generic.pprint("Reinstall cancelled.")
             if status == "Installed" and not overwrite:
-                install_wrap_up(config.dirname(dirinstall_arg))
+                install_wrap_up(file.dirname(dirinstall_arg))
             elif status == "No rsync":
                 generic.pprint("rsync not installed! Please install it!")
                 exit_code = 1
@@ -1062,7 +1063,7 @@ https://github.com/hammy3502/tarstall/wiki
         generic.pprint('Invalid command(s)! Run "tarstall -h" for help!')
         exit_code = 1
 
-    config.unlock()
+    file.unlock()
     if mode == "gui":
         return
     elif mode == "cli":

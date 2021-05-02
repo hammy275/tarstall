@@ -9,6 +9,7 @@ from subprocess import call
 import requests
 
 import config
+import file
 import generic
 from generic_manage import wget_with_progress, git_clone_with_progress, c_out, can_update
 
@@ -39,7 +40,7 @@ def reinstall_deps():
         return "Wget error"
     generic.progress(60)
     config.vprint("Creating file to skip tarstall's installer prompt")
-    config.create("/tmp/dont-ask-me")
+    file.create("/tmp/dont-ask-me")
     config.vprint("Running tarstall setup to (re)-install dependencies")
     err = call([sys.executable, "install_tarstall"], stdout=c_out, stderr=c_out)
     generic.progress(95)
@@ -78,20 +79,20 @@ def repair_db():
     generic.progress(5)
 
     config.vprint("Re-discovering programs:")
-    for pf in os.listdir(config.full("~/.tarstall/bin/")):
+    for pf in os.listdir(file.full("~/.tarstall/bin/")):
         config.vprint("Re-discovering " + pf, end="\r")
         prog_info = {pf: {"install_type": "default", "desktops": [],
         "post_upgrade_script": None, "update_url": None, "has_path": False, "binlinks": []}}
-        if ".git" in os.listdir(config.full("~/.tarstall/bin/{}".format(pf))):
+        if ".git" in os.listdir(file.full("~/.tarstall/bin/{}".format(pf))):
             prog_info[pf]["install_type"] = "git"
-        elif len(os.listdir(config.full("~/.tarstall/bin/{}".format(pf)))) == 1:
+        elif len(os.listdir(file.full("~/.tarstall/bin/{}".format(pf)))) == 1:
             prog_info[pf]["install_type"] = "single"
         new_db["programs"].update(prog_info)
 
     generic.progress(20)
 
     config.vprint("Reading tarstall's bashrc file for further operations...")
-    with open(config.full("~/.tarstall/.bashrc")) as f:
+    with open(file.full("~/.tarstall/.bashrc")) as f:
         bashrc_lines = f.readlines()
 
     generic.progress(25)
@@ -117,15 +118,15 @@ def repair_db():
 
     config.vprint("Backing up old database...")
     date_str = datetime.datetime.today().strftime("%d-%m-%Y-%H-%M-%S")
-    move(config.full("~/.tarstall/database"), config.full("~/.tarstall/database-backup-{}.bak".format(date_str)))
+    move(file.full("~/.tarstall/database"), file.full("~/.tarstall/database-backup-{}.bak".format(date_str)))
 
     generic.progress(80)
 
     config.vprint("Re-discovering .desktop files...")
-    for d in os.listdir(config.full("~/.local/share/applications/tarstall")):
+    for d in os.listdir(file.full("~/.local/share/applications/tarstall")):
         # File name: {program}-{package}.desktop
         # Stored in DB as {program}-package
-        desktop_name = config.name(config.full("~/.local/share/applications/tarstall/{}".format(d)))  # Returns "{program}-{package}"
+        desktop_name = file.name(file.full("~/.local/share/applications/tarstall/{}".format(d)))  # Returns "{program}-{package}"
         desktop_info = desktop_name.split("-")
         new_db["programs"][desktop_info[1]]["desktops"].append("{}-{}".format(desktop_info[0], desktop_info[1]))
 
@@ -154,7 +155,7 @@ def change_branch(branch, reset=False):
 
     """
     if branch == "master":
-        if not config.check_bin("git"):
+        if not file.check_bin("git"):
             reset = False
             generic.progress(50)
     if branch not in ["master", "beta"]:
@@ -179,7 +180,7 @@ def change_branch(branch, reset=False):
                 if config.db["programs"][prog]["desktops"]:
                     for d in config.db["programs"][prog]["desktops"]:
                         try:
-                            os.remove(config.full("~/.local/share/applications/tarstall/{}.desktop".format(d)))
+                            os.remove(file.full("~/.local/share/applications/tarstall/{}.desktop".format(d)))
                         except FileNotFoundError:
                             pass
             generic.progress(85)
@@ -187,7 +188,7 @@ def change_branch(branch, reset=False):
             config.db = {"refresh": True}
             config.write_db()
             generic.progress(100)
-            config.unlock()
+            file.unlock()
             config.vprint("Done!")
             return "Reset"
         else:
@@ -229,37 +230,37 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
         missing_deps = True
     if missing_deps:
         final_status = "Missing Deps"
-    if config.locked():  # Lock check
+    if file.locked():  # Lock check
         config.vprint("Lock file detected at /tmp/tarstall-lock.")
         if del_lock:
             config.vprint("Deleting the lock and continuing execution!")
-            config.unlock()
+            file.unlock()
             return "Unlocked"
         else:
             config.vprint("Lock file removal not specified; staying locked.")
             return "Locked"
     else:
-        config.lock()
+        file.lock()
 
     if config.db == {"refresh": True}:  # Downgrade check
         config.vprint("Finishing downgrade")
         generic.progress(5)
-        config.create("~/.tarstall/database")
+        file.create("~/.tarstall/database")
         create_db()
         generic.progress(15)
-        config.db = config.get_db()
+        config.db = file.get_db()
         config.write_db()
         generic.progress(20)
-        rmtree(config.full("~/.tarstall/bin"))
+        rmtree(file.full("~/.tarstall/bin"))
         generic.progress(90)
-        os.mkdir(config.full("~/.tarstall/bin"))
+        os.mkdir(file.full("~/.tarstall/bin"))
         generic.progress(100)
         config.vprint("Downgrade complete, returning back to tarstall execution...")
 
     if start_fts:  # Check if -f or --first is supplied
         return first_time_setup()
 
-    if not(config.exists('~/.tarstall/tarstall_execs/tarstall')):  # Make sure tarstall is installed
+    if not(file.exists('~/.tarstall/tarstall_execs/tarstall')):  # Make sure tarstall is installed
         return "Not installed"
 
     if config.db == {}:
@@ -306,21 +307,21 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
 
         elif file_version == 17:
             config.vprint("Moving .desktop files to tarstall subdirectory")
-            if not config.exists("~/.local/share/applications/tarstall"):
+            if not file.exists("~/.local/share/applications/tarstall"):
                 config.vprint("Creating tarstall .desktop directory")
-                os.mkdir(config.full("~/.local/share/applications/tarstall"))
+                os.mkdir(file.full("~/.local/share/applications/tarstall"))
             for program in config.db["programs"]:
                 for desktop in config.db["programs"][program]["desktops"]:
-                    if config.exists("~/.local/share/applications/{}.desktop".format(desktop)):
+                    if file.exists("~/.local/share/applications/{}.desktop".format(desktop)):
                         config.vprint("Moving {} to tarstall subdirectory".format(desktop))
-                        move(config.full("~/.local/share/applications/{}.desktop".format(desktop)), config.full("~/.local/share/applications/tarstall/{}.desktop".format(desktop)))
-                    elif config.exists("~/.local/share/applications/tarstall/{}.desktop".format(desktop)):
+                        move(file.full("~/.local/share/applications/{}.desktop".format(desktop)), file.full("~/.local/share/applications/tarstall/{}.desktop".format(desktop)))
+                    elif file.exists("~/.local/share/applications/tarstall/{}.desktop".format(desktop)):
                         config.vprint("Not moving {}, it's already in our new directory!".format(desktop))
 
         elif file_version == 18:
             config.vprint("Deleting version.json (if it exists!)")
-            if config.exists("~/.tarstall/version.json"):
-                os.remove(config.full("~/.tarstall/version.json"))
+            if file.exists("~/.tarstall/version.json"):
+                os.remove(file.full("~/.tarstall/version.json"))
 
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
@@ -346,7 +347,7 @@ def get_default_db():
         "options": {
             "Verbose": False,
             "AutoInstall": False,
-            "ShellFile": config.get_shell_file(),
+            "ShellFile": file.get_shell_file(),
             "SkipQuestions": False,
             "UpdateURLPrograms": False,
             "PressEnterKey": True
@@ -388,7 +389,7 @@ def update(force_update=False, show_progress=True):
     if not can_update and not force_update:
         config.vprint("requests isn't installed.")
         return "No requests"
-    elif not config.check_bin("git"):
+    elif not file.check_bin("git"):
         config.vprint("git isn't installed.")
         return "No git"
     generic.progress(5, show_progress)
@@ -420,17 +421,17 @@ def update(force_update=False, show_progress=True):
             return "Failed"
         generic.progress(55, show_progress)
         config.vprint("Removing old tarstall files")
-        os.chdir(config.full("~/.tarstall/"))
+        os.chdir(file.full("~/.tarstall/"))
         files = os.listdir()
         to_keep = ["bin", "database", ".bashrc", ".fishrc"]
         progress = 55
         adder = 15 / int(len(files) - len(to_keep))
         for f in files:
             if f not in to_keep:
-                if os.path.isdir(config.full("~/.tarstall/{}".format(f))):
-                    rmtree(config.full("~/.tarstall/{}".format(f)))
+                if os.path.isdir(file.full("~/.tarstall/{}".format(f))):
+                    rmtree(file.full("~/.tarstall/{}".format(f)))
                 else:
-                    os.remove(config.full("~/.tarstall/{}".format(f)))
+                    os.remove(file.full("~/.tarstall/{}".format(f)))
                 progress += adder
                 generic.progress(progress, show_progress)
         generic.progress(70, show_progress)
@@ -443,12 +444,12 @@ def update(force_update=False, show_progress=True):
         adder = 25 / int(len(files) - len(to_ignore))
         for f in files:
             if f not in to_ignore:
-                move("/tmp/tarstall-update/tarstall/{}".format(f), config.full("~/.tarstall/{}".format(f)))
+                move("/tmp/tarstall-update/tarstall/{}".format(f), file.full("~/.tarstall/{}".format(f)))
                 progress += adder
                 generic.progress(progress, show_progress)
         generic.progress(95, show_progress)
         config.vprint("Removing old tarstall temp directory")
-        os.chdir(config.full("~/.tarstall/"))
+        os.chdir(file.full("~/.tarstall/"))
         try:
             rmtree("/tmp/tarstall-update")
         except FileNotFoundError:
@@ -474,15 +475,15 @@ def erase():
         line couldn't be removed.
 
     """
-    if not (config.exists(config.full("~/.tarstall/tarstall_execs/tarstall"))):
+    if not (file.exists(file.full("~/.tarstall/tarstall_execs/tarstall"))):
         return "Not installed"
     config.vprint('Removing source line from bashrc and fishrc')
-    if config.get_shell_file() is not None:
-        if "fish" in config.get_shell_file():
+    if file.get_shell_file() is not None:
+        if "fish" in file.get_shell_file():
             path_to_remove = "fishrc"
         else:
             path_to_remove = "bashrc"
-        config.remove_line("~/.tarstall/.{}".format(path_to_remove), config.get_shell_path(), "word")
+        file.remove_line("~/.tarstall/.{}".format(path_to_remove), file.get_shell_path(), "word")
     else:
         to_return = "No line"
     to_return = "Erased"
@@ -492,12 +493,12 @@ def erase():
         if config.db["programs"][prog]["desktops"]:
             for d in config.db["programs"][prog]["desktops"]:
                 try:
-                    os.remove(config.full("~/.local/share/applications/tarstall/{}.desktop".format(d)))
+                    os.remove(file.full("~/.local/share/applications/tarstall/{}.desktop".format(d)))
                 except FileNotFoundError:
                     pass
     generic.progress(40)
     config.vprint('Removing tarstall directory')
-    rmtree(config.full('~/.tarstall'))
+    rmtree(file.full('~/.tarstall'))
     generic.progress(90)
     try:
         rmtree("/tmp/tarstall-temp")
@@ -510,10 +511,10 @@ def erase():
         pass
     generic.progress(98)
     try:
-        os.remove(config.full("~/.local/share/applications/tarstall/tarstall.desktop"))
+        os.remove(file.full("~/.local/share/applications/tarstall/tarstall.desktop"))
     except FileNotFoundError:
         pass
-    config.unlock()
+    file.unlock()
     generic.progress(100)
     return to_return
 
@@ -529,32 +530,32 @@ def first_time_setup():
 
     """
     os.chdir(os.path.dirname(__file__))
-    if config.exists(config.full('~/.tarstall/tarstall_execs/tarstall')):
+    if file.exists(file.full('~/.tarstall/tarstall_execs/tarstall')):
         return "Already installed"
     print('Installing tarstall to your system...')
     generic.progress(5)
     try:
-        os.mkdir(config.full("~/.tarstall"))
+        os.mkdir(file.full("~/.tarstall"))
     except FileExistsError:
-        rmtree(config.full("~/.tarstall"))
-        os.mkdir(config.full("~/.tarstall"))
+        rmtree(file.full("~/.tarstall"))
+        os.mkdir(file.full("~/.tarstall"))
     try:
-        os.mkdir(config.full("/tmp/tarstall-temp/"))
+        os.mkdir(file.full("/tmp/tarstall-temp/"))
     except FileExistsError:
-        rmtree(config.full("/tmp/tarstall-temp"))
-        os.mkdir(config.full("/tmp/tarstall-temp/"))
+        rmtree(file.full("/tmp/tarstall-temp"))
+        os.mkdir(file.full("/tmp/tarstall-temp/"))
     generic.progress(10)
-    os.mkdir(config.full("~/.tarstall/bin"))
-    config.create("~/.tarstall/database")
+    os.mkdir(file.full("~/.tarstall/bin"))
+    file.create("~/.tarstall/database")
     create_db()
-    config.create("~/.tarstall/.bashrc")  # Create directories and files
-    if not config.exists("~/.config"):
-        os.mkdir(config.full("~/.config"))
-    if not config.exists("~/.config/fish"):
-        os.mkdir(config.full("~/.config/fish"))
-    if not config.exists("~/.config/fish/config.fish"):
-        config.create("~/.config/fish/config.fish")
-    config.create("~/.tarstall/.fishrc")
+    file.create("~/.tarstall/.bashrc")  # Create directories and files
+    if not file.exists("~/.config"):
+        os.mkdir(file.full("~/.config"))
+    if not file.exists("~/.config/fish"):
+        os.mkdir(file.full("~/.config/fish"))
+    if not file.exists("~/.config/fish/config.fish"):
+        file.create("~/.config/fish/config.fish")
+    file.create("~/.tarstall/.fishrc")
     generic.progress(15)
     progress = 15
     files = os.listdir()
@@ -563,35 +564,35 @@ def first_time_setup():
         i_num = len(i) - 3
         if i[i_num:len(i)] == '.py':
             try:
-                copyfile(i, config.full('~/.tarstall/' + i))
+                copyfile(i, file.full('~/.tarstall/' + i))
             except FileNotFoundError:
                 return "Bad copy"
         progress += prog_change
         generic.progress(progress)
     generic.progress(70)
-    shell_file = config.get_shell_path()
+    shell_file = file.get_shell_path()
     if shell_file is None:
         to_return = "Unsupported shell"
     else:
         to_return = "Success"
-        if "shrc" in config.get_shell_file():
-            config.add_line("source ~/.tarstall/.bashrc\n", shell_file)
-        elif "fish" in config.get_shell_file():
-            config.add_line("source ~/.tarstall/.fishrc\n", shell_file)
+        if "shrc" in file.get_shell_file():
+            file.add_line("source ~/.tarstall/.bashrc\n", shell_file)
+        elif "fish" in file.get_shell_file():
+            file.add_line("source ~/.tarstall/.fishrc\n", shell_file)
     generic.progress(75)
-    copytree(config.full("./tarstall_execs/"), config.full("~/.tarstall/tarstall_execs/"))  # Move tarstall.py to execs dir
+    copytree(file.full("./tarstall_execs/"), file.full("~/.tarstall/tarstall_execs/"))  # Move tarstall.py to execs dir
     generic.progress(90)
-    if not config.exists("~/.local/share/applications"):
-        os.mkdir(config.full("~/.local/share/applications"))
-    if not config.exists("~/.local/share/applications/tarstall"):
-        os.mkdir(config.full("~/.local/share/applications/tarstall"))
+    if not file.exists("~/.local/share/applications"):
+        os.mkdir(file.full("~/.local/share/applications"))
+    if not file.exists("~/.local/share/applications/tarstall"):
+        os.mkdir(file.full("~/.local/share/applications/tarstall"))
     generic.progress(92)
-    config.add_line("export PATH=$PATH:{}".format(
-                config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")  # Add bashrc line
-    config.add_line("set PATH $PATH {}".format(config.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.fishrc")
+    file.add_line("export PATH=$PATH:{}".format(
+                file.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")  # Add bashrc line
+    file.add_line("set PATH $PATH {}".format(file.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.fishrc")
     generic.progress(95)
     os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
-    config.unlock()
+    file.unlock()
     generic.progress(100)
     return to_return
 

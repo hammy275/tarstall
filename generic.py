@@ -18,6 +18,8 @@ import sys
 import config
 import os
 
+import file
+
 if config.mode == "gui":
     try:
         import PySimpleGUI as sg
@@ -94,7 +96,7 @@ def file_browser(root_dir):
         str: path/to/file/from/root_dir/file.txt (Path to the selected file from root_dir (NOT FROM / !!!!)
 
     """
-    root_dir = config.full(root_dir)
+    root_dir = file.full(root_dir)
     os.chdir(root_dir)
     all_files = os.listdir()
     folders = []
@@ -121,13 +123,13 @@ def file_browser(root_dir):
         if file_chosen == "exit":
             return None
         elif file_chosen in folders:
-            os.chdir(config.full("./{}".format(file_chosen)))
+            os.chdir(file.full("./{}".format(file_chosen)))
             current_folder_path.append(file_chosen)
         elif file_chosen == "..":
             if os.getcwd() == root_dir:
                 pprint("\nCan't go up a directory!\n")
             else:
-                os.chdir(config.full(".."))
+                os.chdir(file.full(".."))
     if current_folder_path != []:
         extra_slash = "/"
     else:
@@ -176,9 +178,9 @@ def ask_file(question):
     """
     if config.mode == "cli":
         f = "asdf"
-        while not config.exists(config.full(f)):
+        while not file.exists(file.full(f)):
             f = input(question)
-        return config.full(f)
+        return file.full(f)
     elif config.mode == "gui":
         layout = [
             [sg.Text(question)],

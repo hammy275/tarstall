@@ -2,6 +2,7 @@ import pytest
 import os
 from io import StringIO
 
+import file
 import prog_manage
 import config
 import tarstall_manage
@@ -36,7 +37,7 @@ def test_get_file_version():
 
 def test_pathify():
     prog_manage.pathify("package")
-    assert config.check_line("export PATH=$PATH:~/.tarstall/bin/package # package", "~/.tarstall/.bashrc", "fuzzy")
+    assert file.check_line("export PATH=$PATH:~/.tarstall/bin/package # package", "~/.tarstall/.bashrc", "fuzzy")
 
 
 def test_verbose_toggle():
@@ -52,24 +53,24 @@ def test_list_programs(capsys):
 
 def test_create_desktop(monkeypatch):
     prog_manage.create_desktop("package", "Name", "test.sh", "Comment here", "False")
-    assert config.exists("~/.local/share/applications/tarstall/test.sh-package.desktop")
+    assert file.exists("~/.local/share/applications/tarstall/test.sh-package.desktop")
 
 
 def test_remove_desktop():
     prog_manage.create_desktop("package", "Name", "test.sh", "Comment here", "False")
     try:
-        assert config.exists("~/.local/share/applications/tarstall/test.sh-package.desktop")
+        assert file.exists("~/.local/share/applications/tarstall/test.sh-package.desktop")
     except AssertionError:
         print("create_desktop() failure, remove_desktop() might be okay.")
     prog_manage.remove_desktop("package", "test.sh-package")
-    assert not config.exists("~/.local/share/applications/tarstall/test.sh-package.desktop")
+    assert not file.exists("~/.local/share/applications/tarstall/test.sh-package.desktop")
 
 
 def test_uninstall():
     prog_manage.uninstall("package")
-    assert config.check_line("export PATH=$PATH:~/.tarstall/bin/package # package", "~/.tarstall/.bashrc",
+    assert file.check_line("export PATH=$PATH:~/.tarstall/bin/package # package", "~/.tarstall/.bashrc",
                            "fuzzy") is False
-    assert os.path.isfile(config.full("~/.tarstall/bin/package/test.sh")) is False
+    assert os.path.isfile(file.full("~/.tarstall/bin/package/test.sh")) is False
 
 
 def test_install(monkeypatch):
@@ -91,7 +92,7 @@ def test_create_db():
         "options": {
             "Verbose": False,
             "AutoInstall": False,
-            "ShellFile": config.get_shell_file(),
+            "ShellFile": file.get_shell_file(),
             "SkipQuestions": False,
             "UpdateURLPrograms": False,
             "PressEnterKey": True
@@ -108,11 +109,11 @@ def test_create_db():
 
 def test_erase():
     assert tarstall_manage.erase() == "Erased"
-    assert os.path.isfile(config.full("~/.tarstall/tarstall.py")) is False
+    assert os.path.isfile(file.full("~/.tarstall/tarstall.py")) is False
     try:
-        assert config.check_line("source ~/.tarstall/.bashrc", "~/.bashrc", "fuzzy") is False
+        assert file.check_line("source ~/.tarstall/.bashrc", "~/.bashrc", "fuzzy") is False
     except FileNotFoundError:
         try:
-            config.check_line("source ~/.tarstall/.zshrc", "~/.zshrc", "fuzzy") is False
+            file.check_line("source ~/.tarstall/.zshrc", "~/.zshrc", "fuzzy") is False
         except FileNotFoundError:
             raise AssertionError("Please use bash or zsh for testing!")
