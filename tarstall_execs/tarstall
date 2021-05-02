@@ -16,14 +16,12 @@
     You should have received a copy of the GNU General Public License
     along with tarstall.  If not, see <https://www.gnu.org/licenses/>."""
 
-import sys
 import os
 import sys
-import getpass
-import shutil
 
 sys.path.insert(1, os.path.abspath(os.path.expanduser("{}/..".format(os.path.dirname(__file__)))))
 
+import tarstall_manage
 import config
 import generic
 import prog_manage
@@ -159,7 +157,7 @@ def repair_tarstall():
     if yn != 'y':
         generic.ppause("Repairs not attempted!")
     else:
-        status = prog_manage.repair_tarstall()
+        status = tarstall_manage.repair_tarstall()
         if status == "Updated":
             status = "Repaired"
         process_update_status(status)
@@ -194,7 +192,7 @@ Are you sure you would like to attempt repairing?
             if yn != 'y':
                 generic.ppause("Repairs not attempted!")
             else:
-                prog_manage.repair_db()
+                tarstall_manage.repair_db()
                 generic.ppause("Database repair complete!")
                 config.unlock()
                 sys.exit(0)
@@ -310,7 +308,7 @@ E - Exit branch wizard and don't change branches."""
             elif ans == "b":
                 branch = "beta"
                 should_reset = "w"
-            status = prog_manage.change_branch(branch, should_reset == "r")
+            status = tarstall_manage.change_branch(branch, should_reset == "r")
             if status == "Success":
                 generic.pprint("Successfully switched to the beta branch!")
                 return
@@ -746,7 +744,7 @@ def parse_args(args=None):
     did_fts = generic.has_argument("f", "first")
     unlock_flag = generic.has_argument("k", "remove-lock")
 
-    status = prog_manage.tarstall_startup(start_fts=did_fts, del_lock=unlock_flag)
+    status = tarstall_manage.tarstall_startup(start_fts=did_fts, del_lock=unlock_flag)
 
     fts_status(status)
 
@@ -765,7 +763,7 @@ def parse_args(args=None):
         yn = generic.get_input('tarstall is not installed on your system. Would you like to install it?',
                                 ['y', 'n'], 'y')
         if yn == 'y':
-            status = prog_manage.first_time_setup()
+            status = tarstall_manage.first_time_setup()
             exit_code = fts_status(status)
             did_fts = True
         else:
@@ -782,7 +780,7 @@ def parse_args(args=None):
     
     elif status == "Old upgrade":
         generic.ppause("You are upgrading from a VERY old version of tarstall. Upgradiing will wipe your database! To upgrade: ")
-        prog_manage.tarstall_startup(start_fts=did_fts, del_lock=unlock_flag, old_upgrade=True)
+        tarstall_manage.tarstall_startup(start_fts=did_fts, del_lock=unlock_flag, old_upgrade=True)
     
     elif status == "DB Broken":
         yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as program update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"])
@@ -791,7 +789,7 @@ def parse_args(args=None):
             generic.pprint("Not repairing DB.")
             sys.exit(1)
         else:
-            prog_manage.repair_db()
+            tarstall_manage.repair_db()
             config.unlock()
             sys.exit(0)
 
@@ -799,7 +797,7 @@ def parse_args(args=None):
         yn = generic.get_input("You are missing some dependencies to allow full usage of tarstall! Would you like to re-run the installer to install the dependencies?", ['y', 'n'], 'y', ["Yes", "No"])
         if yn == 'y':
             exit_code = 1
-            status = prog_manage.reinstall_deps()
+            status = tarstall_manage.reinstall_deps()
             if status == "Success":
                 generic.pprint("Successfully re-installed dependencies!")
                 exit_code = 0
@@ -982,7 +980,7 @@ def parse_args(args=None):
                                                 'This will remove all programs installed with tarstall!',
                                                 ['y', 'n'], 'n', ["Yes", "No"])
             if erase_really_sure == 'y':
-                status = prog_manage.erase()
+                status = tarstall_manage.erase()
                 if status == "Not installed":
                     generic.pprint("tarstall isn't installed, so not removed!")
                 elif status == "Erased":
@@ -997,11 +995,11 @@ def parse_args(args=None):
             generic.pprint('Erase cancelled.')
 
     elif generic.has_argument("v", "verbose"):
-        status = prog_manage.verbose_toggle()
+        status = tarstall_manage.verbose_toggle()
         generic.pprint("Verbose mode {}".format(status))
 
     elif generic.has_argument("u", "update"):
-        status = prog_manage.update()
+        status = tarstall_manage.update()
         process_update_status(status)
 
     elif generic.has_argument("c", "config"):

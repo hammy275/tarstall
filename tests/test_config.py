@@ -3,6 +3,9 @@ import os
 import prog_manage
 import json
 
+import tarstall_manage
+
+
 def test_check_bin():
     assert config.check_bin("sh") is True
     assert config.check_bin("agtasdytfhgasdfsudyghaushdgj") is False
@@ -137,9 +140,9 @@ def test_char_check():
 
 def test_write_db():
     old_db = config.db
-    config.db.update({"test": "here"})
+    tarstall_manage.update({"test": "here"})
     config.write_db()
-    old_db.update({"test": "here"})
+    tarstall_manage.update({"test": "here"})
     with open(config.full("~/.tarstall/database")) as f:
         db = json.load(f)
     assert old_db == db

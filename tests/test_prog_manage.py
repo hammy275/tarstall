@@ -4,6 +4,7 @@ from io import StringIO
 
 import prog_manage
 import config
+import tarstall_manage
 
 """
 To write tests for:
@@ -29,8 +30,8 @@ def test_gitinstall(monkeypatch):
 
 
 def test_get_file_version():
-    assert prog_manage.get_file_version("prog") == config.prog_internal_version
-    assert prog_manage.get_file_version("file") == config.file_version
+    assert tarstall_manage.get_file_version("prog") == config.prog_internal_version
+    assert tarstall_manage.get_file_version("file") == config.file_version
 
 
 def test_pathify():
@@ -39,9 +40,9 @@ def test_pathify():
 
 
 def test_verbose_toggle():
-    prog_manage.verbose_toggle()
+    tarstall_manage.verbose_toggle()
     assert config.read_config("Verbose") is False
-    prog_manage.verbose_toggle()
+    tarstall_manage.verbose_toggle()
     assert config.read_config("Verbose") is True
 
 
@@ -79,12 +80,12 @@ def test_install(monkeypatch):
 
 
 def test_repair_db():
-    prog_manage.repair_db()
+    tarstall_manage.repair_db()
     assert config.db["programs"]["package"]["install_type"] == "single"  # Since the archive only contains one file, it gets re-detected as single-file
 
 
 def test_create_db():
-    prog_manage.create_db()
+    tarstall_manage.create_db()
     #TODO: Fake os so we can test get_shell_file in any environment
     assert config.db == {
         "options": {
@@ -106,7 +107,7 @@ def test_create_db():
 
 
 def test_erase():
-    assert prog_manage.erase() == "Erased"
+    assert tarstall_manage.erase() == "Erased"
     assert os.path.isfile(config.full("~/.tarstall/tarstall.py")) is False
     try:
         assert config.check_line("source ~/.tarstall/.bashrc", "~/.bashrc", "fuzzy") is False
