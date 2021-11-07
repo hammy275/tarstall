@@ -39,13 +39,11 @@ def reinstall_deps():
     if err != 0:
         return "Wget error"
     generic.progress(60)
-    config.vprint("Creating file to skip tarstall's installer prompt")
-    file.create("/tmp/dont-ask-me")
     config.vprint("Running tarstall setup to (re)-install dependencies")
-    err = call([sys.executable, "install_tarstall"], stdout=c_out, stderr=c_out)
+    input("")
+    err = call([sys.executable, "install_tarstall", "--skip-questions"], stdout=c_out, stderr=c_out)
     generic.progress(95)
     config.vprint("Removing installer skip file")
-    os.remove("/tmp/dont-ask-me")
     generic.progress(100)
     if err != 0:
         return "Installer error"

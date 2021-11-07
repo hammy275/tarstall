@@ -2,10 +2,33 @@
 
 import sys
 import os
-from subprocess import call
+from subprocess import call, DEVNULL
 from shutil import which, rmtree
 
 columns = int(os.popen('stty size', 'r').read().split()[1])
+
+def progress(val, msg="    "):
+    """Update Progress of Operation.
+    Updates a progress bar (if we have a GUI) as tarstall processes run
+    Args:
+        val (int/float): Value to update the progress bar to.
+        msg (str): Message to display on right side of progress bar. Defaults to "    ".
+    Stole this from tarstall (my own program) lol
+    """
+    try:
+        columns = os.get_terminal_size()[0]
+    except Exception:
+        columns = 120
+    start_chars = "Progress ({}%): ".format(str(int(val)))
+    end_chars = msg
+    end_buffer = 80
+    full_squares = int(val * 0.01 * (columns - len(start_chars) - end_buffer))
+    empty_squares = columns - len(start_chars) - end_buffer - full_squares
+    end = "\r"
+    if val == 100:
+        end = "\n"
+    print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end=end)
+
 
 def status(msg):
     """Print Status Message.
@@ -16,28 +39,33 @@ def status(msg):
         msg (str): Message to print.
 
     """
+    print("")
     print("#"*int(columns*0.75))
     print(msg)
     print("#"*int(columns*0.75))
 
 
-def run(cmds):
+def run(cmds, verbose):
     """Run Command.
 
     A tiny function that simply uses 'call', and returns whether or not the call exited successfully.
 
     Args:
         cmds (str[]): The command list to pass to call()
+        verbose (bool): Whether to show output.
 
     Returns:
         bool: Whether or not the call() succeeded.
 
     """
-    err = call(cmds)
-    return err == 0
+    out = DEVNULL
+    if verbose:
+        out = None
+    err_code = call(cmds, stdout=out, stderr=out)
+    return err_code == 0
 
 
-def install_package(pkg):
+def install_package(pkg, verbose):
     """Installs a Package.
 
     Installs the specified package using the distro's package manager.
@@ -57,6 +85,7 @@ def install_package(pkg):
     
     Args:
         pkg (str/dict): If a string, the package to install. See above for dictionary format.
+        verbose (bool): Whether to print output
 
     """
     if type(pkg) is not str:
@@ -70,13 +99,13 @@ def install_package(pkg):
             status("This script only supports automatic program installtion through apt(-get), dnf, and pip; please install {} manually!".format(pkg))
             sys.exit(1)
     if which("apt") is not None:
-        passed = run(["sudo", "apt", "install", pkg, "-y"])
+        passed = run(["sudo", "apt", "install", pkg, "-y"], verbose)
     elif which("apt-get") is not None:
-        passed = run(["sudo", "apt-get", "install", pkg, "-y"])
+        passed = run(["sudo", "apt-get", "install", pkg, "-y"], verbose)
     elif which("dnf") is not None:
-        passed = run(["sudo", "dnf", "install", pkg, "-y"])
+        passed = run(["sudo", "dnf", "install", pkg, "-y"], verbose)
     elif which("pacman") is not None:
-        passed = run(["sudo", "pacman", "-S", pkg, "--noconfirm"])
+        passed = run(["sudo", "pacman", "-S", pkg, "--noconfirm"], verbose)
     else:
         status("This script only supports automatic program installtion through apt(-get), dnf, and pip; please install {} manually!".format(pkg))
         sys.exit(1)
@@ -85,7 +114,7 @@ def install_package(pkg):
         sys.exit(1)
 
 
-def setup():
+def setup(skip_questions=False, verbose=False):
     # Checks
     status("Checking for anything missing for tarstall setup")
     supported_package_managers = ["apt", "apt-get", "dnf", "pacman"]
@@ -120,7 +149,7 @@ def setup():
     print("{}\n\n\n".format(msg))
 
     # User information
-    if not os.path.isfile("/tmp/dont-ask-me"):
+    if not skip_questions:
         status("Welcome!\nThis installer is going to install tarstall! You'll need to enter your sudo password at some points. " + 
         "This will use your distro's package manager along with pip to install the dependencies required for tarstall!")
         cancel = input("When you're ready to start installation, press ENTER! If you would like to cancel, type 'c', then press ENTER!")
@@ -129,31 +158,47 @@ def setup():
             sys.exit()
 
     # Install requirements obtained through package manager
-    status("Installing tarstall's package requirements")
+    if verbose:
+        status("Installing tarstall's package requirements")
+    else:
+        progress(0, "Installing package requirements")
     if which("git") is None:
-        install_package("git")
+        install_package("git", verbose)
     else:
-        print("git is already installed!")
+        if verbose:
+            print("git is already installed!")
+    if not verbose:
+        progress(10, "Installing package requirements")
     if which("wget") is None:
-        install_package("wget")
+        install_package("wget", verbose)
     else:
-        print("wget is already installed!")
+        if verbose:
+            print("wget is already installed!")
+    if not verbose:
+        progress(20, "Installing package requirements")
     try:
         import tkinter
         del tkinter
-        print("Thanks for having tkinter already installed!")
     except ImportError:
-        install_package({"apt": "python3-tk", "dnf": "python3-tkinter", "pacman": "tk"})
+        install_package({"apt": "python3-tk", "dnf": "python3-tkinter", "pacman": "tk"}, verbose)
+    if not verbose:
+        progress(30, "Installing package requirements")
 
     # Clone repository
-    status("Getting a copy of tarstall")
+    if verbose:
+        status("Getting a copy of tarstall")
+    else:
+        progress(30, "Downloading tarstall")
+    
     try:
         rmtree("/tmp/tarstall-setup")
     except FileNotFoundError:
         pass
     os.mkdir("/tmp/tarstall-setup")
     os.chdir("/tmp/tarstall-setup")
-    if not run(["git", "clone", "https://github.com/hammy3502/tarstall.git"]):
+    if not verbose:
+        progress(32, "Downloading tarstall")
+    if not run(["git", "clone", "https://github.com/hammy3502/tarstall.git"], verbose):
         status("Error while getting the tarstall repository!")
         try:
             rmtree("/tmp/tarstall-setup")
@@ -163,17 +208,22 @@ def setup():
     os.chdir("/tmp/tarstall-setup/tarstall")
 
     # Install Python requirements
-    status("Installing tarstall's Python requirements")
-    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"]):
-        install_package({"apt": "python3-pip", "dnf": "python3-pip", "pacman": "python-pip"})
-    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"]) or not \
-    run([sys.executable, "-m", "pip", "install", "-r", "requirements-gui.txt", "--user"]):
+    if verbose:
+        status("Installing tarstall's Python requirements")
+    else:
+        progress(70, "Installing Python requirements")
+    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"], verbose):
+        install_package({"apt": "python3-pip", "dnf": "python3-pip", "pacman": "python-pip"}, verbose)
+    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"], verbose) or not \
+    run([sys.executable, "-m", "pip", "install", "-r", "requirements-gui.txt", "--user"], verbose):
         status("An error occured while installing the GUI requirements!")
         sys.exit(1)
-
     # Pass control to tarstall
-    status("Running tarstall installation")
-    if not run([sys.executable, "./tarstall_execs/tarstall", "-f"]):
+    if verbose:
+        status("Running tarstall installation")
+    else:
+        progress(100, "Continuing setup from tarstall\n")
+    if not run([sys.executable, "./tarstall_execs/tarstall", "-f"], True):
         status("Error installing tarstall! Please view the information above!!!")
         sys.exit(1)
 
@@ -183,5 +233,37 @@ def setup():
     except FileNotFoundError:
         pass
 
+
+def help_out():
+    print("""
+Usage: install_tarstall [optional: OPTIONS]
+
+Options:
+\t-h, --help\tDisplay this help message and exit
+\t-s, --skip-questions\tSkip prompting before installing tarstall
+\t-v, --verbose\tShow status of setup verbosely instead of using a progress bar
+""")
+
+
+def parse_args():
+    if "-h" in sys.argv or "--help" in sys.argv:
+        help_out()
+    else:
+        expected_argv_length = 1
+
+        skip_questions = "-s" in sys.argv or "--skip-questions" in sys.argv
+        if skip_questions:
+            expected_argv_length += 1
+
+        verbose = "-v" in sys.argv or "--verbose" in sys.argv
+        if verbose:
+            expected_argv_length += 1
+        
+        # Bail if there's some bad parameter
+        if len(sys.argv) != expected_argv_length:
+            help_out()
+        else:
+            setup(skip_questions, verbose)
+
 if __name__ == "__main__":
-    setup()
+    parse_args()
