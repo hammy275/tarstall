@@ -742,6 +742,10 @@ def parse_args(args=None):
     exit_code = 0
     if args is None:
         args = sys.argv[1:]
+    
+    if generic_cli.has_argument("v", "verbose", args):
+        config.verbose = True
+        generic.pprint("Running verbosely because of -v flag!")
 
     did_fts = generic_cli.has_argument("f", "first", args)
     unlock_flag = generic_cli.has_argument("k", "remove-lock", args)
@@ -995,10 +999,6 @@ def parse_args(args=None):
                 generic.pprint('Erase cancelled.')
         else:
             generic.pprint('Erase cancelled.')
-
-    elif generic_cli.has_argument("v", "verbose", args):
-        status = tarstall_manage.verbose_toggle()
-        generic.pprint("Verbose mode {}".format(status))
 
     elif generic_cli.has_argument("u", "update", args):
         status = tarstall_manage.update()
