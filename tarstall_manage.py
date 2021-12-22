@@ -321,6 +321,14 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
             if file.exists("~/.tarstall/version.json"):
                 os.remove(file.full("~/.tarstall/version.json"))
 
+        elif file_version == 19:
+            config.vprint("Upgrading all URL-updatable programs to specify archive type.")
+            for program in config.db["programs"]:
+                if config.db["programs"][program]["update_url"] is not None:
+                    config.db["programs"][program]["update_archive_type"] = ".tar.gz"
+                else:
+                    config.db["programs"][program]["update_archive_type"] = None
+
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
         config.write_db()

@@ -1,4 +1,7 @@
 # Small test script for testing tarstall during development
 
-rm -rf ~/.tarstall
-python3 ./tarstall_execs/tarstall -f
+rm ~/.tarstall/*.py
+rm ~/.tarstall/tarstall_execs/tarstall
+
+cp *.py ~/.tarstall
+cp ./tarstall_execs/tarstall ~/.tarstall/tarstall_execs/

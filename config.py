@@ -21,8 +21,8 @@ import json
 from file import get_shell_file, unlock, full, get_db
 
 version = "1.7.0"
-prog_internal_version = 119
-file_version = 19
+prog_internal_version = 120
+file_version = 20
 
 #############
 
@@ -133,7 +133,7 @@ def write_db():
     """
     try:
         with open(full("~/.tarstall/database"), "w") as dbf:
-            json.dump(db, dbf)
+            json.dump(db, dbf, indent=4)
         vprint("Database written!")
     except FileNotFoundError:
         print(json.dumps(db))
@@ -153,8 +153,10 @@ Database structure
     "options" : {
         "Verbose": False,
         "AutoInstall": False,
-        "ShellFile": ".bashrc"
-        "SkipQuestions": False
+        "ShellFile": ".bashrc",
+        "SkipQuestions": False,
+        "UpdateURLPrograms": False,
+        "PressEnterKey": True
     }
     "version" : {
         "file_version": file_version,
@@ -167,7 +169,11 @@ Database structure
             "post_upgrade_script": None,
             "desktops": [
                 "desktop_file_name"
-            ]
+            ],
+            "update_url": None,
+            "has_path": False,
+            "binlinks": [],
+            "update_archive_type": None
         }
     }
 }

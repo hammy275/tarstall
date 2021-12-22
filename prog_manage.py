@@ -29,15 +29,33 @@ from generic_manage import c_out
 from config import verbose
 
 
-def add_upgrade_url(program, url):
+def add_upgrade_url(program, url, type_in=None):
     """Adds an Upgrade URL to a Program.
 
     Args:
         program (str): The program that will be upgraded
         url (str): The URL containing the archive to upgrade from. THIS MUST BE A VALID URL!!!!!
+        type_in (str): File extension for updating. If None, tarstall tries to determine it.
+    
+    Returns:
+        str: Success on success, Need Type if tarstall needs the archive type supplied to it, or
+        Bad Type if the supplied type is invalid.
 
     """
+    supported_types = [".tar.gz", ".tar.xz", ".zip", ".7z", ".rar"]
+    has_type = type_in is not None
+    if not has_type:
+        for typ in supported_types:
+            if url.endswith(typ):
+                has_type = True
+                type_in = typ
+                break
+        if not has_type:
+            return "Need Type"
+    elif type_in not in supported_types:
+        return "Bad Type"
     config.db["programs"][program]["update_url"] = url
+    config.db["programs"][program]["update_archive_type"] = type_in
     config.write_db()
 
 
@@ -77,17 +95,18 @@ def wget_program(program, show_progress=False, progress_modifier=1):
         generic.progress(10 / progress_modifier, show_progress)
         config.vprint("Downloading archive...")
         url = config.db["programs"][program]["update_url"]
+        extension = config.db["programs"][program]["update_archive_type"]
         err = wget_with_progress(url, 10 / progress_modifier, 65 / progress_modifier, show_progress=show_progress)
         if err != 0:
             return "Wget error"
         generic.progress(65 / progress_modifier, show_progress)
         files = os.listdir()
         config.vprint("Renaming archive")
-        os.rename("/tmp/tarstall-temp2/{}".format(files[0]), "/tmp/tarstall-temp2/{}".format(program + ".tar.gz"))
+        os.rename("/tmp/tarstall-temp2/{}".format(files[0]), "/tmp/tarstall-temp2/{}".format(program + extension))
         os.chdir("/tmp/")
         generic.progress(70 / progress_modifier, show_progress)
         config.vprint("Using install to install the program.")
-        inst_status = pre_install("/tmp/tarstall-temp2/{}".format(program + ".tar.gz"), True, show_progress=False)
+        inst_status = pre_install("/tmp/tarstall-temp2/{}".format(program + extension), True, show_progress=False)
         generic.progress(95 / progress_modifier, show_progress)
         try:
             rmtree(file.full("/tmp/tarstall-temp2"))

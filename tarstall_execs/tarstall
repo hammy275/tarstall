@@ -221,13 +221,20 @@ e - Return to program management""".format(r_msg=r_msg)
         ans = generic.get_input(msg, options, 'e', gui_options)
         if ans == 'a':
             new_url = ""
-            while re.match(r"https://\w.\w", new_url) is None or new_url == "":
-                new_url = generic.ask("Please enter a URL that points directly to a .tar.gz that contains" + 
+            while new_url == "":
+                new_url = generic.ask("Please enter a URL that points directly to an archive that contains" + 
                 "a full-copy of the program to install when upgrading. Type 'c' or 'cancel' to cancel: ")
                 if new_url.lower() == 'c' or new_url.lower() == "cancel":
                     return
-            prog_manage.add_upgrade_url(program, new_url)
-            generic.pprint("URL added successfully!")
+            res = prog_manage.add_upgrade_url(program, new_url)
+            if res == "Need Type":
+                type_in = generic.ask("Please select the file type that is downloaded: ", [".tar.gz", ".tar.xz", ".zip", ".7z", ".rar"], ".tar.gz")
+                res = prog_manage.add_upgrade_url(program, new_url, type_in)
+            if res == "Success":
+                generic.pprint("URL added successfully!")
+            elif res == "Bad Type":
+                generic.pprint("Invalid type supplied!")
+
         elif ans == 'r' and r_msg:
             prog_manage.remove_update_url(program)
             generic.pprint("Upgrade URL successfully removed from program!")
