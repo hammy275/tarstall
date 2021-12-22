@@ -1060,7 +1060,7 @@ https://github.com/hammy3502/tarstall/wiki
         """.format(user_version=config.get_version("version"), file_version=config.get_version("file_version"),
                 prog_version=config.get_version("prog_internal_version"), branch=config.branch))
 
-    else:
+    elif not did_fts:
         generic.pprint('Invalid command(s)! Run "tarstall -h" for help!')
         exit_code = 1
 

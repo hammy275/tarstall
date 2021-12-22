@@ -437,7 +437,7 @@ def update(force_update=False, show_progress=True):
         os.chdir("/tmp/tarstall-update/tarstall/")
         files = os.listdir()
         to_ignore = [".git", ".gitignore", "README.md", "readme-images", "COPYING", "requirements.txt",
-                     "requirements-gui.txt", "tests", "install_tarstall", "version", "version.json"]
+                     "requirements-gui.txt", "tests", "install_tarstall", "version", "version.json", "test.sh"]
         progress = 70
         adder = 25 / int(len(files) - len(to_ignore))
         for f in files:
