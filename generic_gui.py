@@ -1,4 +1,7 @@
-import PySimpleGUI as sg
+try:
+    import PySimpleGUI as sg
+except ImportError:
+    pass
 
 
 def ask(question):

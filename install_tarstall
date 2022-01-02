@@ -5,7 +5,11 @@ import os
 from subprocess import call, DEVNULL
 from shutil import which, rmtree
 
-columns = int(os.popen('stty size', 'r').read().split()[1])
+try:
+    columns = os.get_terminal_size()[0]
+except OSError:
+    columns = 80
+
 
 def progress(val, msg="    "):
     """Update Progress of Operation.
@@ -15,10 +19,6 @@ def progress(val, msg="    "):
         msg (str): Message to display on right side of progress bar. Defaults to "    ".
     Stole this from tarstall (my own program) lol
     """
-    try:
-        columns = os.get_terminal_size()[0]
-    except Exception:
-        columns = 120
     start_chars = "Progress ({}%): ".format(str(int(val)))
     end_chars = msg
     end_buffer = 80

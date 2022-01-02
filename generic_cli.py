@@ -1,7 +1,7 @@
-import sys
 import os
 
 import file
+
 
 def get_argument_index(short, long, args):
     """Gets the index of an argument in sys.argv
@@ -89,7 +89,10 @@ def get_input(question, options, default, from_easy=False):
 
 def progress(val):
     try:
-        columns = int(os.popen('stty size', 'r').read().split()[1])
+        try:
+            columns = os.get_terminal_size()[0]
+        except OSError:
+            columns = 80
         start_chars = "Progress ({}%): ".format(str(int(val)))
         end_chars = "   "
         full_squares = int(val * 0.01 * (columns - len(start_chars) - len(end_chars)))

@@ -27,7 +27,6 @@ import tarstall_manage
 import config
 import generic
 import prog_manage
-import re
 from subprocess import call
 
 mode = config.read_config("Mode")
