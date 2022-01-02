@@ -24,9 +24,9 @@ def nothing_two(a, b=False):
     return None
 
 
-def test_gitinstall(monkeypatch):
+def test_install_git(monkeypatch):
     monkeypatch.setattr(prog_manage, "finish_install", nothing_two)
-    prog_manage.gitinstall("https://github.com/hammy3502/tarstall.git", "tarstall")
+    prog_manage.install("https://github.com/hammy3502/tarstall.git", "tarstall")
     assert os.path.isfile(os.path.expanduser("~/.tarstall/bin/tarstall/prog_manage.py"))
 
 
@@ -48,7 +48,7 @@ def test_verbose_toggle():
 
 
 def test_list_programs(capsys):
-    prog_manage.list_programs() == ["package"]
+    assert prog_manage.list_programs() == ["package"]
 
 
 def test_create_desktop(monkeypatch):
@@ -73,7 +73,7 @@ def test_uninstall():
     assert os.path.isfile(file.full("~/.tarstall/bin/package/test.sh")) is False
 
 
-def test_install(monkeypatch):
+def test_install_archive(monkeypatch):
     os.chdir(os.path.realpath(__file__)[:-19])
     monkeypatch.setattr(prog_manage, "finish_install", nothing_two)
     prog_manage.install("./fake_packages/package.tar.gz")

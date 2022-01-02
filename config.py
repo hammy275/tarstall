@@ -21,7 +21,7 @@ import json
 from file import get_shell_file, unlock, full, get_db
 
 version = "1.7.0"
-prog_internal_version = 120
+prog_internal_version = 121
 file_version = 20
 
 #############
@@ -49,6 +49,7 @@ def read_config(key):
             return "cli"
         else:
             return "Bad Value"
+
 
 def change_config(key, mode, value=None):
     """Change Config Value.

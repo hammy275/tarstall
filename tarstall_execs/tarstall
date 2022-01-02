@@ -722,10 +722,7 @@ def help():
 
 Commands:
 \t-h, --help\tDisplays this help prompt
-\t-i, --install [ARCHIVE]\tInstalls the archive located at [ARCHIVE]
-\t-d, --dirinstall [DIRECTORY]\tInstalls the directory located at [DIRECTORY]
-\t-g, --gitinstall [URL]\tInstalls the git repository at [URL]
-\t-s, --singleinstall [EXECUTABLE]\tInstalls the program [EXECUTABLE] as a standalone executable
+\t-i, --install [ARCHIVE/DIRECTORY/FILE/URL]\tInstalls the supplied archive/directory/file/git URL
 \t-r, --remove [PROGRAM]\tUninstalls [PROGRAM] from tarstall
 \t-l, --list\tLists all installed programs
 \t-f, --first\tRuns first-time setup
@@ -738,6 +735,34 @@ Commands:
 \t-q, --update-programs [PROGRAM]\tUpdates [PROGRAM], or all programs if [PROGRAM] is not specified
     """
     )
+
+
+def post_install(status, overwrite, program_internal_name):
+    exit_code = 0
+    if status == "Bad file":
+        generic.pprint("The specified file does not exist!")
+        exit_code = 1
+    if status == "Installed" and not overwrite:
+        install_wrap_up(program_internal_name)
+    elif status.startswith("No"):
+        generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
+    elif status == "No rsync":
+        generic.pprint("rsync not installed! Please install it!")
+        exit_code = 1
+    elif status == "Bad name":
+        generic.pprint("Archive name cannot contain a space or #!")
+        exit_code = 1
+    elif status == "Error":
+        generic.pprint("An error occured during installation!")
+        exit_code = 1
+    elif status == "No git":
+        generic.pprint("git not installed! Please install it before using this feature!")
+        exit_code = 1
+    elif status == "Bad URL":
+        generic.pprint("Invalid URL supplied; make sure it ends in .git!")
+        exit_code = 1
+
+    return exit_code
 
 
 def parse_args(args=None):
@@ -829,130 +854,22 @@ def parse_args(args=None):
     elif generic_cli.get_arg_extra("i", "install", args) is not None:
         install_arg = generic_cli.get_arg_extra("i", "install", args)
         if install_arg == -1:
-            generic.pprint("Please specify an archive to install!")
+            generic.pprint("Please specify something to install!")
             exit_code = 1
         else:
             overwrite = False
-            status = prog_manage.pre_install(install_arg)
-            if status == "Bad file":
-                generic.pprint("The specified file does not exist!")
-                exit_code = 1
-            elif status == "Application exists":
+            status = prog_manage.install(install_arg)
+            if status[0] == "Application exists":
                 reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?",
                                         ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"])  # Ask to reinstall
                 if reinstall == "r":
-                    status = prog_manage.pre_install(install_arg, False)
+                    status = prog_manage.install(install_arg, False)
                 elif reinstall == "o":
-                    status = prog_manage.pre_install(install_arg, True)
+                    status = prog_manage.install(install_arg, True)
                     overwrite = True
                 else:
                     generic.pprint("Reinstall cancelled.")
-            if status == "Installed" and not overwrite:
-                install_wrap_up(file.name(install_arg))
-            elif status.startswith("No"):
-                generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
-            elif status == "No rsync":
-                generic.pprint("rsync not installed! Please install it!")
-                exit_code = 1
-            elif status == "Bad name":
-                generic.pprint("Archive name cannot contain a space or #!")
-                exit_code = 1
-            elif status == "Error":
-                generic.pprint("Error occured while extracting archive!")
-                exit_code = 1
-
-    elif generic_cli.get_arg_extra("g", "gitinstall", args) is not None:
-        gitinstall_arg = generic_cli.get_arg_extra("g", "gitinstall", args)
-        if gitinstall_arg == -1:
-            generic.pprint("Please specify a URL to install!")
-            exit_code = 1
-        else:
-            overwrite = False
-            status = prog_manage.pre_gitinstall(gitinstall_arg)
-            if status == "No git":
-                generic.pprint("git not installed! Please install it before using this feature!")
-                exit_code = 1
-            elif status == "Bad URL":
-                generic.pprint("Invalid URL supplied; make sure it ends in .git!")
-                exit_code = 1
-            elif status == "Application exists":
-                reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?",
-                                                ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"])  # Ask to reinstall
-                if reinstall == "r":
-                    status = prog_manage.pre_gitinstall(gitinstall_arg, False)
-                elif reinstall == "o":
-                    status = prog_manage.pre_gitinstall(gitinstall_arg, True)
-                    overwrite = True
-                else:
-                    generic.pprint("Reinstall cancelled.")
-            if status == "Installed" and not overwrite:
-                install_wrap_up(file.name(gitinstall_arg))
-            elif status == "No rsync":
-                generic.pprint("rsync not installed! Please install it!")
-                exit_code = 1
-            elif status == "Error":
-                generic.pprint("An error occured while attempting to git clone!")
-                exit_code = 1
-    
-
-    elif generic_cli.get_arg_extra("s", "singleinstall", args) is not None:
-        singlefile_arg = generic_cli.get_arg_extra("s", "singleinstall", args)
-        if singlefile_arg == -1:
-            generic.pprint("Please specify a file to install!")
-            exit_code = 1
-        else:
-            status = prog_manage.pre_singleinstall(singlefile_arg)
-            if status == "Bad file":
-                generic.pprint("The specified file does not exist!")
-                exit_code = 1
-            elif status == "Application exists":
-                reinstall = generic.get_input("Application already exists! Would you like to reinstall?",
-                                        ["r", "n"], "n", ["Reinstall", "Cancel"])  # Ask to reinstall
-                if reinstall == "r":
-                    status = prog_manage.pre_singleinstall(singlefile_arg, True)
-                else:
-                    generic.pprint("Reinstall cancelled.")
-            if status == "Installed":
-                install_wrap_up(file.name(singlefile_arg), True)
-            elif status.startswith("No"):
-                generic.pprint("{} needs to be installed! Installation halted.".format(status[3:]))
-            elif status == "No rsync":
-                generic.pprint("rsync not installed! Please install it!")
-                exit_code = 1
-            elif status == "Bad name":
-                generic.pprint("Archive name cannot contain a space or #!")
-                exit_code = 1
-            elif status == "Error":
-                generic.pprint("Error occured while extracting archive!")
-                exit_code = 1
-
-
-    elif generic_cli.get_arg_extra("d", "dirinstall", args) is not None:
-        dirinstall_arg = generic_cli.get_arg_extra("d", "dirinstall", args)
-        if dirinstall_arg == -1:
-            generic.pprint("Please specify a directory to install!")
-            exit_code = 1
-        else:
-            overwrite = False
-            status = prog_manage.pre_dirinstall(dirinstall_arg)
-            if status == "Bad folder":
-                generic.pprint("Please specify a valid directory path that ends in a \"/\"!")
-                exit_code = 1
-            elif status == "Application exists":
-                reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?", ["r", "o", "n"], "n", 
-                ["Reinstall", "Overwrite", "Cancel"])
-                if reinstall == 'r':
-                    status = prog_manage.pre_dirinstall(dirinstall_arg, False)
-                elif reinstall == 'o':
-                    status = prog_manage.pre_dirinstall(dirinstall_arg, True)
-                    overwrite = True
-                else:
-                    generic.pprint("Reinstall cancelled.")
-            if status == "Installed" and not overwrite:
-                install_wrap_up(file.dirname(dirinstall_arg))
-            elif status == "No rsync":
-                generic.pprint("rsync not installed! Please install it!")
-                exit_code = 1
+            exit_code = post_install(status[0], overwrite, status[1])
 
     elif generic_cli.get_arg_extra("r", "remove", args) is not None:
         remove_arg = generic_cli.get_arg_extra("r", "remove", args)

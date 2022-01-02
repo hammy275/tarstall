@@ -106,7 +106,7 @@ def wget_program(program, show_progress=False, progress_modifier=1):
         os.chdir("/tmp/")
         generic.progress(70 / progress_modifier, show_progress)
         config.vprint("Using install to install the program.")
-        inst_status = pre_install("/tmp/tarstall-temp2/{}".format(program + extension), True, show_progress=False)
+        inst_status = install("/tmp/tarstall-temp2/{}".format(program + extension), True, show_progress=False)
         generic.progress(95 / progress_modifier, show_progress)
         try:
             rmtree(file.full("/tmp/tarstall-temp2"))
@@ -283,96 +283,67 @@ def change_git_branch(program, branch):
         return "Success"
 
 
-def pre_install(program, overwrite=None, show_progress=True):
-    """Pre-Archive Install.
+def install(path, overwrite=None, show_progress=True):
+    """Install a Program.
 
-    Preparation before installing an archive.
+    Allows installing an archive, a directory, a single file, or a link to a git repo.
 
-    Arguments:
-        program (str): Path to archive to attempt installation.
-        overwrite (bool/None): Whether or not to overwrite the program if it exists.
+    Args:
+        path (str): The path to the file or the URL.
+        overwrite (bool/None): See above
+        show_progress: Whether to show installation progress or not.
 
     Returns:
-        str: Status of the installation. Possible returns are: "Bad file", and "Application exists".
-
+        (str, str): A status from the installation method and the program's internal name.
     """
-    if not file.exists(program):
-        return "Bad file"
-    program_internal_name = file.name(program)  # Get the program name
-    if program_internal_name in config.db["programs"]:  # Reinstall check
+    is_url = path.startswith("http://") or path.startswith("https://")
+    if is_url:
+        if not path.endswith(".git"):
+            return "Bad URL", None
+        prog_type = "git"
+    else:
+        if not file.exists(path):
+            return "Bad file", None
+
+        if os.path.isdir(path):
+            prog_type = "dir"
+            if not path.endswith("/"):
+                path += "/"
+        else:
+            file_extension = file.extension(path)
+            if file_extension in [".7z", ".rar", ".zip", ".tar.gz", ".tar.xz"]:
+                prog_type = "archive"
+            else:
+                prog_type = "single"
+    if prog_type == "dir":
+        program_internal_name = file.dirname(path)
+    else:
+        program_internal_name = file.name(path)
+    if program_internal_name in config.db["programs"]:
         if overwrite is None:
-            return "Application exists"
+            return "Application exists", None
         else:
             if not overwrite:
                 uninstall(program_internal_name)
-                return install(program, False, True, show_progress)  # Reinstall
+                return (_install(path, prog_type, program_internal_name, False, True, show_progress),
+                        program_internal_name)
             elif overwrite:
-                return install(program, True, True, show_progress)
+                return (_install(path, prog_type, program_internal_name, True, True, show_progress),
+                        program_internal_name)
     else:
-        return install(program, show_progress=show_progress)  # No reinstall needed to be asked, install program
-    config.write_db()
+        return (_install(path, prog_type, program_internal_name, False, False, show_progress),
+                program_internal_name)
 
 
-def pre_singleinstall(program, reinstall=None):
-    if not file.exists(program):
-        return "Bad file"
-    program_internal_name = file.name(program)
-    if program_internal_name in config.db["programs"]:  # Reinstall check
-        if reinstall is None:
-            return "Application exists"
-        else:
-            return single_install(program, program_internal_name, True)
-    else:
-        return single_install(program, program_internal_name)  # No reinstall needed to be asked, install program
-    config.write_db()
-
-
-def pre_gitinstall(program, overwrite=None):
-    """Before Git Installs.
-
-    Args:
-        program (str): Git URL to install
-        overwrite (bool/None): Whether to do an overwrite reinstall. Defaults to None.
-
-    Returns:
-        str: Statuses. Includes: 
-
-    """
-    if not file.check_bin("git"):
-        return "No git"
-    elif re.match(r"https://\w.\w", program) is None or " " in program or "\\" in program or file.extension(program) != ".git":
-        return "Bad URL"
-    else:
-        program_internal_name = file.name(program)
-        if program_internal_name in config.db["programs"]:
-            if overwrite is None:
-                return "Application exists"
-            else:
-                if not overwrite:
-                    uninstall(program_internal_name)
-                    return gitinstall(program, program_internal_name, False, True)
-                elif overwrite:
-                    return gitinstall(program, program_internal_name, True, True)
-        else:
-            return gitinstall(program, program_internal_name)
-    config.write_db()
-
-
-def pre_dirinstall(program, overwrite=None):
-    if not(os.path.isdir(file.full(program))) or program[-1:] != '/':
-        return "Bad folder"
-    program_internal_name = file.dirname(program)
-    if program_internal_name in config.db["programs"]:
-        if overwrite is None:
-            return "Application exists"
-        elif not overwrite:
-            uninstall(program_internal_name)
-            return dirinstall(program, program_internal_name, False, True)
-        elif overwrite:
-            return dirinstall(program, program_internal_name, True, True)
-    else:
-        return dirinstall(program, program_internal_name)
-    config.write_db()
+def _install(program, program_type, program_internal_name, overwrite=False, reinstall=False, show_progress=True):
+    if program_type == "git":
+        return _git_install(program, program_internal_name, overwrite=overwrite, reinstall=reinstall)
+    elif program_type == "single":
+        return _single_install(program, program_internal_name, reinstall=reinstall)
+    elif program_type == "dir":
+        return _dir_install(program, program_internal_name, overwrite=overwrite, reinstall=reinstall)
+    elif program_type == "archive":
+        return _archive_install(program, overwrite=overwrite, reinstall=reinstall, show_progress=show_progress)
 
 
 def remove_desktop(program, desktop):
@@ -564,7 +535,7 @@ Categories={categories}
     return "Created"
 
 
-def gitinstall(git_url, program_internal_name, overwrite=False, reinstall=False):
+def _git_install(git_url, program_internal_name, overwrite=False, reinstall=False):
     """Git Install.
 
     Installs a program from a URL to a Git repository
@@ -713,7 +684,7 @@ def create_command(file_extension, program):
     return command_to_go
 
 
-def install(program, overwrite=False, reinstall=False, show_progress=True):
+def _archive_install(program, overwrite=False, reinstall=False, show_progress=True):
     """Install Archive.
 
     Takes an archive and installs it.
@@ -792,7 +763,7 @@ def install(program, overwrite=False, reinstall=False, show_progress=True):
         return "Installed"
 
 
-def single_install(program, program_internal_name, reinstall=False):
+def _single_install(program, program_internal_name, reinstall=False):
     """Install Single File.
 
     Will create a folder to put the single file in.
@@ -820,7 +791,7 @@ def single_install(program, program_internal_name, reinstall=False):
     return finish_install(program_internal_name, "single")
 
 
-def dirinstall(program_path, program_internal_name, overwrite=False, reinstall=False):
+def _dir_install(program_path, program_internal_name, overwrite=False, reinstall=False):
     """Install Directory.
 
     Installs a directory as a program
