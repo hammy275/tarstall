@@ -160,7 +160,7 @@ def easy_get_action(options, replacements=[]):
     return get_input(msg, options_list, default, gui_labels, True)
 
 
-def get_input(question, options, default, gui_labels=[], from_easy=False):
+def get_input(question, options, default, gui_labels=None, from_easy=False):
     """Get User Input.
 
     Get user input, except make sure the input provided matches one of the options we're looking for

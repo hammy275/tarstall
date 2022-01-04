@@ -106,7 +106,7 @@ def wget_program(program, show_progress=False, progress_modifier=1):
         os.chdir("/tmp/")
         generic.progress(70 / progress_modifier, show_progress)
         config.vprint("Using install to install the program.")
-        inst_status = install("/tmp/tarstall-temp2/{}".format(program + extension), True, show_progress=False)
+        inst_status = install("/tmp/tarstall-temp2/{}".format(program + extension), True, show_progress=False)[0]
         generic.progress(95 / progress_modifier, show_progress)
         try:
             rmtree(file.full("/tmp/tarstall-temp2"))

@@ -227,7 +227,7 @@ e - Return to program management""".format(r_msg=r_msg)
                     return
             res = prog_manage.add_upgrade_url(program, new_url)
             if res == "Need Type":
-                type_in = generic.ask("Please select the file type that is downloaded: ", [".tar.gz", ".tar.xz", ".zip", ".7z", ".rar"], ".tar.gz")
+                type_in = generic.get_input("Please select the file type that is downloaded: ", [".tar.gz", ".tar.xz", ".zip", ".7z", ".rar"], ".tar.gz")
                 res = prog_manage.add_upgrade_url(program, new_url, type_in)
             if res == "Success":
                 generic.pprint("URL added successfully!")

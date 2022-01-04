@@ -32,8 +32,8 @@ def ask_file(question):
             return values["answer"]
 
 
-def get_input(question, options, gui_labels=[]):
-    if gui_labels == []:
+def get_input(question, options, gui_labels=None):
+    if gui_labels is None:
         gui_labels = options
     if len(options) <= 5:
         button_list = []
