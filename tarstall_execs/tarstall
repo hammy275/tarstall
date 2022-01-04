@@ -726,10 +726,10 @@ Commands:
 \t-l, --list\tLists all installed programs
 \t-f, --first\tRuns first-time setup
 \t-e, --erase\tRemoves tarstall from your system
-\t-v, --verbose\tToggles verbose mode for tarstall
+\t-v, --verbose\tEnables verbose mode for this run of tarstall
 \t-u, --update\tUpdates tarstall if an update is available
 \t-m, --manage\t [PROGRAM] Manage the program named [PROGRAM]
-\t-k, --remove-lock\tRemoves tarstall's lock (only do this if tarstall isn't already running)ls
+\t-k, --remove-lock\tRemoves tarstall's lock (only do this if tarstall isn't already running)
 \t-c, --config\tConfigure tarstall
 \t-q, --update-programs [PROGRAM]\tUpdates [PROGRAM], or all programs if [PROGRAM] is not specified
     """
