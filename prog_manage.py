@@ -151,7 +151,7 @@ def update_program(program, show_progress=False):
         elif config.db["programs"][program]["post_upgrade_script"] is None:
             return status
         elif status == "No update":
-            generic.progress(100)
+            generic.progress(100, show_progress)
             return status
     elif config.db["programs"][program]["update_url"] is not None:
         status = wget_program(program, show_progress, progs)
@@ -251,9 +251,9 @@ def update_programs():
     generic.progress(progress)
     for p in config.db["programs"].keys():
         if not config.db["programs"][p]["update_url"] and (config.db["programs"][p]["install_type"] == "git" or config.db["programs"][p]["post_upgrade_script"]):
-            statuses[p] = update_program(p)
+            statuses[p] = update_program(p, False)
         elif (config.db["programs"][p]["update_url"] and config.read_config("UpdateURLPrograms")):
-            statuses[p] = update_program(p)
+            statuses[p] = update_program(p, False)
         else:
             statuses[p] = "Does not update"
         progress += increment
