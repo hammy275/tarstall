@@ -28,16 +28,19 @@ if config.mode == "gui":
         pass  # This will be caught by tarstall.py, let's not worry about it here.
 
 
-def file_browser(root_dir):
+def file_browser(root_dir, stay_inside_dir=True, return_full_path=False):
     """File Browser.
 
     File browser for CLI that allows the choosing of files in folders.
 
     Args:
         root_dir (str): Path to top directory. Anything above this will be unaccessible
+        stay_inside_dir (bool): Whether the user should be forced to stay inside the root_dir
+        return_full_path (bol): Whether to return the full path to the chosen file.
     
     Returns:
-        str: path/to/file/from/root_dir/file.txt (Path to the selected file from root_dir (NOT FROM / !!!!)
+        str: path/to/file/from/root_dir/file.txt (Path to the selected file from root_dir
+        Will return full path (from / instead of from root_dir) if return_full_path is True
 
     """
     root_dir = file.full(root_dir)
@@ -70,7 +73,7 @@ def file_browser(root_dir):
             os.chdir(file.full("./{}".format(file_chosen)))
             current_folder_path.append(file_chosen)
         elif file_chosen == "..":
-            if os.getcwd() == root_dir:
+            if os.getcwd() == root_dir and stay_inside_dir:
                 pprint("\nCan't go up a directory!\n")
             else:
                 os.chdir(file.full(".."))
@@ -78,7 +81,13 @@ def file_browser(root_dir):
         extra_slash = "/"
     else:
         extra_slash = ""
-    return "/".join(current_folder_path) + extra_slash + file_chosen
+    if return_full_path:
+        path_ret = os.getcwd()
+        if not path_ret.endswith("/"):
+            path_ret = path_ret + "/"
+        return path_ret + file_chosen
+    else:
+        return "/".join(current_folder_path) + extra_slash + file_chosen
 
 
 def ask(question):

@@ -672,7 +672,12 @@ Note: The script will be run inside your program's directory.
 Leave blank to de-link the script from the program.
 Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh")
 """
-            status = prog_manage.update_script(program, generic.ask_file(msg))
+            script_path = generic.file_browser(file.full("~/.tarstall/bin/{}".format(program)), 
+                stay_inside_dir=False, return_full_path=True)
+            if script_path is None:
+                generic.ppause("Operation cancelled!")
+                return
+            status = prog_manage.update_script(program, script_path)
             if status == "Success":
                 generic.ppause("Update script added successfully!")
             elif status == "Bad path":
