@@ -726,7 +726,8 @@ def help():
 
 Commands:
 \t-h, --help\tDisplays this help prompt
-\t-i, --install [ARCHIVE/DIRECTORY/FILE/URL]\tInstalls the supplied archive/directory/file/git URL
+\t-i, --install [ARCHIVE/DIRECTORY/FILE/URL]\tInstalls the supplied archive/directory/file/git URL/archive URL
+\t-n, --name [NAME]\tSpecify a name for the program manually. Required if installing an archive URL.
 \t-r, --remove [PROGRAM]\tUninstalls [PROGRAM] from tarstall
 \t-l, --list\tLists all installed programs
 \t-f, --first\tRuns first-time setup
@@ -763,7 +764,16 @@ def post_install(status, overwrite, program_internal_name):
         generic.pprint("git not installed! Please install it before using this feature!")
         exit_code = 1
     elif status == "Bad URL":
-        generic.pprint("Invalid URL supplied; make sure it ends in .git!")
+        generic.pprint("Invalid URL supplied; make sure it ends in .git, .7z, .tar.gz, .tar.xz, .rar, or .zip!")
+        exit_code = 1
+    elif status == "No wget":
+        generic.pprint("wget not installed! Please install it to install from URLs!")
+        exit_code = 1
+    elif status == "Wget error":
+        generic.pprint("Error while retrieving archive!")
+        exit_code = 1
+    elif status == "Needs name":
+        generic.pprint("Please specify a name for the program using -n [NAME] or --name [NAME]!")
         exit_code = 1
 
     return exit_code
@@ -862,14 +872,15 @@ def parse_args(args=None):
             exit_code = 1
         else:
             overwrite = False
-            status = prog_manage.install(install_arg)
+            override_name = generic_cli.get_arg_extra("n", "name", args)
+            status = prog_manage.install(install_arg, override_name=override_name)
             if status[0] == "Application exists":
                 reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?",
                                         ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"])  # Ask to reinstall
                 if reinstall == "r":
-                    status = prog_manage.install(install_arg, False)
+                    status = prog_manage.install(install_arg, False, override_name=override_name)
                 elif reinstall == "o":
-                    status = prog_manage.install(install_arg, True)
+                    status = prog_manage.install(install_arg, True, override_name=override_name)
                     overwrite = True
                 else:
                     generic.pprint("Reinstall cancelled.")

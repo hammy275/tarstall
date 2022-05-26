@@ -283,7 +283,7 @@ def change_git_branch(program, branch):
         return "Success"
 
 
-def install(path, overwrite=None, show_progress=True):
+def install(path, overwrite=None, show_progress=True, override_name=None):
     """Install a Program.
 
     Allows installing an archive, a directory, a single file, or a link to a git repo.
@@ -292,15 +292,22 @@ def install(path, overwrite=None, show_progress=True):
         path (str): The path to the file or the URL.
         overwrite (bool/None): See above
         show_progress: Whether to show installation progress or not.
+        override_name (str): The name for the program if using a wget install
 
     Returns:
         (str, str): A status from the installation method and the program's internal name.
     """
     is_url = path.startswith("http://") or path.startswith("https://")
+    prog_type = None
     if is_url:
-        if not path.endswith(".git"):
+        if path.endswith(".git"):
+            prog_type = "git"
+        for typ in ["7z", "rar", "zip", "tar.gz", "tar.xz"]:
+            if path.endswith(typ):
+                prog_type = "wget"
+                break
+        if prog_type is None:
             return "Bad URL", None
-        prog_type = "git"
     else:
         if not file.exists(path):
             return "Bad file", None
@@ -315,10 +322,14 @@ def install(path, overwrite=None, show_progress=True):
                 prog_type = "archive"
             else:
                 prog_type = "single"
-    if prog_type == "dir":
+    if override_name is not None:
+        program_internal_name = override_name
+    elif prog_type == "dir":
         program_internal_name = file.dirname(path)
     else:
         program_internal_name = file.name(path)
+    if prog_type == "wget" and override_name is None:
+        return "Needs name", None
     if program_internal_name in config.db["programs"]:
         if overwrite is None:
             return "Application exists", None
@@ -344,7 +355,8 @@ def _install(program, program_type, program_internal_name, overwrite=False, rein
         return _dir_install(program, program_internal_name, overwrite=overwrite, reinstall=reinstall)
     elif program_type == "archive":
         return _archive_install(program, overwrite=overwrite, reinstall=reinstall, show_progress=show_progress)
-
+    elif program_type == "wget":
+        return _wget_install(program, program_internal_name, overwrite=overwrite, reinstall=reinstall)
 
 def remove_desktop(program, desktop):
     """Remove .desktop
@@ -440,7 +452,8 @@ def rename(program, new_name):
     return new_name
 
 
-def finish_install(program_internal_name, install_type="default"):
+def finish_install(program_internal_name, install_type="default",
+                   show_progress=True):
     """End of Install.
 
     Ran after every program install.
@@ -453,18 +466,18 @@ def finish_install(program_internal_name, install_type="default"):
         str: "Installed".
 
     """
-    generic.progress(90)
+    generic.progress(90, show_progress)
     config.vprint("Removing temporary install directory (if it exists)")
     try:
         rmtree("/tmp/tarstall-temp")
     except FileNotFoundError:
         pass
     config.vprint("Adding program to tarstall list of programs")
-    generic.progress(95)
+    generic.progress(95, show_progress)
     config.db["programs"].update({program_internal_name: {"install_type": install_type, "desktops": [],
     "post_upgrade_script": None, "update_url": None, "has_path": False, "binlinks": []}})
     config.write_db()
-    generic.progress(100)
+    generic.progress(100, show_progress)
     return "Installed"
 
 
@@ -684,6 +697,60 @@ def create_command(file_extension, program):
     return command_to_go
 
 
+def _wget_install(url, program_internal_name, reinstall=False, overwrite=False):
+    if not file.check_bin("wget"):
+        return "No wget"
+    if reinstall:
+        try:
+            config.vprint("Removing old copy of program to reinstall (if it exists!)")
+            rmtree("~/.tarstall/bin/{}".format(program_internal_name))
+        except FileNotFoundError:
+            pass
+    config.vprint("Creating temporary folder")
+    try:
+        rmtree(file.full("/tmp/tarstall-temp2"))
+    except FileNotFoundError:
+        pass
+    os.mkdir("/tmp/tarstall-temp2")
+    os.chdir("/tmp/tarstall-temp2")
+    generic.progress(10)
+    config.vprint("Downloading archive...")
+
+    extension = None
+    for typ in ["7z", "rar", "zip", "tar.gz", "tar.xz"]:
+        if url.endswith(typ):
+            extension = "." + typ
+            break
+    if extension is None:
+        return "Bad URL", None
+
+    err = wget_with_progress(url, 10, 65, show_progress=True)
+    if err != 0:
+        return "Wget error"
+
+    config.vprint("Renaming archive")
+    files = os.listdir()
+    os.rename("/tmp/tarstall-temp2/{}".format(files[0]), "/tmp/tarstall-temp2/{}".format(program_internal_name + extension))
+    os.chdir("/tmp/")
+    generic.progress(70)
+
+    config.vprint("Re-running installer with archive to finish installation")
+
+    inst_status = install("/tmp/tarstall-temp2/{}".format(program_internal_name + extension), overwrite=overwrite, show_progress=False)[0]
+    generic.progress(95)
+    try:
+        rmtree(file.full("/tmp/tarstall-temp2"))
+    except FileNotFoundError:
+        pass
+    generic.progress(100)
+    if inst_status != "Installed":
+        return "Error"
+    else:
+        config.vprint("Automatically adding update URL to be install URL")
+        add_upgrade_url(program_internal_name, url, extension)
+        return "Installed"
+
+
 def _archive_install(program, overwrite=False, reinstall=False, show_progress=True):
     """Install Archive.
 
@@ -749,7 +816,6 @@ def _archive_install(program, overwrite=False, reinstall=False, show_progress=Tr
     else:
         move(source, dest)
     generic.progress(80, show_progress)
-    config.vprint("Adding program to tarstall list of programs")
     config.vprint('Removing old temp directory...')
     os.chdir("/tmp")
     try:
@@ -757,7 +823,7 @@ def _archive_install(program, overwrite=False, reinstall=False, show_progress=Tr
     except FileNotFoundError:
         config.vprint('Temp folder not found so not deleted!')
     if not overwrite:
-        return finish_install(program_internal_name)
+        return finish_install(program_internal_name, show_progress=show_progress)
     else:
         generic.progress(100, show_progress)
         return "Installed"
