@@ -335,7 +335,7 @@ def install(path, overwrite=None, show_progress=True, override_name=None):
             return "Application exists", None
         else:
             if not overwrite:
-                uninstall(program_internal_name)
+                uninstall(program_internal_name, show_progress=False)
                 return (_install(path, prog_type, program_internal_name, False, True, show_progress),
                         program_internal_name)
             elif overwrite:
@@ -886,11 +886,12 @@ def _dir_install(program_path, program_internal_name, overwrite=False, reinstall
         return "Installed"
 
 
-def uninstall(program):
+def uninstall(program, show_progress=True):
     """Uninstall a Program.
 
     Args:
         program (str): Name of program to uninstall
+        show_progress (bool): Whether to show progress or not.
 
     Returns:
         str: Status detailing the uninstall. Can be: "Not installed" or "Success".
@@ -900,10 +901,10 @@ def uninstall(program):
         return "Not installed"
     config.vprint("Removing program files")
     rmtree(file.full("~/.tarstall/bin/" + program + '/'))
-    generic.progress(40)
+    generic.progress(40, show_progress)
     config.vprint("Removing program from PATH and any binlinks for the program")
     file.remove_line(program, "~/.tarstall/.bashrc", 'poundword')
-    generic.progress(50)
+    generic.progress(50, show_progress)
     config.vprint("Removing program desktop files")
     if config.db["programs"][program]["desktops"]:
         progress = 50
@@ -914,12 +915,12 @@ def uninstall(program):
             except FileNotFoundError:
                 pass
             progress += adder
-            generic.progress(progress)
-    generic.progress(80)
+            generic.progress(progress, show_progress)
+    generic.progress(80, show_progress)
     config.vprint("Removing program from tarstall list of programs")
     del config.db["programs"][program]
     config.write_db()
-    generic.progress(100)
+    generic.progress(100, show_progress)
     return "Success"
 
 
