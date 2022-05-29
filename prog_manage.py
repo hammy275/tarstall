@@ -354,7 +354,7 @@ def _install(program, program_type, program_internal_name, overwrite=False, rein
     elif program_type == "dir":
         return _dir_install(program, program_internal_name, overwrite=overwrite, reinstall=reinstall)
     elif program_type == "archive":
-        return _archive_install(program, overwrite=overwrite, reinstall=reinstall, show_progress=show_progress)
+        return _archive_install(program, program_internal_name=program_internal_name, overwrite=overwrite, reinstall=reinstall, show_progress=show_progress)
     elif program_type == "wget":
         return _wget_install(program, program_internal_name, overwrite=overwrite, reinstall=reinstall)
 
@@ -751,7 +751,7 @@ def _wget_install(url, program_internal_name, reinstall=False, overwrite=False):
         return "Installed"
 
 
-def _archive_install(program, overwrite=False, reinstall=False, show_progress=True):
+def _archive_install(program, program_internal_name, overwrite=False, reinstall=False, show_progress=True):
     """Install Archive.
 
     Takes an archive and installs it.
@@ -766,7 +766,6 @@ def _archive_install(program, overwrite=False, reinstall=False, show_progress=Tr
     """
     if not file.check_bin("rsync") and overwrite:
         return "No rsync"
-    program_internal_name = file.name(program)
     if file.char_check(program_internal_name):
         return "Bad name"
     config.vprint("Removing old temp directory (if it exists!)")

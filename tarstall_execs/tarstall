@@ -49,13 +49,13 @@ if mode == "gui":
 
 def gui_loop():
     """Main Loop for GUI."""
-    to_disable = ["install", "install_browse", "dirinstall", "dirinstall_browse", "gitinstall",
-    "gitinstall_browse", "remove", "manage"]
+    to_disable = ["install", "install_browse", "dirinstall", "dirinstall_browse", "urlinstall", "remove", "manage"]
     layout = [
         [sg.Text("Select an option:")],
         [sg.Radio("Install: ", "Todo", default=True, enable_events=True, key="should_install"), sg.InputText(key="install"), sg.FileBrowse(key="install_browse")],
         [sg.Radio("Install Directory: ", "Todo", enable_events=True, key="should_dirinstall"), sg.InputText(key="dirinstall", disabled=True), sg.FolderBrowse(disabled=True, key="dirinstall_browse")],
-        [sg.Radio("Gitinstall: ", "Todo", enable_events=True, key="should_gitinstall"), sg.InputText(key="gitinstall", disabled=True), sg.FileBrowse(disabled=True, key="gitinstall_browse")],
+        [sg.Radio("Install from URL: ", "Todo", enable_events=True, key="should_urlinstall"), sg.InputText(key="urlinstall", disabled=True)],
+        [sg.Checkbox("Custom Program Name", default=False, enable_events=True, key="should_custom_name"), sg.InputText(key="custom_name", disabled=True)],
         [sg.Radio("Remove: ", "Todo", enable_events=True, key="should_remove"), sg.Combo(prog_manage.list_programs(), key="remove", disabled=True)],
         [sg.Radio("Erase tarstall", "Todo", enable_events=True, key="should_erase")],
         [sg.Radio("Update tarstall", "Todo", enable_events=True, key="should_update")],
@@ -75,12 +75,16 @@ def gui_loop():
         if event in (None, "Exit"):
             sys.exit(0)
         elif event == "Go":
+            custom_name_params = []
+            if (values["should_install"] or values["should_dirinstall"] or values["should_urlinstall"]) \
+                    and values["should_custom_name"] and values["custom_name"] != "":
+                custom_name_params = ["--name", values["custom_name"]]
             if values["should_install"]:
-                status = parse_args(["--install", values["install"]])
+                status = parse_args(["--install", values["install"]] + custom_name_params)
             elif values["should_dirinstall"]:
-                status = parse_args(["--dirinstall", values["dirinstall"]])
-            elif values["should_gitinstall"]:
-                status = parse_args(["--gitinstall", values["gitinstall"]])
+                status = parse_args(["--install", values["dirinstall"]] + custom_name_params)
+            elif values["should_urlinstall"]:
+                status = parse_args(["--install", values["urlinstall"]] + custom_name_params)
             elif values["should_remove"]:
                 status = parse_args(["--remove", values["remove"]])
             elif values["should_erase"]:
@@ -104,22 +108,29 @@ def gui_loop():
                     sys.exit(1)
             else:
                 config.install_bar.UpdateBar(100)
+            window.Element("remove").Update(values=prog_manage.list_programs())
+            window.Element("manage").Update(values=prog_manage.list_programs())
         else:
-            for o in to_disable:
-                window.Element(o).Update(disabled=True)
-            if event == "should_install":
-                window.Element("install").Update(disabled=False)
-                window.Element("install_browse").Update(disabled=False)
-            elif event == "should_dirinstall":
-                window.Element("dirinstall").Update(disabled=False)
-                window.Element("dirinstall_browse").Update(disabled=False)
-            elif event == "should_gitinstall":
-                window.Element("gitinstall").Update(disabled=False)
-                window.Element("gitinstall_browse").Update(disabled=False)
-            elif event == "should_remove":
-                window.Element("remove").Update(disabled=False)
-            elif event == "should_manage":
-                window.Element("manage").Update(disabled=False)
+            if event != "should_custom_name":
+                for o in to_disable:
+                    window.Element(o).Update(disabled=True)
+                if event == "should_install":
+                    window.Element("install").Update(disabled=False)
+                    window.Element("install_browse").Update(disabled=False)
+                elif event == "should_dirinstall":
+                    window.Element("dirinstall").Update(disabled=False)
+                    window.Element("dirinstall_browse").Update(disabled=False)
+                elif event == "should_urlinstall":
+                    window.Element("urlinstall").Update(disabled=False)
+                elif event == "should_remove":
+                    window.Element("remove").Update(disabled=False)
+                elif event == "should_manage":
+                    window.Element("manage").Update(disabled=False)
+
+            enable_set_custom_name = event == "should_install" or event == "should_dirinstall" \
+                                     or event == "should_urlinstall" or event == "should_custom_name"
+            window.Element("should_custom_name").Update(disabled=(not enable_set_custom_name))
+            window.Element("custom_name").Update(disabled=(not enable_set_custom_name) or (not values["should_custom_name"]))
 
 
 def process_update_status(status):
@@ -773,7 +784,7 @@ def post_install(status, overwrite, program_internal_name):
         generic.pprint("Error while retrieving archive!")
         exit_code = 1
     elif status == "Needs name":
-        generic.pprint("Please specify a name for the program using -n [NAME] or --name [NAME]!")
+        generic.pprint("Please specify a name for the program!")
         exit_code = 1
 
     return exit_code
