@@ -15,4 +15,4 @@ def pre_test(monkeypatch):
     tarstall_manage.verbose_toggle()
 
     monkeypatch.setattr('sys.stdin', StringIO("n\n"*3))
-    prog_manage._archive_install("./tests/fake_packages/package.tar.gz")
+    prog_manage._archive_install("./tests/fake_packages/package.tar.gz", "package")
