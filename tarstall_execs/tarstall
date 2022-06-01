@@ -27,6 +27,7 @@ import tarstall_manage
 import config
 import generic
 import prog_manage
+import generic_manage
 from subprocess import call
 
 mode = config.read_config("Mode")
@@ -373,7 +374,7 @@ def configure():
         ]
         option = generic.easy_get_action(options, replacements)
         if option == 'au':
-            if not prog_manage.can_update:
+            if not generic_manage.can_update:
                 generic.pprint("requests isn't installed, so AutoInstall cannot be enabled!")
             else:
                 key = "AutoInstall"
@@ -683,6 +684,7 @@ Note: The script will be run inside your program's directory.
 Leave blank to de-link the script from the program.
 Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh")
 """
+            generic.pprint(msg)
             script_path = generic.file_browser(file.full("~/.tarstall/bin/{}".format(program)), 
                 stay_inside_dir=False, return_full_path=True)
             if script_path is None:
