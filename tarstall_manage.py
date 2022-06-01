@@ -629,7 +629,7 @@ def verbose_toggle():
     return generic.endi(new_value)
 
 
-def get_online_version(type_of_replacement, branch=config.branch):
+def get_online_version(type_of_replacement, branch=None):
     """Get tarstall Version from GitHub.
 
     Args:
@@ -639,6 +639,8 @@ def get_online_version(type_of_replacement, branch=config.branch):
     Returns:
         int: The specified version, -1 if requests is missing, or -2 if not connected to the internet.
     """
+    if branch is None:
+        branch = config.branch
     if not can_update:
         config.vprint("requests library not installed! Exiting...")
         return -1
