@@ -1,5 +1,5 @@
 """tarstall: A package manager for managing archives
-    Copyright (C) 2020  hammy3502
+    Copyright (C) 2022  hammy3502
 
     tarstall is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -14,9 +14,12 @@
     You should have received a copy of the GNU General Public License
     along with tarstall.  If not, see <https://www.gnu.org/licenses/>."""
 
-import sys
 import config
 import os
+
+import file
+import generic_gui
+import generic_cli
 
 if config.mode == "gui":
     try:
@@ -25,19 +28,22 @@ if config.mode == "gui":
         pass  # This will be caught by tarstall.py, let's not worry about it here.
 
 
-def file_browser(root_dir):
+def file_browser(root_dir, stay_inside_dir=True, return_full_path=False):
     """File Browser.
 
     File browser for CLI that allows the choosing of files in folders.
 
     Args:
         root_dir (str): Path to top directory. Anything above this will be unaccessible
+        stay_inside_dir (bool): Whether the user should be forced to stay inside the root_dir
+        return_full_path (bol): Whether to return the full path to the chosen file.
     
     Returns:
-        str: path/to/file/from/root_dir/file.txt (Path to the selected file from root_dir (NOT FROM / !!!!)
+        str: path/to/file/from/root_dir/file.txt (Path to the selected file from root_dir
+        Will return full path (from / instead of from root_dir) if return_full_path is True
 
     """
-    root_dir = config.full(root_dir)
+    root_dir = file.full(root_dir)
     os.chdir(root_dir)
     all_files = os.listdir()
     folders = []
@@ -64,18 +70,24 @@ def file_browser(root_dir):
         if file_chosen == "exit":
             return None
         elif file_chosen in folders:
-            os.chdir(config.full("./{}".format(file_chosen)))
+            os.chdir(file.full("./{}".format(file_chosen)))
             current_folder_path.append(file_chosen)
         elif file_chosen == "..":
-            if os.getcwd() == root_dir:
+            if os.getcwd() == root_dir and stay_inside_dir:
                 pprint("\nCan't go up a directory!\n")
             else:
-                os.chdir(config.full(".."))
+                os.chdir(file.full(".."))
     if current_folder_path != []:
         extra_slash = "/"
     else:
         extra_slash = ""
-    return "/".join(current_folder_path) + extra_slash + file_chosen
+    if return_full_path:
+        path_ret = os.getcwd()
+        if not path_ret.endswith("/"):
+            path_ret = path_ret + "/"
+        return path_ret + file_chosen
+    else:
+        return "/".join(current_folder_path) + extra_slash + file_chosen
 
 
 def ask(question):
@@ -93,16 +105,7 @@ def ask(question):
     if config.mode == "cli":
         return input(question)
     elif config.mode == "gui":
-        layout = [
-            [sg.Text(question)],
-            [sg.InputText(key="answer"), sg.Button("Submit")]
-        ]
-        window = sg.Window("tarstall-gui", layout, disable_close=True)
-        while True:
-            event, values = window.read()
-            if event == "Submit":
-                window.Close()
-                return values["answer"]
+        return generic_gui.ask(question)
 
 
 def ask_file(question):
@@ -118,22 +121,9 @@ def ask_file(question):
     
     """
     if config.mode == "cli":
-        f = "asdf"
-        while not config.exists(config.full(f)):
-            f = input(question)
-        return config.full(f)
+        return generic_cli.ask_file(question)
     elif config.mode == "gui":
-        layout = [
-            [sg.Text(question)],
-            [sg.InputText(key="answer"), sg.FileBrowse()],
-            [sg.Button("Submit")]
-        ]
-        window = sg.Window("tarstall-gui", layout, disable_close=True)
-        while True:
-            event, values = window.read()
-            if event == "Submit":
-                window.Close()
-                return values["answer"]
+        return generic_gui.ask_file(question)
 
 
 def easy_get_action(options, replacements=[]):
@@ -179,7 +169,7 @@ def easy_get_action(options, replacements=[]):
     return get_input(msg, options_list, default, gui_labels, True)
 
 
-def get_input(question, options, default, gui_labels=[], from_easy=False):
+def get_input(question, options, default, gui_labels=None, from_easy=False):
     """Get User Input.
 
     Get user input, except make sure the input provided matches one of the options we're looking for
@@ -195,48 +185,9 @@ def get_input(question, options, default, gui_labels=[], from_easy=False):
 
     """
     if config.mode == "cli":
-        options_form = list(options)  # Otherwise, Python would "link" options_form with options
-        options_form[options_form.index(default)] = options_form[options_form.index(default)].upper()
-        if len(options) > 3 or from_easy:
-            question += "\n[" + "/".join(options_form) + "]"
-        else:
-            question += " [" + "/".join(options_form) + "]"
-        answer = "This is a string. There are many others like it, but this one is mine."  # Set answer to something
-        while answer not in options and answer != "":
-            answer = input(question)
-            answer = answer.lower()  # Loop ask question while the answer is invalid or not blank
-        if answer == "":
-            return default  # If answer is blank return default answer
-        else:
-            return answer  # Return answer if it isn't the default answer
+        return generic_cli.get_input(question, options, default, from_easy)
     elif config.mode == "gui":
-        if gui_labels == []:
-            gui_labels = options
-        if len(options) <= 5:
-            button_list = []
-            for o in gui_labels:
-                button_list.append(sg.Button(o))
-            layout = [
-                [sg.Text(question)],
-                button_list
-            ]
-            window = sg.Window("tarstall-gui", layout, disable_close=True)
-            while True:
-                event, values = window.read()
-                if event in gui_labels:
-                    window.Close()
-                    return options[gui_labels.index(event)]
-        else:
-            layout = [
-                [sg.Text(question)],
-                [sg.Combo(gui_labels, key="option"), sg.Button("Submit")]
-            ]
-            window = sg.Window("tarstall-gui", layout, disable_close=True)
-            while True:
-                event, values = window.read()
-                if event == "Submit":
-                    window.Close()
-                    return options[gui_labels.index(values["option"])]
+        return generic_gui.get_input(question, options, gui_labels)
 
 
 
@@ -299,18 +250,4 @@ def progress(val, should_show=True):
         if config.install_bar is not None:
             config.install_bar.UpdateBar(val)
     elif config.mode == "cli" and not config.verbose and should_show:
-        try:
-            columns = int(os.popen('stty size', 'r').read().split()[1])
-            start_chars = "Progress ({}%): ".format(str(int(val)))
-            end_chars = "   "
-            full_squares = int(val * 0.01 * (columns - len(start_chars) - len(end_chars)))
-            empty_squares = columns - len(start_chars) - len(end_chars) - full_squares
-            if val < 100:
-                print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="\r")
-            else:
-                print(start_chars + "■"*full_squares + "□"*empty_squares + end_chars, end="")
-        except IndexError:
-            if val < 100:
-                print("{}% complete".format(val), end="\r")
-            else:
-                print("{}% complete".format(val), end="")
+        generic_cli.progress(val)

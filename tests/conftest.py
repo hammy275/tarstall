@@ -3,14 +3,16 @@ import pytest
 import prog_manage
 from io import StringIO
 
+import tarstall_manage
+
 
 @pytest.fixture(autouse=True)
 def pre_test(monkeypatch):
-    assert prog_manage.erase() == "Erased" or prog_manage.erase() == "Not installed"
+    assert tarstall_manage.erase() == "Erased" or tarstall_manage.erase() == "Not installed"
 
-    prog_manage.first_time_setup()
+    tarstall_manage.first_time_setup()
 
-    prog_manage.verbose_toggle()
+    tarstall_manage.verbose_toggle()
 
     monkeypatch.setattr('sys.stdin', StringIO("n\n"*3))
-    prog_manage.install("./tests/fake_packages/package.tar.gz")
+    prog_manage._archive_install("./tests/fake_packages/package.tar.gz", "package")
