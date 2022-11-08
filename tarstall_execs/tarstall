@@ -978,19 +978,22 @@ def parse_args(args=None):
         else:
             msg = "Program Update Information:\n\n"
             exit_code = 0
+            programs_updated = 0
             for p in status.keys():
                 if status[p] == "Success":
                     msg += p + " updated successfully!\n"
-                elif status[p] == "No update":
-                    msg += p + " is already up to date!\n"
+                    programs_updated += 1
                 elif status[p] == "OSError":
                     msg += p + " does not have #!/bin/sh or similar specified at the top of its file!\n"
                     exit_code = 1
-                elif status[p] == "Does not update":
-                    msg += p + " does not update or has a URL as its only update option!\n"
-                else:
+                elif status[p] != "No update" and status[p] != "Does not update":
                     msg += p + " did not update successfully!\n"
                     exit_code = 1
+            if programs_updated > 0:
+                suffix = "" if programs_updated == 1 else "s"
+                msg += "\nUpdated {} program{}.".format(programs_updated, suffix)
+            else:
+                msg = "All programs are already up-to-date or have no update mechanism!"
             generic.pprint(msg)
     
 
