@@ -570,6 +570,12 @@ def first_time_setup():
     file.create("~/.tarstall/database")
     create_db()
     file.create("~/.tarstall/.bashrc")  # Create directories and files
+    with open(file.full("~/.tarstall/.bashrc"), "a") as f:
+        f.write("""__complete_tarstall() {
+COMPREPLY=($(~/.tarstall/args.py "${COMP_LINE}"))
+};
+complete -F __complete_tarstall tarstall
+""")
     if not file.exists("~/.config"):
         os.mkdir(file.full("~/.config"))
     if not file.exists("~/.config/fish"):
@@ -613,6 +619,7 @@ def first_time_setup():
     file.add_line("set PATH $PATH {}".format(file.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.fishrc")
     generic.progress(95)
     os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
+    os.system('sh -c "chmod +x ~/.tarstall/args.py"')
     file.unlock()
     generic.progress(100)
     return to_return
