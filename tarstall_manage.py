@@ -572,6 +572,7 @@ def first_time_setup():
     file.create("~/.tarstall/.bashrc")  # Create directories and files
     with open(file.full("~/.tarstall/.bashrc"), "a") as f:
         f.write("""__complete_tarstall() {
+local IFS=$'\n'
 COMPREPLY=($(~/.tarstall/args.py "${COMP_LINE}"))
 };
 complete -F __complete_tarstall tarstall

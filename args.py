@@ -3,7 +3,7 @@
 import os
 import sys
 import config
-import shlex
+import file
 
 arguments = []
 parsed_args = []
@@ -110,13 +110,27 @@ class InstallArgument(Argument):
         else:
             path = ""
         paths = path.split("/")
-        search = paths[len(paths) - 1].lower()
-        dir = os.getcwd()
-        if len(paths) > 1:
-            dir = os.path.join(os.getcwd(), "/".join(search[:-1]))
-        for file in os.listdir(dir):
-            if file.lower().startswith(search):
-                files.append(shlex.quote(os.path.join(dir, file)))
+        if len(paths) == 1 and paths[0].strip() == "":
+            dir = "/"
+        else:
+            dir = file.full(path)
+        if not os.path.isdir(dir):
+            if len(paths) > 0:
+                dir = "/".join(paths[:-1])
+                if dir == "":
+                    dir = "/"
+                dir = file.full(dir)
+                if not os.path.isdir(dir):
+                    return []
+            else:
+                return []
+        for fil in os.listdir(dir):
+            fil = os.path.join(dir, fil)
+            if fil.startswith(file.full(path)):
+                entry = os.path.join(dir, fil)
+                if os.path.isdir(entry) and not entry.endswith("/"):
+                    entry += "/"
+                files.append(entry.replace(" ", "\\ "))
 
         return files
 
@@ -289,5 +303,5 @@ upgrade_arg = UpgradeArgument()
 
 if __name__ == "__main__":
     completes = get_tab_complete(" ".join(sys.argv).split(" "))
-    sys.stdout.write(" ".join(completes))
+    sys.stdout.write("\n".join(completes))
     sys.stdout.flush()
