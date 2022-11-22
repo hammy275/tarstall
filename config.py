@@ -21,7 +21,7 @@ import json
 from file import get_shell_file, unlock, full, get_db
 
 version = "1.7.0"
-prog_internal_version = 129
+prog_internal_version = 130
 file_version = 20
 
 #############
