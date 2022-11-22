@@ -84,8 +84,7 @@ class ProgramArgument(Argument):
                     if program.lower().startswith(prog):
                         progs.append(program)
                 return progs
-        elif "programs" in config.db:
-            return list(config.db["programs"].keys())
+        return []
 
 # Actual Arguments
 
@@ -109,6 +108,7 @@ class InstallArgument(Argument):
             path = argv[0]
         else:
             path = ""
+        file.add_line(path, "arg")
         paths = path.split("/")
         if len(paths) == 1 and paths[0].strip() == "":
             dir = "/"
@@ -237,22 +237,26 @@ def parse_args(argv):
     Parse arguments for execution, and store them in parsed_args.
 
     Args:
-        argv (str[]): Raw list of arguments from sys.argv
+        argv (str[]): List of arguments from sys.argv excluding initial tarstall call
     """
     parsed_args.clear()
     args = []
     for arg in argv:  # Copy argv
         args.append(arg)
-    args = args[1:]  # Chop off tarstall call
     for priority in range(MAX_PRIORITY + 1):
         for arg_index in range(len(args)):
             arg = get_matching_argument(args[arg_index], priority)
             if arg is not None:
                 count = arg.arg_count(args[arg_index + 1:])
                 if count == 0:
-                    arg.val = True
+                    arg.val = [True]
                 else:
-                    arg.val = args[arg_index + 1:arg_index + 1 + count]  # Get arguments
+                    try:
+                        arg.val = args[arg_index + 1:arg_index + 1 + count]  # Get arguments
+                        if len(arg.val) == 0:
+                            arg.val = [None]
+                    except IndexError:
+                        arg.val = [None]
                 parsed_args.append(arg)
                 break
     return True
