@@ -743,7 +743,7 @@ Commands:\n"""
             extra_desc = " " + argument.arg_desc
         else:
             extra_desc = ""
-        usage += "\t-{}, --{}{}\t{}".format(argument.arg_short, argument.arg_long, extra_desc, argument.desc)
+        usage += "\t-{}, --{}{}\t{}\n".format(argument.arg_short, argument.arg_long, extra_desc, argument.desc)
     generic.pprint(usage)
 
 
