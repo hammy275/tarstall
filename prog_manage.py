@@ -163,7 +163,7 @@ def update_program(program, show_progress=False):
         try:
             generic.progress(50 * (progs - 1), show_progress)
             err = call(config.db["programs"][program]["post_upgrade_script"],
-                       cwd=file.full("~/.tarstall/bin/{}".format(program)), stdout=c_out)
+                       cwd=file.full(f"{config.TARSTALL_DIR}/bin/{program}"), stdout=c_out)
             generic.progress(100, show_progress)
             if err != 0:
                 return "Script error"
@@ -214,7 +214,7 @@ def update_git_program(program, show_progress=False, progress_modifier=1):
         config.vprint("git isn't installed!")
         return "No git"
     generic.progress(5 / progress_modifier, show_progress)
-    outp = run(["git", "pull"], cwd=file.full("~/.tarstall/bin/{}".format(program)), stdout=PIPE, stderr=PIPE)
+    outp = run(["git", "pull"], cwd=file.full(f"{config.TARSTALL_DIR}/bin/{program}"), stdout=PIPE, stderr=PIPE)
     generic.progress(95 / progress_modifier, show_progress)
     err = outp.returncode
     output = str(outp.stdout) + "\n\n\n" + str(outp.stderr)
@@ -276,7 +276,7 @@ def change_git_branch(program, branch):
     """
     if not file.check_bin("git"):
         return "No git"
-    err = call(["git", "checkout", "-f", branch], cwd=file.full("~/.tarstall/bin/{}".format(program)), stdout=c_out)
+    err = call(["git", "checkout", "-f", branch], cwd=file.full(f"{config.TARSTALL_DIR}/bin/{program}"), stdout=c_out)
     if err != 0:
         return "Error changing"
     else:
@@ -389,8 +389,8 @@ def remove_paths_and_binlinks(program):
     """
     if not config.db["programs"][program]["has_path"] and config.db["programs"][program]["binlinks"] == []:
         return "None exist"
-    file.remove_line(program, "~/.tarstall/.bashrc", 'poundword')
-    file.remove_line(program, "~/.tarstall/.fishrc", 'poundword')
+    file.remove_line(program, f"{config.TARSTALL_DIR}/.bashrc", 'poundword')
+    file.remove_line(program, f"{config.TARSTALL_DIR}/.fishrc", 'poundword')
     config.db["programs"][program]["has_path"] = False
     config.db["programs"][program]["binlinks"] = []
     config.write_db()
@@ -423,31 +423,32 @@ def rename(program, new_name):
     generic.progress(25)
     config.vprint("Replacing PATHs")
     config.db["programs"][new_name] = config.db["programs"].pop(program)
-    file.replace_in_file("export PATH=$PATH:~/.tarstall/bin/" + program,
-    "export PATH=$PATH:~/.tarstall/bin/" + new_name, "~/.tarstall/.bashrc")
-    file.replace_in_file("set PATH $PATH ~/.tarstall/bin/" + program + ' # ' + program,
-    "set PATH $PATH ~/.tarstall/bin/" + new_name + ' # ' + new_name, "~/.tarstall/.fishrc")
+    file.replace_in_file(f"export PATH=$PATH:{config.TARSTALL_DIR}/bin/" + program,
+    f"export PATH=$PATH:{config.TARSTALL_DIR}/bin/" + new_name, f"{config.TARSTALL_DIR}/.bashrc")
+    file.replace_in_file(f"set PATH $PATH {config.TARSTALL_DIR}/bin/" + program + ' # ' + program,
+    f"set PATH $PATH {config.TARSTALL_DIR}/bin/" + new_name + ' # ' + new_name, f"{config.TARSTALL_DIR}/.fishrc")
     generic.progress(50)
     config.vprint("Replacing binlinks")
-    file.replace_in_file("'cd " + file.full('~/.tarstall/bin/' + program),
-    "'cd " + file.full('~/.tarstall/bin/' + new_name), "~/.tarstall/.bashrc")
-    file.replace_in_file(";cd " + file.full("~/.tarstall/bin/" + program) + "/;./",
-    ";cd " + file.full("~/.tarstall/bin/" + new_name) + "/;./", "~/.tarstall/.fishrc")
+    file.replace_in_file("'cd " + file.full(f'{config.TARSTALL_DIR}/bin/' + program),
+    "'cd " + file.full(f'{config.TARSTALL_DIR}/bin/' + new_name), f"{config.TARSTALL_DIR}/.bashrc")
+    file.replace_in_file(";cd " + file.full(f"{config.TARSTALL_DIR}/bin/" + program) + "/;./",
+    ";cd " + file.full(f"{config.TARSTALL_DIR}/bin/" + new_name) + "/;./", f"{config.TARSTALL_DIR}/.fishrc")
     if is_single:
-        file.replace_in_file("./" + program, "./" + new_name, "~/.tarstall/.bashrc")
-        file.replace_in_file("alias " + program, "alias " + new_name, "~/.tarstall/.bashrc")
-        file.replace_in_file("./" + program, "./" + new_name, "~/.tarstall/.fishrc")
-        file.replace_in_file("function " + program, "function " + new_name, "~/.tarstall/.fishrc")
+        file.replace_in_file("./" + program, "./" + new_name, f"{config.TARSTALL_DIR}/.bashrc")
+        file.replace_in_file("alias " + program, "alias " + new_name, f"{config.TARSTALL_DIR}/.bashrc")
+        file.replace_in_file("./" + program, "./" + new_name, f"{config.TARSTALL_DIR}/.fishrc")
+        file.replace_in_file("function " + program, "function " + new_name, f"{config.TARSTALL_DIR}/.fishrc")
     generic.progress(75)
     config.vprint("Replacing program recognisers")
-    file.replace_in_file("# " + program, "# " + new_name, "~/.tarstall/.bashrc")
-    file.replace_in_file("# " + program, "# " + new_name, "~/.tarstall/.fishrc")
-    move(file.full("~/.tarstall/bin/" + program), file.full("~/.tarstall/bin/" + new_name))
+    file.replace_in_file("# " + program, "# " + new_name, f"{config.TARSTALL_DIR}/.bashrc")
+    file.replace_in_file("# " + program, "# " + new_name, f"{config.TARSTALL_DIR}/.fishrc")
+    move(file.full(f"{config.TARSTALL_DIR}/bin/" + program), file.full(f"{config.TARSTALL_DIR}/bin/" + new_name))
     config.write_db()
     generic.progress(90)
     if is_single:
         config.vprint("Renaming single-file")
-        move(file.full("~/.tarstall/bin/{}/{}".format(new_name, program)), file.full("~/.tarstall/bin/{}/{}".format(new_name, new_name)))
+        move(file.full(f"{config.TARSTALL_DIR}/bin/{new_name}/{program}"),
+             file.full(f"{config.TARSTALL_DIR}/bin/{new_name}/{new_name}"))
     generic.progress(100)
     return new_name
 
@@ -502,8 +503,8 @@ def create_desktop(program_internal_name, name, program_file, comment="", should
 
     """
     if program_internal_name is not None:
-        exec_path = file.full("~/.tarstall/bin/{}/{}".format(program_internal_name, program_file))
-        path = file.full("~/.tarstall/bin/{}/".format(program_internal_name))
+        exec_path = file.full(f"{config.TARSTALL_DIR}/bin/{program_internal_name}/{program_file}")
+        path = file.full(f"{config.TARSTALL_DIR}/bin/{program_internal_name}/")
         file_name = program_file
         if "/" in file_name:
             file_name += ".tar.gz"
@@ -573,14 +574,14 @@ def _git_install(git_url, program_internal_name, overwrite=False, reinstall=Fals
         os.mkdir("/tmp/tarstall-temp")
         os.chdir("/tmp/tarstall-temp")
     else:
-        os.chdir(file.full("~/.tarstall/bin"))
+        os.chdir(file.full(f"{config.TARSTALL_DIR}/bin"))
     generic.progress(5)
     err = git_clone_with_progress(git_url, 5, 65)
     if err != 0:
         return "Error"
     generic.progress(65)
     if overwrite:
-        call(["rsync", "-a", "/tmp/tarstall-temp/{}/".format(program_internal_name), file.full("~/.tarstall/bin/{}".format(program_internal_name))], stdout=c_out)
+        call(["rsync", "-a", "/tmp/tarstall-temp/{}/".format(program_internal_name), file.full(f"{config.TARSTALL_DIR}/bin/{program_internal_name}")], stdout=c_out)
     if not overwrite:
         return finish_install(program_internal_name, "git")
     else:
@@ -605,12 +606,12 @@ def add_binlink(file_chosen, program_internal_name):
         name = file.name(name)
     if name in config.db["programs"][program_internal_name]["binlinks"]:
         return "Already there"
-    line_to_add = '\nalias ' + name + "='cd " + file.full('~/.tarstall/bin/' + program_internal_name) + \
+    line_to_add = '\nalias ' + name + "='cd " + file.full(f'{config.TARSTALL_DIR}/bin/' + program_internal_name) + \
     '/ && ./' + file_chosen + "' # " + program_internal_name
     config.vprint("Adding alias to bashrc and fishrc")
-    file.add_line(line_to_add, "~/.tarstall/.bashrc")
-    line_to_add = "\nfunction " + name + ";cd " + file.full("~/.tarstall/bin/" + program_internal_name) + "/;./" + file_chosen + ";end # " + program_internal_name
-    file.add_line(line_to_add, "~/.tarstall/.fishrc")
+    file.add_line(line_to_add, f"{config.TARSTALL_DIR}/.bashrc")
+    line_to_add = "\nfunction " + name + ";cd " + file.full(f"{config.TARSTALL_DIR}/bin/" + program_internal_name) + "/;./" + file_chosen + ";end # " + program_internal_name
+    file.add_line(line_to_add, f"{config.TARSTALL_DIR}/.fishrc")
     config.db["programs"][program_internal_name]["binlinks"].append(name)
     config.write_db()
     return "Added"
@@ -619,7 +620,7 @@ def add_binlink(file_chosen, program_internal_name):
 def pathify(program_internal_name):
     """Add Program to Path.
 
-    Adds a program to PATH through ~/.tarstall/.bashrc and ~/.tarstall/.fishrc
+    Adds a program to PATH through tarstall's .bashrc and .fishrc
 
     Args:
         program_internal_name (str): Name of program to add to PATH
@@ -631,10 +632,10 @@ def pathify(program_internal_name):
     if config.db["programs"][program_internal_name]["has_path"]:
         return "Already there"
     config.vprint('Adding program to PATH')
-    line_to_write = "\nexport PATH=$PATH:~/.tarstall/bin/" + program_internal_name + ' # ' + program_internal_name
-    file.add_line(line_to_write, "~/.tarstall/.bashrc")
-    line_to_write = "\nset PATH $PATH ~/.tarstall/bin/" + program_internal_name + ' # ' + program_internal_name
-    file.add_line(line_to_write, "~/.tarstall/.fishrc")
+    line_to_write = f"\nexport PATH=$PATH:{config.TARSTALL_DIR}/bin/" + program_internal_name + ' # ' + program_internal_name
+    file.add_line(line_to_write, f"{config.TARSTALL_DIR}/.bashrc")
+    line_to_write = f"\nset PATH $PATH {config.TARSTALL_DIR}/bin/" + program_internal_name + ' # ' + program_internal_name
+    file.add_line(line_to_write, f"{config.TARSTALL_DIR}/.fishrc")
     config.db["programs"][program_internal_name]["has_path"] = True
     config.write_db()
     return "Complete"
@@ -703,7 +704,7 @@ def _wget_install(url, program_internal_name, reinstall=False, overwrite=False):
     if reinstall:
         try:
             config.vprint("Removing old copy of program to reinstall (if it exists!)")
-            rmtree("~/.tarstall/bin/{}".format(program_internal_name))
+            rmtree(f"{config.TARSTALL_DIR}/bin/{program_internal_name}")
         except FileNotFoundError:
             pass
     config.vprint("Creating temporary folder")
@@ -795,16 +796,16 @@ def _archive_install(program, program_internal_name, overwrite=False, reinstall=
     if os.path.isdir(file.full('/tmp/tarstall-temp/' + program_internal_name + '/')):
         config.vprint('Folder in folder detected! Using that directory instead...')
         source = file.full('/tmp/tarstall-temp/' + program_internal_name) + '/'
-        dest = file.full('~/.tarstall/bin/' + program_internal_name) + '/'
+        dest = file.full(f'{config.TARSTALL_DIR}/bin/' + program_internal_name) + '/'
     elif len(os.listdir()) == 1 and os.path.isdir(os.listdir()[0]):
         config.vprint("Single folder detected!")
         folder = os.listdir()[0]
         source = file.full("/tmp/tarstall-temp/" + folder) + '/'
-        dest = file.full("~/.tarstall/bin/" + program_internal_name) + '/'
+        dest = file.full(f"{config.TARSTALL_DIR}/bin/" + program_internal_name) + '/'
     else:
         config.vprint('Folder in folder not detected!')
         source = file.full('/tmp/tarstall-temp') + '/'
-        dest = file.full('~/.tarstall/bin/' + program_internal_name) + '/'
+        dest = file.full(f'{config.TARSTALL_DIR}/bin/' + program_internal_name) + '/'
     config.vprint("Moving program to directory")
     if overwrite:
         if verbose:
@@ -841,17 +842,17 @@ def _single_install(program, program_internal_name, reinstall=False):
     """
     if not reinstall:
         config.vprint("Creating folder to house file in")
-        os.mkdir(file.full("~/.tarstall/bin/{}".format(program_internal_name)))
+        os.mkdir(file.full(f"{config.TARSTALL_DIR}/bin/{program_internal_name}"))
     generic.progress(5)
     config.vprint("Marking executable as... executable")
     os.system('sh -c "chmod +x {}"'.format(program))
     generic.progress(10)
     if reinstall:
         config.vprint("Deleting old single-executable...")
-        os.remove(file.full("~/.tarstall/bin/{p}/{p}".format(p=program_internal_name)))
+        os.remove(file.full(f"{config.TARSTALL_DIR}/bin/{program_internal_name}/{program_internal_name}"))
     generic.progress(15)
     config.vprint("Moving to tarstall directory and renaming...")
-    move(file.full(program), file.full("~/.tarstall/bin/{p}/{p}".format(p=program_internal_name)))
+    move(file.full(program), file.full(f"{config.TARSTALL_DIR}/bin/{program_internal_name}/{program_internal_name}"))
     generic.progress(90)
     return finish_install(program_internal_name, "single")
 
@@ -875,10 +876,10 @@ def _dir_install(program_path, program_internal_name, overwrite=False, reinstall
         return "No rsync"
     config.vprint("Moving folder to tarstall destination")
     if overwrite:
-        call(["rsync", "-a", program_path, file.full("~/.tarstall/bin/{}".format(program_internal_name))], stdout=c_out)
+        call(["rsync", "-a", program_path, file.full(f"{config.TARSTALL_DIR}/bin/{program_internal_name}")], stdout=c_out)
         rmtree(program_path)
     else:
-        move(program_path, file.full("~/.tarstall/bin/"))
+        move(program_path, file.full(f"{config.TARSTALL_DIR}/bin/"))
     if not overwrite:
         return finish_install(program_internal_name)
     else:
@@ -899,10 +900,10 @@ def uninstall(program, show_progress=True):
     if not program in config.db["programs"]:
         return "Not installed"
     config.vprint("Removing program files")
-    rmtree(file.full("~/.tarstall/bin/" + program + '/'))
+    rmtree(file.full(f"{config.TARSTALL_DIR}/bin/" + program + '/'))
     generic.progress(40, show_progress)
     config.vprint("Removing program from PATH and any binlinks for the program")
-    file.remove_line(program, "~/.tarstall/.bashrc", 'poundword')
+    file.remove_line(program, f"{config.TARSTALL_DIR}/.bashrc", 'poundword')
     generic.progress(50, show_progress)
     config.vprint("Removing program desktop files")
     if config.db["programs"][program]["desktops"]:

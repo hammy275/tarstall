@@ -92,20 +92,20 @@ def repair_db():
     generic.progress(5)
 
     config.vprint("Re-discovering programs:")
-    for pf in os.listdir(file.full("~/.tarstall/bin/")):
+    for pf in os.listdir(file.full(f"{config.TARSTALL_DIR}/bin/")):
         config.vprint("Re-discovering " + pf, end="\r")
         prog_info = {pf: {"install_type": "default", "desktops": [],
         "post_upgrade_script": None, "update_url": None, "has_path": False, "binlinks": []}}
-        if ".git" in os.listdir(file.full("~/.tarstall/bin/{}".format(pf))):
+        if ".git" in os.listdir(file.full(f"{config.TARSTALL_DIR}/bin/{pf}")):
             prog_info[pf]["install_type"] = "git"
-        elif len(os.listdir(file.full("~/.tarstall/bin/{}".format(pf)))) == 1:
+        elif len(os.listdir(file.full(f"{config.TARSTALL_DIR}/bin/{pf}"))) == 1:
             prog_info[pf]["install_type"] = "single"
         new_db["programs"].update(prog_info)
 
     generic.progress(20)
 
     config.vprint("Reading tarstall's bashrc file for further operations...")
-    with open(file.full("~/.tarstall/.bashrc")) as f:
+    with open(file.full(f"{config.TARSTALL_DIR}/.bashrc")) as f:
         bashrc_lines = f.readlines()
 
     generic.progress(25)
@@ -131,7 +131,7 @@ def repair_db():
 
     config.vprint("Backing up old database...")
     date_str = datetime.datetime.today().strftime("%d-%m-%Y-%H-%M-%S")
-    move(file.full("~/.tarstall/database"), file.full("~/.tarstall/database-backup-{}.bak".format(date_str)))
+    move(file.full(f"{config.TARSTALL_DIR}/database"), file.full(f"{config.TARSTALL_DIR}/database-backup-{date_str}.bak"))
 
     generic.progress(80)
 
@@ -258,22 +258,22 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
     if config.db == {"refresh": True}:  # Downgrade check
         config.vprint("Finishing downgrade")
         generic.progress(5)
-        file.create("~/.tarstall/database")
+        file.create(f"{config.TARSTALL_DIR}/database")
         create_db()
         generic.progress(15)
-        config.db = file.get_db()
+        config.db = config.get_db()
         config.write_db()
         generic.progress(20)
-        rmtree(file.full("~/.tarstall/bin"))
+        rmtree(file.full(f"{config.TARSTALL_DIR}/bin"))
         generic.progress(90)
-        os.mkdir(file.full("~/.tarstall/bin"))
+        os.mkdir(file.full(f"{config.TARSTALL_DIR}/bin"))
         generic.progress(100)
         config.vprint("Downgrade complete, returning back to tarstall execution...")
 
     if start_fts:  # Check if -f or --first is supplied
         return first_time_setup()
 
-    if not(file.exists('~/.tarstall/tarstall_execs/tarstall')):  # Make sure tarstall is installed
+    if not(file.exists(f'{config.TARSTALL_DIR}/tarstall_execs/tarstall')):  # Make sure tarstall is installed
         return "Not installed"
 
     if config.db == {}:
@@ -333,8 +333,8 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
 
         elif file_version == 18:
             config.vprint("Deleting version.json (if it exists!)")
-            if file.exists("~/.tarstall/version.json"):
-                os.remove(file.full("~/.tarstall/version.json"))
+            if file.exists(f"{config.TARSTALL_DIR}/version.json"):
+                os.remove(file.full(f"{config.TARSTALL_DIR}/version.json"))
 
         elif file_version == 19:
             config.vprint("Upgrading all URL-updatable programs to specify archive type.")
@@ -442,17 +442,17 @@ def update(force_update=False, show_progress=True):
             return "Failed"
         generic.progress(55, show_progress)
         config.vprint("Removing old tarstall files")
-        os.chdir(file.full("~/.tarstall/"))
+        os.chdir(file.full(f"{config.TARSTALL_DIR}/"))
         files = os.listdir()
         to_keep = ["bin", "database", ".bashrc", ".fishrc"]
         progress = 55
         adder = 15 / int(len(files) - len(to_keep))
         for f in files:
             if f not in to_keep:
-                if os.path.isdir(file.full("~/.tarstall/{}".format(f))):
-                    rmtree(file.full("~/.tarstall/{}".format(f)))
+                if os.path.isdir(file.full(f"{config.TARSTALL_DIR}/{f}")):
+                    rmtree(file.full(f"{config.TARSTALL_DIR}/{f}"))
                 else:
-                    os.remove(file.full("~/.tarstall/{}".format(f)))
+                    os.remove(file.full(f"{config.TARSTALL_DIR}/{f}"))
                 progress += adder
                 generic.progress(progress, show_progress)
         generic.progress(70, show_progress)
@@ -465,12 +465,12 @@ def update(force_update=False, show_progress=True):
         adder = 25 / int(len(files) - len(to_ignore))
         for f in files:
             if f not in to_ignore:
-                move("/tmp/tarstall-update/tarstall/{}".format(f), file.full("~/.tarstall/{}".format(f)))
+                move("/tmp/tarstall-update/tarstall/{}".format(f), file.full(f"{config.TARSTALL_DIR}/{f}"))
                 progress += adder
                 generic.progress(progress, show_progress)
         generic.progress(95, show_progress)
         config.vprint("Removing old tarstall temp directory")
-        os.chdir(file.full("~/.tarstall/"))
+        os.chdir(file.full(f"{config.TARSTALL_DIR}/"))
         try:
             rmtree("/tmp/tarstall-update")
         except FileNotFoundError:
@@ -496,7 +496,7 @@ def erase():
         line couldn't be removed.
 
     """
-    if not (file.exists(file.full("~/.tarstall/tarstall_execs/tarstall"))):
+    if not (file.exists(file.full(f"{config.TARSTALL_DIR}/tarstall_execs/tarstall"))):
         return "Not installed"
     config.vprint('Removing source line from bashrc and fishrc')
     if file.get_shell_file() is not None:
@@ -504,7 +504,7 @@ def erase():
             path_to_remove = "fishrc"
         else:
             path_to_remove = "bashrc"
-        file.remove_line("~/.tarstall/.{}".format(path_to_remove), file.get_shell_path(), "word")
+        file.remove_line(f"{config.TARSTALL_DIR}/.{path_to_remove}", file.get_shell_path(), "word")
     else:
         to_return = "No line"
     to_return = "Erased"
@@ -519,7 +519,7 @@ def erase():
                     pass
     generic.progress(40)
     config.vprint('Removing tarstall directory')
-    rmtree(file.full('~/.tarstall'))
+    rmtree(file.full(f'{config.TARSTALL_DIR}'))
     generic.progress(90)
     try:
         rmtree("/tmp/tarstall-temp")
@@ -551,29 +551,29 @@ def first_time_setup():
 
     """
     os.chdir(os.path.dirname(__file__))
-    if file.exists(file.full('~/.tarstall/tarstall_execs/tarstall')):
+    if file.exists(file.full(f'{config.TARSTALL_DIR}/tarstall_execs/tarstall')):
         return "Already installed"
     print('Installing tarstall to your system...')
     generic.progress(5)
     try:
-        os.mkdir(file.full("~/.tarstall"))
+        os.mkdir(file.full(f"{config.TARSTALL_DIR}"))
     except FileExistsError:
-        rmtree(file.full("~/.tarstall"))
-        os.mkdir(file.full("~/.tarstall"))
+        rmtree(file.full(f"{config.TARSTALL_DIR}"))
+        os.mkdir(file.full(f"{config.TARSTALL_DIR}"))
     try:
         os.mkdir(file.full("/tmp/tarstall-temp/"))
     except FileExistsError:
         rmtree(file.full("/tmp/tarstall-temp"))
         os.mkdir(file.full("/tmp/tarstall-temp/"))
     generic.progress(10)
-    os.mkdir(file.full("~/.tarstall/bin"))
-    file.create("~/.tarstall/database")
+    os.mkdir(file.full(f"{config.TARSTALL_DIR}/bin"))
+    file.create(f"{config.TARSTALL_DIR}/database")
     create_db()
-    file.create("~/.tarstall/.bashrc")  # Create directories and files
-    with open(file.full("~/.tarstall/.bashrc"), "a") as f:
+    file.create(f"{config.TARSTALL_DIR}/.bashrc")  # Create directories and files
+    with open(file.full(f"{config.TARSTALL_DIR}/.bashrc"), "a") as f:
         f.write("""__complete_tarstall() {
 local IFS=$'\n'
-COMPREPLY=($(~/.tarstall/args.py "${COMP_LINE}"))
+COMPREPLY=($(""" + config.TARSTALL_DIR + """/args.py "${COMP_LINE}"))
 };
 complete -F __complete_tarstall tarstall
 """)
@@ -583,7 +583,7 @@ complete -F __complete_tarstall tarstall
         os.mkdir(file.full("~/.config/fish"))
     if not file.exists("~/.config/fish/config.fish"):
         file.create("~/.config/fish/config.fish")
-    file.create("~/.tarstall/.fishrc")
+    file.create(f"{config.TARSTALL_DIR}/.fishrc")
     generic.progress(15)
     progress = 15
     files = os.listdir()
@@ -592,7 +592,7 @@ complete -F __complete_tarstall tarstall
         i_num = len(i) - 3
         if i[i_num:len(i)] == '.py':
             try:
-                copyfile(i, file.full('~/.tarstall/' + i))
+                copyfile(i, file.full(f'{config.TARSTALL_DIR}/' + i))
             except FileNotFoundError:
                 return "Bad copy"
         progress += prog_change
@@ -604,11 +604,11 @@ complete -F __complete_tarstall tarstall
     else:
         to_return = "Success"
         if "shrc" in file.get_shell_file():
-            file.add_line("source ~/.tarstall/.bashrc\n", shell_file)
+            file.add_line(f"source {config.TARSTALL_DIR}/.bashrc\n", shell_file)
         elif "fish" in file.get_shell_file():
-            file.add_line("source ~/.tarstall/.fishrc\n", shell_file)
+            file.add_line(f"source {config.TARSTALL_DIR}/.fishrc\n", shell_file)
     generic.progress(75)
-    copytree(file.full("./tarstall_execs/"), file.full("~/.tarstall/tarstall_execs/"))  # Move tarstall.py to execs dir
+    copytree(file.full("./tarstall_execs/"), file.full(f"{config.TARSTALL_DIR}/tarstall_execs/"))  # Move tarstall.py to execs dir
     generic.progress(90)
     if not file.exists("~/.local/share/applications"):
         os.mkdir(file.full("~/.local/share/applications"))
@@ -616,11 +616,11 @@ complete -F __complete_tarstall tarstall
         os.mkdir(file.full("~/.local/share/applications/tarstall"))
     generic.progress(92)
     file.add_line("export PATH=$PATH:{}".format(
-                file.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.bashrc")  # Add bashrc line
-    file.add_line("set PATH $PATH {}".format(file.full("~/.tarstall/tarstall_execs")), "~/.tarstall/.fishrc")
+                file.full(f"{config.TARSTALL_DIR}/tarstall_execs")), f"{config.TARSTALL_DIR}/.bashrc")  # Add bashrc line
+    file.add_line("set PATH $PATH {}".format(file.full(f"{config.TARSTALL_DIR}/tarstall_execs")), f"{config.TARSTALL_DIR}/.fishrc")
     generic.progress(95)
-    os.system('sh -c "chmod +x ~/.tarstall/tarstall_execs/tarstall"')
-    os.system('sh -c "chmod +x ~/.tarstall/args.py"')
+    os.system(f'sh -c "chmod +x {config.TARSTALL_DIR}/tarstall_execs/tarstall"')
+    os.system(f'sh -c "chmod +x {config.TARSTALL_DIR}/args.py"')
     file.unlock()
     generic.progress(100)
     return to_return

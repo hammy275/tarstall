@@ -1,7 +1,7 @@
 import os
 
 import file
-
+import config
 
 def test_check_bin():
     assert file.check_bin("sh") is True
@@ -10,29 +10,29 @@ def test_check_bin():
 
 def test_check_line():
     # TODO: Test other modes
-    file.create("~/.tarstall/config")
-    file.add_line("Test Line", "~/.tarstall/config")
-    assert file.check_line("Test Line", "~/.tarstall/config", "fuzzy") is True
-    assert file.check_line("ThisShouldNotBeFound=True", "~/.tarstall/config", "fuzzy") is False
+    file.create(f"{config.TARSTALL_DIR}/config")
+    file.add_line("Test Line", f"{config.TARSTALL_DIR}/config")
+    assert file.check_line("Test Line", f"{config.TARSTALL_DIR}/config", "fuzzy") is True
+    assert file.check_line("ThisShouldNotBeFound=True", f"{config.TARSTALL_DIR}/config", "fuzzy") is False
 
 
 def test_create():
-    file.create("~/.tarstall/test01")
-    assert file.exists("~/.tarstall/test01")
+    file.create(f"{config.TARSTALL_DIR}/test01")
+    assert file.exists(f"{config.TARSTALL_DIR}/test01")
 
 
 def test_remove_line():
     # TODO: Test other modes
-    file.create("~/.tarstall/config")
-    file.add_line("Test Line", "~/.tarstall/config")
-    file.add_line("Verbose=True", "~/.tarstall/config")
-    file.remove_line("Test Line", "~/.tarstall/config", "fuzzy")
-    assert file.check_line("Verbose=False", "~/.tarstall/config", "fuzzy") is False
+    file.create(f"{config.TARSTALL_DIR}/config")
+    file.add_line("Test Line", f"{config.TARSTALL_DIR}/config")
+    file.add_line("Verbose=True", f"{config.TARSTALL_DIR}/config")
+    file.remove_line("Test Line", f"{config.TARSTALL_DIR}/config", "fuzzy")
+    assert file.check_line("Verbose=False", f"{config.TARSTALL_DIR}/config", "fuzzy") is False
 
 
 def test_add_line():
-    file.add_line("Verbose=False\n", "~/.tarstall/config")
-    assert file.check_line("Verbose=False", "~/.tarstall/config", "fuzzy") is True
+    file.add_line("Verbose=False\n", f"{config.TARSTALL_DIR}/config")
+    assert file.check_line("Verbose=False", f"{config.TARSTALL_DIR}/config", "fuzzy") is True
 
 
 def test_name():
@@ -49,7 +49,7 @@ def test_extension():
 
 
 def test_exists():
-    assert file.exists(os.path.expanduser("~/.tarstall/config.py")) is True
+    assert file.exists(os.path.expanduser(f"{config.TARSTALL_DIR}/config.py")) is True
     assert file.exists("./config.no") is False
 
 

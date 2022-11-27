@@ -4,10 +4,12 @@ import prog_manage
 from io import StringIO
 
 import tarstall_manage
+import config
 
 
 @pytest.fixture(autouse=True)
 def pre_test(monkeypatch):
+    config.TARSTALL_DIR = "~/tarstall_test"
     assert tarstall_manage.erase() == "Erased" or tarstall_manage.erase() == "Not installed"
 
     tarstall_manage.first_time_setup()

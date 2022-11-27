@@ -1,6 +1,7 @@
 import os
 
 import file
+import config
 import prog_manage
 
 """
@@ -23,12 +24,12 @@ def nothing_two(a, b=False):
 def test_install_git(monkeypatch):
     monkeypatch.setattr(prog_manage, "finish_install", nothing_two)
     prog_manage.install("https://github.com/hammy3502/tarstall.git", "tarstall")
-    assert os.path.isfile(os.path.expanduser("~/.tarstall/bin/tarstall/prog_manage.py"))
+    assert os.path.isfile(os.path.expanduser(f"{config.TARSTALL_DIR}/bin/tarstall/prog_manage.py"))
 
 
 def test_pathify():
     prog_manage.pathify("package")
-    assert file.check_line("export PATH=$PATH:~/.tarstall/bin/package # package", "~/.tarstall/.bashrc", "fuzzy")
+    assert file.check_line(f"export PATH=$PATH:{config.TARSTALL_DIR}/bin/package # package", f"{config.TARSTALL_DIR}/.bashrc", "fuzzy")
 
 
 def test_list_programs(capsys):
@@ -52,15 +53,15 @@ def test_remove_desktop():
 
 def test_uninstall():
     prog_manage.uninstall("package")
-    assert file.check_line("export PATH=$PATH:~/.tarstall/bin/package # package", "~/.tarstall/.bashrc",
+    assert file.check_line(f"export PATH=$PATH:{config.TARSTALL_DIR}/bin/package # package", f"{config.TARSTALL_DIR}/.bashrc",
                            "fuzzy") is False
-    assert os.path.isfile(file.full("~/.tarstall/bin/package/test.sh")) is False
+    assert os.path.isfile(file.full(f"{config.TARSTALL_DIR}/bin/package/test.sh")) is False
 
 
 def test_install_archive(monkeypatch):
     os.chdir(os.path.realpath(__file__)[:-19])
     monkeypatch.setattr(prog_manage, "finish_install", nothing_two)
     prog_manage.install("./fake_packages/package.tar.gz")
-    assert os.path.isfile(os.path.expanduser("~/.tarstall/bin/package/test.sh"))
+    assert os.path.isfile(os.path.expanduser(f"{config.TARSTALL_DIR}/bin/package/test.sh"))
 
 

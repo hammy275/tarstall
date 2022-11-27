@@ -46,11 +46,11 @@ def test_create_db():
 
 def test_erase():
     assert tarstall_manage.erase() == "Erased"
-    assert os.path.isfile(file.full("~/.tarstall/tarstall.py")) is False
+    assert os.path.isfile(file.full(f"{config.TARSTALL_DIR}/tarstall.py")) is False
     try:
-        assert file.check_line("source ~/.tarstall/.bashrc", "~/.bashrc", "fuzzy") is False
+        assert file.check_line(f"source {config.TARSTALL_DIR}/.bashrc", "~/.bashrc", "fuzzy") is False
     except FileNotFoundError:
         try:
-            file.check_line("source ~/.tarstall/.zshrc", "~/.zshrc", "fuzzy") is False
+            file.check_line(f"source {config.TARSTALL_DIR}/.zshrc", "~/.zshrc", "fuzzy") is False
         except FileNotFoundError:
             raise AssertionError("Please use bash or zsh for testing!")

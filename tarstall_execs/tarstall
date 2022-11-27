@@ -386,8 +386,8 @@ def configure():
         elif option == 'm':
             if config.read_config("Mode") == "cli":
                 config.change_config("Mode", "change", "gui")
-                prog_manage.create_desktop(None, "tarstall", "~/.tarstall/tarstall_execs/tarstall", 
-                "Run tarstall's GUI", "False", ["Utility"], "", "~/.tarstall/tarstall_execs/")
+                prog_manage.create_desktop(None, "tarstall", f"{config.TARSTALL_DIR}/tarstall_execs/tarstall", 
+                "Run tarstall's GUI", "False", ["Utility"], "", f"{config.TARSTALL_DIR}/tarstall_execs/")
                 generic.ppause("Changed to GUI mode! Restart tarstall to confirm your changes!")
             else:
                 config.change_config("Mode", "change", "cli")
@@ -664,7 +664,7 @@ def manage(program):
                 generic.pprint("This feature can only be used from the command line version of tarstall!")
             else:
                 generic.pprint("When you exit the shell, you will be returned to here.")
-                os.chdir(file.full("~/.tarstall/bin/" + program + "/"))
+                os.chdir(file.full(f"{config.TARSTALL_DIR}/bin/" + program + "/"))
                 if file.get_shell_file() == ".zshrc":
                     call(["/bin/zsh"])
                 elif "fish" in file.get_shell_file():
@@ -685,7 +685,7 @@ Leave blank to de-link the script from the program.
 Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh")
 """
             generic.pprint(msg)
-            script_path = generic.file_browser(file.full("~/.tarstall/bin/{}".format(program)), 
+            script_path = generic.file_browser(file.full(f"{config.TARSTALL_DIR}/bin/{program}"),
                 stay_inside_dir=False, return_full_path=True)
             if script_path is None:
                 generic.ppause("Operation cancelled!")

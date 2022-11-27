@@ -344,17 +344,3 @@ def char_check(name):
 
     """
     return ' ' in name or '#' in name
-
-
-def get_db(db_check=""):
-    """Get Database.
-
-    Returns:
-        dict: Database. {} if database fails to be read or found on disk.
-
-    """
-    try:
-        with open(full("~/.tarstall/database")) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.decoder.JSONDecodeError):
-        return {}
