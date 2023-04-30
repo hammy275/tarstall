@@ -23,7 +23,7 @@ def nothing_two(a, b=False):
 
 def test_install_git(monkeypatch):
     monkeypatch.setattr(prog_manage, "finish_install", nothing_two)
-    prog_manage.install("https://github.com/hammy3502/tarstall.git", "tarstall")
+    prog_manage.install("https://github.com/hammy275/tarstall.git", "tarstall")
     assert os.path.isfile(os.path.expanduser(f"{config.TARSTALL_DIR}/bin/tarstall/prog_manage.py"))
 
 

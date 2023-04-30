@@ -1,5 +1,5 @@
 """tarstall: A package manager for managing archives
-    Copyright (C) 2022  hammy3502
+    Copyright (C) 2022  hammy275
 
     tarstall is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ def reinstall_deps():
     os.chdir("/tmp/tarstall-temp/")
     generic.progress(5)
     config.vprint("Obtaining tarstall installer...")
-    url = "https://raw.githubusercontent.com/hammy3502/tarstall/{}/install_tarstall".format(config.db["version"]["branch"])
+    url = "https://raw.githubusercontent.com/hammy275/tarstall/{}/install_tarstall".format(config.db["version"]["branch"])
     err = wget_with_progress(url, 5, 60)
     if err != 0:
         return "Wget error"
@@ -436,7 +436,7 @@ def update(force_update=False, show_progress=True):
         os.mkdir("tarstall-update")
         os.chdir("/tmp/tarstall-update")
         config.vprint("Cloning tarstall repository from git")
-        err = git_clone_with_progress("https://github.com/hammy3502/tarstall.git", 10, 55, config.branch)
+        err = git_clone_with_progress("https://github.com/hammy275/tarstall.git", 10, 55, config.branch)
         if err != 0:
             generic.progress(100, show_progress)
             return "Failed"
@@ -652,7 +652,7 @@ def get_online_version(type_of_replacement, branch=None):
     if not can_update:
         config.vprint("requests library not installed! Exiting...")
         return -1
-    version_url = "https://raw.githubusercontent.com/hammy3502/tarstall/{}/version.json".format(branch)
+    version_url = "https://raw.githubusercontent.com/hammy275/tarstall/{}/version.json".format(branch)
     try:
         version_raw = requests.get(version_url)
     except requests.ConnectionError:

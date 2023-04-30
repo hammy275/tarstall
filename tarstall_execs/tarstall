@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 """tarstall: A package manager for managing archives
-    Copyright (C) 2022  hammy3502
+    Copyright (C) 2022  hammy275
 
     tarstall is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -992,7 +992,7 @@ def parse_args(args_in=None):
     elif not do_fts and len(sys.argv) == 1:
         generic.pprint("""
 tarstall. A Python based package manager to manage archives.
-Written by: hammy3502
+Written by: hammy275
 
 tarstall Version: {user_version}
 Internal Version Code: {file_version}.{prog_version}
@@ -1002,7 +1002,7 @@ For help, type "tarstall -h"
 
 For additional help, the tarstall wiki is linked below.
 
-https://github.com/hammy3502/tarstall/wiki
+https://github.com/hammy275/tarstall/wiki
         """.format(user_version=config.get_version("version"), file_version=config.get_version("file_version"),
                 prog_version=config.get_version("prog_internal_version"), branch=config.branch))
 
