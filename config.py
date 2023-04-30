@@ -1,5 +1,5 @@
 """tarstall: A package manager for managing archives
-    Copyright (C) 2022  hammy3502
+    Copyright (C) 2022  hammy275
 
     tarstall is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ import json
 from file import get_shell_file, unlock, full, get_db
 
 version = "1.7.0"
-prog_internal_version = 128
+prog_internal_version = 129
 file_version = 20
 
 #############
