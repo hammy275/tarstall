@@ -20,13 +20,11 @@ import os
 import file
 import generic_gui
 import generic_cli
+from interactions_base import Interactions
+from generic_cli import CLIInteractions
+from generic_gui import GUIInteractions
 
-if config.mode == "gui":
-    try:
-        import PySimpleGUI as sg
-    except ImportError:
-        pass  # This will be caught by tarstall.py, let's not worry about it here.
-
+interactor: Interactions = CLIInteractions() if config.mode == "cli" else GUIInteractions()
 
 def file_browser(root_dir, stay_inside_dir=True, return_full_path=False):
     """File Browser.
@@ -90,42 +88,6 @@ def file_browser(root_dir, stay_inside_dir=True, return_full_path=False):
         return "/".join(current_folder_path) + extra_slash + file_chosen
 
 
-def ask(question):
-    """Get Any User Input.
-
-    Get user input, with no expected response like with get_input
-
-    Args:
-        question (str): Question to ask user
-
-    Returns:
-        str: User-supplied answer to question
-    
-    """
-    if config.mode == "cli":
-        return input(question)
-    elif config.mode == "gui":
-        return generic_gui.ask(question)
-
-
-def ask_file(question):
-    """Get User Input for File.
-
-    Get user input for a file
-
-    Args:
-        question (str): Question to ask user
-
-    Returns:
-        str: Path to file
-    
-    """
-    if config.mode == "cli":
-        return generic_cli.ask_file(question)
-    elif config.mode == "gui":
-        return generic_gui.ask_file(question)
-
-
 def easy_get_action(options, replacements=[]):
     """Easy get_input()
 
@@ -169,28 +131,6 @@ def easy_get_action(options, replacements=[]):
     return get_input(msg, options_list, default, gui_labels, True)
 
 
-def get_input(question, options, default, gui_labels=None, from_easy=False):
-    """Get User Input.
-
-    Get user input, except make sure the input provided matches one of the options we're looking for
-
-    Args:
-        question (str): Question to ask the user
-        options (str[]): List of options the user can choose from
-        default (str): Default option (used when user enters nothing)
-        gui_labels (str[]): Labels to use for GUI buttons/dropdown menus (optional)
-
-    Returns:
-        str: Option the user chose
-
-    """
-    if config.mode == "cli":
-        return generic_cli.get_input(question, options, default, from_easy)
-    elif config.mode == "gui":
-        return generic_gui.get_input(question, options, gui_labels)
-
-
-
 def endi(state):
     """Bool to String.
 
@@ -206,6 +146,54 @@ def endi(state):
     return "disabled"
 
 
+def ask(question):
+    """Get Any User Input.
+
+    Get user input, with no expected response like with get_input
+
+    Args:
+        question (str): Question to ask user
+
+    Returns:
+        str: User-supplied answer to question
+    
+    """
+    return interactor.ask(question)
+
+
+def ask_file(question):
+    """Get User Input for File.
+
+    Get user input for a file
+
+    Args:
+        question (str): Question to ask user
+
+    Returns:
+        str: Path to file
+    
+    """
+    return interactor.ask_file(question)
+
+
+def get_input(question, options, default, gui_labels=None, from_easy=False):
+    """Get User Input.
+
+    Get user input, except make sure the input provided matches one of the options we're looking for
+
+    Args:
+        question (str): Question to ask the user
+        options (str[]): List of options the user can choose from
+        default (str): Default option (used when user enters nothing)
+        gui_labels (str[]): Labels to use for GUI buttons/dropdown menus (optional)
+
+    Returns:
+        str: Option the user chose
+
+    """
+    return interactor.get_input(question, options, default, gui_labels, from_easy)
+
+
 def pprint(st, title="tarstall-gui"):
     """Print Depending on Mode.
 
@@ -214,10 +202,7 @@ def pprint(st, title="tarstall-gui"):
         title (str, optional): Title for window if in GUI mode. Defaults to "tarstall-gui".
 
     """
-    if config.mode == "gui":
-        sg.Popup(st, title=title)
-    elif config.mode == "cli":
-        print(st)
+    interactor.pprint(st, title)
 
 
 def ppause(st, title="tarstall-gui"):
@@ -228,12 +213,7 @@ def ppause(st, title="tarstall-gui"):
         title (str, optional): Title for window if in GUI mode. Defaults to "tarstall-gui".
 
     """
-    if config.mode == "gui":
-        sg.Popup(st, title=title)
-    elif config.mode == "cli":
-        print(st)
-        if config.read_config("PressEnterKey"):
-            input("Press ENTER to continue...")
+    interactor.ppause(st, title)
 
 
 def progress(val, should_show=True):
@@ -246,8 +226,4 @@ def progress(val, should_show=True):
         should_show (bool): If set to False, don't show the bar in CLI. Defaults to True.
 
     """
-    if config.mode == "gui":
-        if config.install_bar is not None:
-            config.install_bar.UpdateBar(val)
-    elif config.mode == "cli" and not config.verbose and should_show:
-        generic_cli.progress(val)
+    interactor.progress(val, should_show)

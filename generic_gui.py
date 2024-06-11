@@ -13,65 +13,77 @@
 
     You should have received a copy of the GNU General Public License
     along with tarstall.  If not, see <https://www.gnu.org/licenses/>."""
+
+from interactions_base import Interactions
+import config
+
 try:
     import PySimpleGUI as sg
 except ImportError:
     pass
 
 
-def ask(question):
-    layout = [
-        [sg.Text(question)],
-        [sg.InputText(key="answer"), sg.Button("Submit")]
-    ]
-    window = sg.Window("tarstall-gui", layout, disable_close=True)
-    while True:
-        event, values = window.read()
-        if event == "Submit":
-            window.Close()
-            return values["answer"]
-
-
-
-def ask_file(question):
-    layout = [
-        [sg.Text(question)],
-        [sg.InputText(key="answer"), sg.FileBrowse()],
-        [sg.Button("Submit")]
-    ]
-    window = sg.Window("tarstall-gui", layout, disable_close=True)
-    while True:
-        event, values = window.read()
-        if event == "Submit":
-            window.Close()
-            return values["answer"]
-
-
-def get_input(question, options, gui_labels=None):
-    if gui_labels is None:
-        gui_labels = options
-    if len(options) <= 5:
-        button_list = []
-        for o in gui_labels:
-            button_list.append(sg.Button(o))
+class GUIInteractions(Interactions):
+    def ask(self, question):
         layout = [
             [sg.Text(question)],
-            button_list
-        ]
-        window = sg.Window("tarstall-gui", layout, disable_close=True)
-        while True:
-            event, values = window.read()
-            if event in gui_labels:
-                window.Close()
-                return options[gui_labels.index(event)]
-    else:
-        layout = [
-            [sg.Text(question)],
-            [sg.Combo(gui_labels, key="option"), sg.Button("Submit")]
+            [sg.InputText(key="answer"), sg.Button("Submit")]
         ]
         window = sg.Window("tarstall-gui", layout, disable_close=True)
         while True:
             event, values = window.read()
             if event == "Submit":
                 window.Close()
-                return options[gui_labels.index(values["option"])]
+                return values["answer"]
+
+    def ask_file(self, question):
+        layout = [
+            [sg.Text(question)],
+            [sg.InputText(key="answer"), sg.FileBrowse()],
+            [sg.Button("Submit")]
+        ]
+        window = sg.Window("tarstall-gui", layout, disable_close=True)
+        while True:
+            event, values = window.read()
+            if event == "Submit":
+                window.Close()
+                return values["answer"]
+
+    def get_input(self, question, options, default, gui_labels=None, from_easy=False):
+        if gui_labels is None:
+            gui_labels = options
+        if len(options) <= 5:
+            button_list = []
+            for o in gui_labels:
+                button_list.append(sg.Button(o))
+            layout = [
+                [sg.Text(question)],
+                button_list
+            ]
+            window = sg.Window("tarstall-gui", layout, disable_close=True)
+            while True:
+                event, values = window.read()
+                if event in gui_labels:
+                    window.Close()
+                    return options[gui_labels.index(event)]
+        else:
+            layout = [
+                [sg.Text(question)],
+                [sg.Combo(gui_labels, key="option"), sg.Button("Submit")]
+            ]
+            window = sg.Window("tarstall-gui", layout, disable_close=True)
+            while True:
+                event, values = window.read()
+                if event == "Submit":
+                    window.Close()
+                    return options[gui_labels.index(values["option"])]
+
+    def pprint(self, st, title="tarstall-gui"):
+        sg.Popup(st, title=title)
+
+    def ppause(self, st, title="tarstall-gui"):
+        sg.Popup(st, title=title)
+
+    def progress(self, val, should_show=True):
+        if config.install_bar is not None:
+            config.install_bar.UpdateBar(val)
