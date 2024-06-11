@@ -41,9 +41,9 @@ def read_config(key):
     try:
         return db["options"][key]
     except KeyError:
-        if key in ["Verbose", "AutoInstall", "SkipQuestions", "UpdateURLPrograms"]:
+        if key in ["Verbose", "AutoInstall", "SkipQuestions", "UpdateURLPrograms", "WarnMissingDeps"]:
             return False
-        elif key in ["PressEnterKey", "WarnMissingDeps"]:
+        elif key in ["PressEnterKey"]:
             return True
         elif key == "ShellFile":
             return get_shell_file()

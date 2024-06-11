@@ -851,7 +851,7 @@ def parse_args(args_in=None):
             file.unlock()
             sys.exit(0)
 
-    if status == "Missing Deps" and config.read_config("WarnMissingDeps"):
+    if status == "Missing Deps" and not config.read_config("WarnMissingDeps"):
         yn = generic.get_input("You are missing some dependencies to allow full usage of tarstall! Would you like to re-run the installer to install the dependencies?", ['y', 'n'], 'y', ["Yes", "No"])
         if yn == 'y':
             exit_code = 1
