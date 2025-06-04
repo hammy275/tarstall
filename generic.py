@@ -161,21 +161,6 @@ def ask(question):
     return interactor.ask(question)
 
 
-def ask_file(question):
-    """Get User Input for File.
-
-    Get user input for a file
-
-    Args:
-        question (str): Question to ask user
-
-    Returns:
-        str: Path to file
-    
-    """
-    return interactor.ask_file(question)
-
-
 def get_input(question, options, default, gui_labels=None, from_easy=False):
     """Get User Input.
 

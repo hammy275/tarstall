@@ -20,8 +20,8 @@ import json
 ###VERSIONS###
 from file import get_shell_file, unlock, full
 
-version = "1.7.0"
-prog_internal_version = 134
+version = "1.8.0"
+prog_internal_version = 135
 file_version = 20
 
 #############
@@ -103,9 +103,9 @@ def vprint(to_print, end=None):
         elif mode == "gui":
             try:
                 if end is not None:
-                    output_area.Update(to_print)
+                    output_area.setText(to_print)
                 else:
-                    output_area.Update(to_print + end.replace("\n", "").replace("\r", ""))
+                    output_area.setText(to_print + end.replace("\n", "").replace("\r", ""))
             except AttributeError:
                 pass  # GUI hasn't loaded yet
 

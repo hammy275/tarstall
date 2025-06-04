@@ -24,12 +24,6 @@ class CLIInteractions(Interactions):
     def ask(self, question):
         return input(question)
 
-    def ask_file(self, question):
-        f = "asdf"
-        while not file.exists(file.full(f)):
-            f = input(question)
-        return file.full(f)
-
     def get_input(self, question, options, default, gui_labels=None, from_easy=False):
         options_form = list(options)  # Otherwise, Python would "link" options_form with options
         options_form[options_form.index(default)] = options_form[options_form.index(default)].upper()

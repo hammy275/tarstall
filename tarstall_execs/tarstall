@@ -34,70 +34,190 @@ mode = config.read_config("Mode")
 
 if mode == "gui":
     try:
-        import tkinter
-        del tkinter
-        try:
-            import PySimpleGUI as sg
-            sg.theme("Black")
-        except ImportError:
-            config.mode = "cli"
-            mode = "cli"
-            print("PySimpleGUI not installed! Defaulting to cli mode...")
+        from PySide6 import QtCore, QtWidgets, QtGui
     except ImportError:
         config.mode = "cli"
         mode = "cli"
-        print("Tkinter not installed! Defaulting to cli mode...")
+        print("PySide6 not installed! Defaulting to cli mode...")
 
 def gui_loop():
-    """Main Loop for GUI."""
-    to_disable = ["install", "install_browse", "dirinstall", "dirinstall_browse", "urlinstall", "remove", "manage"]
-    layout = [
-        [sg.Text("Select an option:")],
-        [sg.Radio("Install: ", "Todo", default=True, enable_events=True, key="should_install"), sg.InputText(key="install"), sg.FileBrowse(key="install_browse")],
-        [sg.Radio("Install Directory: ", "Todo", enable_events=True, key="should_dirinstall"), sg.InputText(key="dirinstall", disabled=True), sg.FolderBrowse(disabled=True, key="dirinstall_browse")],
-        [sg.Radio("Install from URL: ", "Todo", enable_events=True, key="should_urlinstall"), sg.InputText(key="urlinstall", disabled=True)],
-        [sg.Checkbox("Custom Program Name", default=False, enable_events=True, key="should_custom_name"), sg.InputText(key="custom_name", disabled=True)],
-        [sg.Radio("Remove: ", "Todo", enable_events=True, key="should_remove"), sg.Combo(prog_manage.list_programs(), key="remove", disabled=True)],
-        [sg.Radio("Erase tarstall", "Todo", enable_events=True, key="should_erase")],
-        [sg.Radio("Update tarstall", "Todo", enable_events=True, key="should_update")],
-        [sg.Radio("Manage: ", "Todo", enable_events=True, key="should_manage"), sg.Combo(prog_manage.list_programs(), key="manage", disabled=True)],
-        [sg.Radio("Configure tarstall", "Todo", enable_events=True, key="should_configure")],
-        [sg.Radio("Upgrade all programs that can be upgraded", "Todo", enable_events=True, key="should_update_programs")],
-        [sg.Button("Go"), sg.Button("Exit")],
-        [sg.ProgressBar(100, key="bar")],
-        [sg.Text(" "*100, key="status_area")]
-    ]
-    window = sg.Window('tarstall-gui', layout=layout)
-    while True:
-        event, values = window.Read()
-        config.install_bar = window.Element("bar")
-        config.output_area = window.Element("status_area")
-        config.install_bar.UpdateBar(0)
-        if event in (None, "Exit"):
-            sys.exit(0)
-        elif event == "Go":
+    app = QtWidgets.QApplication([])
+    class TarstallGUI(QtWidgets.QWidget):
+        def __init__(self):
+            super().__init__()
+
+            self.radio_value = "Install"
+
+            self.setWindowTitle("tarstall-gui")
+            self.layout = QtWidgets.QVBoxLayout(self)
+            self.layout.addWidget(QtWidgets.QLabel("Select an option:"))
+
+            install_row = QtWidgets.QHBoxLayout()
+            install_radio = QtWidgets.QRadioButton("Install")
+            install_radio.toggled.connect(self.radio_update)
+            install_row.addWidget(install_radio)
+            self.install_file = QtWidgets.QLineEdit()
+            install_row.addWidget(self.install_file)
+            self.install_browse = QtWidgets.QPushButton("Browse")
+            install_row.addWidget(self.install_browse)
+            self.layout.addLayout(install_row)
+
+            install_dir_row = QtWidgets.QHBoxLayout()
+            install_dir_radio = QtWidgets.QRadioButton("Install Directory")
+            install_dir_radio.toggled.connect(self.radio_update)
+            install_dir_row.addWidget(install_dir_radio)
+            self.install_dir = QtWidgets.QLineEdit()
+            install_dir_row.addWidget(self.install_dir)
+            self.install_dir_browse = QtWidgets.QPushButton("Browse")
+            install_dir_row.addWidget(self.install_dir_browse)
+            self.layout.addLayout(install_dir_row)
+
+            install_url_row = QtWidgets.QHBoxLayout()
+            install_url_radio = QtWidgets.QRadioButton("Install from URL")
+            install_url_radio.toggled.connect(self.radio_update)
+            install_url_row.addWidget(install_url_radio)
+            self.install_url = QtWidgets.QLineEdit()
+            install_url_row.addWidget(self.install_url)
+            self.layout.addLayout(install_url_row)
+
+            custom_program_name_row = QtWidgets.QHBoxLayout()
+            self.custom_name_check = QtWidgets.QCheckBox()
+            custom_program_name_row.addWidget(self.custom_name_check)
+            self.custom_name = QtWidgets.QLineEdit()
+            custom_program_name_row.addWidget(self.custom_name)
+            self.layout.addLayout(custom_program_name_row)
+
+            remove_row = QtWidgets.QHBoxLayout()
+            remove_radio = QtWidgets.QRadioButton("Remove")
+            remove_radio.toggled.connect(self.radio_update)
+            remove_row.addWidget(remove_radio)
+            self.remove_dropdown = QtWidgets.QComboBox()
+            remove_row.addWidget(self.remove_dropdown)
+            self.layout.addLayout(remove_row)
+
+            erase_row = QtWidgets.QHBoxLayout()
+            erase_radio = QtWidgets.QRadioButton("Erase tarstall")
+            erase_radio.toggled.connect(self.radio_update)
+            erase_row.addWidget(erase_radio)
+            self.layout.addLayout(erase_row)
+
+            update_row = QtWidgets.QHBoxLayout()
+            update_radio = QtWidgets.QRadioButton("Update tarstall")
+            update_radio.toggled.connect(self.radio_update)
+            update_row.addWidget(update_radio)
+            self.layout.addLayout(update_row)
+
+            manage_row = QtWidgets.QHBoxLayout()
+            manage_radio = QtWidgets.QRadioButton("Manage")
+            manage_radio.toggled.connect(self.radio_update)
+            manage_row.addWidget(manage_radio)
+            self.manage_dropdown = QtWidgets.QComboBox()
+            manage_row.addWidget(self.manage_dropdown)
+            self.layout.addLayout(manage_row)
+
+            configure_row = QtWidgets.QHBoxLayout()
+            configure_radio = QtWidgets.QRadioButton("Configure tarstall")
+            configure_radio.toggled.connect(self.radio_update)
+            configure_row.addWidget(configure_radio)
+            self.layout.addLayout(configure_row)
+
+            upgrade_all_row = QtWidgets.QHBoxLayout()
+            upgrade_all_radio = QtWidgets.QRadioButton("Upgrade all programs that can be upgraded")
+            upgrade_all_radio.toggled.connect(self.radio_update)
+            upgrade_all_row.addWidget(upgrade_all_radio)
+            self.layout.addLayout(upgrade_all_row)
+
+            buttons_layout = QtWidgets.QHBoxLayout()
+            self.go_button = QtWidgets.QPushButton("Go")
+            self.go_button.clicked.connect(self.go_button_press)
+            buttons_layout.addWidget(self.go_button)
+            self.exit_button = QtWidgets.QPushButton("Exit")
+            self.exit_button.clicked.connect(self.exit_button_press)
+            buttons_layout.addWidget(self.exit_button)
+            self.output_text = QtWidgets.QLabel("")
+            buttons_layout.addWidget(self.output_text)
+            config.output_area = self.output_text
+            self.layout.addLayout(buttons_layout)
+
+            self.progress_bar = QtWidgets.QProgressBar()
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(100)
+            self.layout.addWidget(self.progress_bar)
+            config.install_bar = self.progress_bar
+
+            self.update_dropdowns()
+            install_radio.setChecked(True)
+
+        def update_dropdowns(self):
+            self.remove_dropdown.clear()
+            self.remove_dropdown.addItems(prog_manage.list_programs())
+            self.manage_dropdown.clear()
+            self.manage_dropdown.addItems(prog_manage.list_programs())
+
+        def disable_all(self):
+            self.install_file.setDisabled(True)
+            self.install_browse.setDisabled(True)
+            self.install_dir.setDisabled(True)
+            self.install_dir_browse.setDisabled(True)
+            self.install_url.setDisabled(True)
+            self.custom_name_check.setDisabled(True)
+            self.custom_name.setDisabled(True)
+            self.remove_dropdown.setDisabled(True)
+            self.manage_dropdown.setDisabled(True)
+
+        def enable_custom_name(self):
+            self.custom_name.setDisabled(False)
+            self.custom_name_check.setDisabled(False)
+
+        @QtCore.Slot()
+        def radio_update(self):
+            self.radio_value = self.sender().text()
+            self.disable_all()
+            if self.radio_value == "Install":
+                self.install_file.setDisabled(False)
+                self.install_browse.setDisabled(False)
+                self.enable_custom_name()
+            elif self.radio_value == "Install Directory":
+                self.install_dir.setDisabled(False)
+                self.install_dir_browse.setDisabled(False)
+                self.enable_custom_name()
+            elif self.radio_value == "Install from URL":
+                self.install_url.setDisabled(False)
+                self.enable_custom_name()
+            elif self.radio_value == "Remove":
+                self.remove_dropdown.setDisabled(False)
+            elif self.radio_value == "Manage":
+                self.manage_dropdown.setDisabled(False)
+
+        @QtCore.Slot()
+        def exit_button_press(self):
+            app.exit(0)
+
+        @QtCore.Slot()
+        def go_button_press(self):
             custom_name_params = []
-            if (values["should_install"] or values["should_dirinstall"] or values["should_urlinstall"]) \
-                    and values["should_custom_name"] and values["custom_name"] != "":
-                custom_name_params = ["--name", values["custom_name"]]
-            if values["should_install"]:
-                status = parse_args(["--install", values["install"]] + custom_name_params)
-            elif values["should_dirinstall"]:
-                status = parse_args(["--install", values["dirinstall"]] + custom_name_params)
-            elif values["should_urlinstall"]:
-                status = parse_args(["--install", values["urlinstall"]] + custom_name_params)
-            elif values["should_remove"]:
-                status = parse_args(["--remove", values["remove"]])
-            elif values["should_erase"]:
+            if self.radio_value in ["Install", "Install Directory", "Install from URL"] and self.custom_name_check.isChecked()\
+                    and self.custom_name.text() != "":
+                custom_name_params = ["--name", self.custom_name.text()]
+            if self.radio_value == "Install":
+                status = parse_args(["--install", self.install_file.text()] + custom_name_params)
+            elif self.radio_value == "Install Directory":
+                status = parse_args(["--install", self.install_dir.text()] + custom_name_params)
+            elif self.radio_value == "Install from URL":
+                status = parse_args(["--install", self.install_url.text()] + custom_name_params)
+            elif self.radio_value == "Remove":
+                status = parse_args(["--remove", self.remove_dropdown.currentText()])
+            elif self.radio_value == "Erase tarstall":
                 status = parse_args(["--erase"])
-            elif values["should_update"]:
+            elif self.radio_value == "Update tarstall":
                 status = parse_args(["--update"])
-            elif values["should_manage"]:
-                status = parse_args(["--manage", values["manage"]])
-            elif values["should_configure"]:
+            elif self.radio_value == "Manage":
+                status = parse_args(["--manage", self.manage_dropdown.currentText()])
+            elif self.radio_value == "Configure tarstall":
                 status = parse_args(["--config"])
-            elif values["should_update_programs"]:
+            elif self.radio_value == "Upgrade all programs that can be upgraded":
                 status = parse_args(["--update-programs"])
+
             if status == "Locked":
                 generic.pprint("tarstall is locked! You can unlock it, but if another instance of tarstall is running, things will break!")
                 ul = generic.get_input("Would you like to unlock tarstall? Only do this if no other instances of tarstall are running!", ['y', 'n'], 'n',
@@ -108,30 +228,10 @@ def gui_loop():
                 else:
                     sys.exit(1)
             else:
-                config.install_bar.UpdateBar(100)
-            window.Element("remove").Update(values=prog_manage.list_programs())
-            window.Element("manage").Update(values=prog_manage.list_programs())
-        else:
-            if event != "should_custom_name":
-                for o in to_disable:
-                    window.Element(o).Update(disabled=True)
-                if event == "should_install":
-                    window.Element("install").Update(disabled=False)
-                    window.Element("install_browse").Update(disabled=False)
-                elif event == "should_dirinstall":
-                    window.Element("dirinstall").Update(disabled=False)
-                    window.Element("dirinstall_browse").Update(disabled=False)
-                elif event == "should_urlinstall":
-                    window.Element("urlinstall").Update(disabled=False)
-                elif event == "should_remove":
-                    window.Element("remove").Update(disabled=False)
-                elif event == "should_manage":
-                    window.Element("manage").Update(disabled=False)
-
-            enable_set_custom_name = event == "should_install" or event == "should_dirinstall" \
-                                     or event == "should_urlinstall" or event == "should_custom_name"
-            window.Element("should_custom_name").Update(disabled=(not enable_set_custom_name))
-            window.Element("custom_name").Update(disabled=(not enable_set_custom_name) or (not values["should_custom_name"]))
+                config.install_bar.setValue(100)
+    widget = TarstallGUI()
+    widget.show()
+    sys.exit(app.exec())
 
 
 def process_update_status(status):

@@ -6,10 +6,6 @@ class Interactions(ABC):
         pass
 
     @abstractmethod
-    def ask_file(self, question):
-        pass
-
-    @abstractmethod
     def get_input(self, question, options, default, gui_labels=None, from_easy=False):
         pass
 

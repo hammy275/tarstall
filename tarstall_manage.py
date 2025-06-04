@@ -230,11 +230,7 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
     final_status = "Good"
     missing_deps = False
     try:
-        import tkinter
-    except (ModuleNotFoundError, ImportError):
-        missing_deps = True
-    try:
-        import PySimpleGUI
+        import PySide6
     except (ModuleNotFoundError, ImportError):
         missing_deps = True
     try:
