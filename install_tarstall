@@ -128,6 +128,11 @@ def install_package(pkg, verbose):
         status("Error installing package {}! Please install it manually, and/or read the error above for information how to resolve this error!".format(pkg))
         sys.exit(1)
 
+def install_pip_reqs(reqs_path, verbose):
+    res = run([sys.executable, "-m", "pip", "install", "-r", reqs_path, "--user"], verbose)
+    if not res:
+        res = run([sys.executable, "-m", "pip", "install", "-r", reqs_path, "--user", "--break-system-packages"], verbose)
+    return res
 
 def setup(skip_questions=False, verbose=False):
     # Checks
@@ -234,10 +239,10 @@ def setup(skip_questions=False, verbose=False):
         status("Installing tarstall's Python requirements")
     else:
         progress(70, "Installing Python requirements")
-    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"], verbose):
+    if not install_pip_reqs("requirements.txt", verbose):
         install_package({"apt": "python3-pip", "dnf": "python3-pip", "pacman": "python-pip"}, verbose)
-    if not run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--user"], verbose) or not \
-    run([sys.executable, "-m", "pip", "install", "-r", "requirements-gui.txt", "--user"], verbose):
+    if (not install_pip_reqs("requirements.txt", verbose) or
+            not install_pip_reqs("requirements-gui.txt", verbose)):
         status("An error occured while installing the GUI requirements!")
         sys.exit(1)
     # Pass control to tarstall
