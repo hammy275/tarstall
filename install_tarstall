@@ -201,15 +201,6 @@ def setup(skip_questions=False, verbose=False):
     else:
         if verbose:
             print("rsync is already installed!")
-    if not verbose:
-        progress(20, "Installing package requirements")
-    try:
-        import tkinter
-        del tkinter
-    except ImportError:
-        install_package({"apt": "python3-tk", "dnf": "python3-tkinter", "pacman": "tk"}, verbose)
-    if not verbose:
-        progress(30, "Installing package requirements")
 
     # Clone repository
     if verbose:

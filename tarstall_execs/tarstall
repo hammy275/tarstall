@@ -83,6 +83,7 @@ def gui_loop():
             custom_program_name_row = QtWidgets.QHBoxLayout()
             self.custom_name_check = QtWidgets.QCheckBox()
             custom_program_name_row.addWidget(self.custom_name_check)
+            custom_program_name_row.addWidget(QtWidgets.QLabel("Custom Program Name"))
             self.custom_name = QtWidgets.QLineEdit()
             custom_program_name_row.addWidget(self.custom_name)
             self.layout.addLayout(custom_program_name_row)
