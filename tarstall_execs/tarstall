@@ -222,7 +222,7 @@ def gui_loop():
             if status == "Locked":
                 generic.pprint("tarstall is locked! You can unlock it, but if another instance of tarstall is running, things will break!")
                 ul = generic.get_input("Would you like to unlock tarstall? Only do this if no other instances of tarstall are running!", ['y', 'n'], 'n',
-                ["Yes", "No"])
+                ["Yes", "No"], last_option_exit=True)
                 if ul == 'y':
                     parse_args(["--remove-lock"])
                     generic.pprint("tarstall unlocked! Please specify what you would like to do again!")
@@ -230,6 +230,7 @@ def gui_loop():
                     sys.exit(1)
             else:
                 config.install_bar.setValue(100)
+            self.update_dropdowns()
     widget = TarstallGUI()
     widget.show()
     sys.exit(app.exec())
@@ -267,7 +268,7 @@ def process_update_status(status):
 
 
 def repair_tarstall():
-    yn = generic.get_input("Would you like to repair tarstall? This process does require internet access!", ['y', 'n'], 'n', ["Yes", "No"])
+    yn = generic.get_input("Would you like to repair tarstall? This process does require internet access!", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
     if yn != 'y':
         generic.ppause("Repairs not attempted!")
     else:
@@ -294,15 +295,15 @@ If ~/.tarstall, ~/.tarstall/bin or ~/.tarstall/.bashrc were tampered with, than 
 
 Are you sure you would like to attempt repairing?
 #########################################"""
-    yn = generic.get_input(msg, ['y', 'n'], 'n', ["Yes", "No"])
+    yn = generic.get_input(msg, ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
     if yn != 'y':
         generic.ppause("Repairs not attempted!")
     else:
-        yn = generic.get_input("Are you SURE you would like to attempt database repair?", ['y', 'n'], 'n', ["Yes", "No"])
+        yn = generic.get_input("Are you SURE you would like to attempt database repair?", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
         if yn != 'y':
             generic.ppause("Repairs not attempted!")
         else:
-            yn = generic.get_input("If you proceed, (post-)upgrade script references will be lost, and programs may be misconfigured! Are you SURE you would like to continue?", ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input("If you proceed, (post-)upgrade script references will be lost, and programs may be misconfigured! Are you SURE you would like to continue?", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn != 'y':
                 generic.ppause("Repairs not attempted!")
             else:
@@ -325,18 +326,20 @@ def wget_wizard(program):
 Select an option:
 a - Add a URL to download a fresh copy of this program when upgraded{r_msg}
 e - Return to program management""".format(r_msg=r_msg)
-        options = ['a', 'e']
-        gui_options = ["Add a URL", "Return to Program Management"]
+        options = ['a']
+        gui_options = ["Add a URL"]
         if r_msg:
             options.append('r')
             gui_options.append("Remove URL from Program")
-        ans = generic.get_input(msg, options, 'e', gui_options)
+        options.append('e')
+        gui_options.append("Return to Program Management")
+        ans = generic.get_input(msg, options, 'e', gui_options, last_option_exit=True)
         if ans == 'a':
             new_url = ""
             while new_url == "":
                 new_url = generic.ask("Please enter a URL that points directly to an archive that contains" + 
-                "a full-copy of the program to install when upgrading. Type 'c' or 'cancel' to cancel: ")
-                if new_url.lower() == 'c' or new_url.lower() == "cancel":
+                "a full-copy of the program to install when upgrading. Type 'c' or 'cancel' to cancel: ", closable=True)
+                if new_url is None or new_url.lower() == 'c' or new_url.lower() == "cancel":
                     return
             res = prog_manage.add_upgrade_url(program, new_url)
             if res == "Need Type":
@@ -367,7 +370,7 @@ Select an option:
 u - Update program from currently configured branch
 b - Reset repository and change branches (WARNING: This will remove everything inside this program's directory!)
 e - Exit Git Wizard."""
-    ans = generic.get_input(msg, ['u', 'b', 'e'], 'e', ["Update", "Change branch", "Exit"])
+    ans = generic.get_input(msg, ['u', 'b', 'e'], 'e', ["Update", "Change branch", "Exit"], last_option_exit=True)
     if ans == 'u':
         status = prog_manage.update_git_program(program)
         if status == "Success":
@@ -377,7 +380,9 @@ e - Exit Git Wizard."""
         elif status == "Error updating":
             generic.pprint("An error occured while attempting to update {}.".format(program))
     elif ans == 'b':
-        branch = generic.ask("Enter branch to switch to: ")
+        branch = generic.ask("Enter branch to switch to: ", closable=True)
+        if branch is None:
+            return
         status = prog_manage.change_git_branch(program, branch)
         if status == "Success":
             generic.pprint("Branch change successful!")
@@ -406,7 +411,7 @@ Select a branch:
 m - Master branch. Less bugs, more stable, wait for updates.
 b - Beta branch. More bugs, less stable, updates ASAP.
 E - Exit branch wizard and don't change branches."""
-    ans = generic.get_input(msg, ['m', 'b', 'e'], 'e', ["Master", "Beta", "Exit"])
+    ans = generic.get_input(msg, ['m', 'b', 'e'], 'e', ["Master", "Beta", "Exit"], last_option_exit=True)
     if ans == 'e':
         generic.pprint("Not changing branches!")
         return
@@ -417,7 +422,7 @@ E - Exit branch wizard and don't change branches."""
         generic.pprint("Already on the beta branch, not switching!")
         return
     else:
-        check = generic.ask('Type "YES" (without the quotes) to confirm the branch switch! ')
+        check = generic.ask('Type "YES" (without the quotes) to confirm the branch switch! ', closable=True)
         if check != "YES":
             generic.pprint("Cancelling branch switch.")
             return
@@ -545,7 +550,7 @@ def binlink(program):
         status = prog_manage.add_binlink(file_chosen, program)
         if status == "Already there":
             generic.ppause("Binlink not added since it already exists!")
-        yn = generic.get_input('Would you like to add another binlink?', ['y', 'n'], 'n')
+        yn = generic.get_input('Would you like to add another binlink?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
 
 
 def desktop_wizard(program, is_single=False):
@@ -563,19 +568,23 @@ def desktop_wizard(program, is_single=False):
         return
     comment = "/"
     while not comment.replace(" ", "").isalnum() and comment != "":
-        comment = generic.ask("Please input a comment for the application: ")
+        comment = generic.ask("Please input a comment for the application: ", closable=True)
+        if comment is None:
+            comment = ""
     icon = ";"
     while not icon.replace("-", "").replace("_", "").replace("/", "").isalnum() and icon != "":
-        icon = generic.ask("Enter the path to an icon, the name of the icon, or press ENTER for no icon! ")
-    terminal = generic.get_input("Should this program launch a terminal to run it in?", ['y', 'n'], 'n', ["Yes", "No"])
+        icon = generic.ask("Enter the path to an icon, the name of the icon, or press ENTER for no icon! ", closable=True)
+        if icon is None:
+            icon = ""
+    terminal = generic.get_input("Should this program launch a terminal to run it in?", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
     if terminal.lower() == 'y':
         should_terminal = "True"
     else:
         should_terminal = "False"
     name = "/"
     while not name.replace(" ", "").isalnum() and name != "":
-        name = generic.ask("Please enter a name: ")
-    if name == "":
+        name = generic.ask("Please enter a name: ", closable=True)
+    if name is None or name == "":
         name = program
     ans = " "
     chosen_categories = []
@@ -584,7 +593,7 @@ def desktop_wizard(program, is_single=False):
     while ans.lower() != "end":
         msg = "Please enter categories, one at a time, from the list of .desktop categories below (defaults to " \
                 "Utility). Type \"end\" to end category selection. \n" + ", ".join(categories) + "\n"
-        ans = generic.get_input(msg, categories, "utility")
+        ans = generic.get_input(msg, categories, "utility", last_option_exit=True)
         if ans.capitalize() in chosen_categories or ans == "end":
             pass
         else:
@@ -609,21 +618,21 @@ def install_wrap_up(program, is_single=False):
     """
     if not config.read_config("SkipQuestions"):
         if is_single:
-            yn = generic.get_input('Would you like to create the binlink for this program?', ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input('Would you like to create the binlink for this program?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 prog_manage.add_binlink(program, program)
                 generic.ppause("Binlink created!")
-            yn = generic.get_input('Would you like to create the desktop file for this program?', ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input('Would you like to create the desktop file for this program?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 desktop_wizard(program, True)
         else:
-            yn = generic.get_input('Would you like to add the program to your PATH?', ['y', 'n'], 'y', ["Yes", "No"])
+            yn = generic.get_input('Would you like to add the program to your PATH?', ['y', 'n'], 'y', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 pathify(program)
-            yn = generic.get_input('Would you like to create a binlink?', ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input('Would you like to create a binlink?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 binlink(program)
-            yn = generic.get_input('Would you like to create a desktop file?', ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input('Would you like to create a desktop file?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 desktop_wizard(program)
     generic.pprint("Installation complete!")
@@ -757,8 +766,8 @@ def manage(program):
                     msg += d + "\n"
                 inp = "/ choose desktop"
                 while not (inp in config.db["programs"][program]["desktops"]) and inp != "exit":
-                    inp = generic.ask(msg + "\nPlease enter the desktop you would like to remove or type \"exit\" to exit: ")
-                if inp != "exit":
+                    inp = generic.ask(msg + "\nPlease enter the desktop you would like to remove or type \"exit\" to exit: ", closable=True)
+                if inp != "exit" and inp is not None:
                     prog_manage.remove_desktop(program, inp)
         elif option == 's':
             if mode == "gui":
@@ -920,7 +929,7 @@ def parse_args(args_in=None):
 
     elif status == "Not installed":
         yn = generic.get_input('tarstall is not installed on your system. Would you like to install it?',
-                                ['y', 'n'], 'y')
+                                ['y', 'n'], 'y', last_option_exit=True)
         if yn == 'y':
             status = tarstall_manage.first_time_setup()
             exit_code = fts_status(status)
@@ -942,7 +951,7 @@ def parse_args(args_in=None):
         tarstall_manage.tarstall_startup(start_fts=do_fts, del_lock=unlock_flag, old_upgrade=True)
     
     elif status == "DB Broken":
-        yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as program update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"])
+        yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as program update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
         if yn != 'y':
             file.unlock()
             generic.pprint("Not repairing DB.")
@@ -953,7 +962,7 @@ def parse_args(args_in=None):
             sys.exit(0)
 
     if status == "Missing Deps" and not config.read_config("WarnMissingDeps"):
-        yn = generic.get_input("You are missing some dependencies to allow full usage of tarstall! Would you like to re-run the installer to install the dependencies?", ['y', 'n'], 'y', ["Yes", "No"])
+        yn = generic.get_input("You are missing some dependencies to allow full usage of tarstall! Would you like to re-run the installer to install the dependencies?", ['y', 'n'], 'y', ["Yes", "No"], last_option_exit=True)
         if yn == 'y':
             exit_code = 1
             status = tarstall_manage.reinstall_deps()
@@ -983,7 +992,7 @@ def parse_args(args_in=None):
             status = prog_manage.install(install_arg, override_name=override_name)
             if status[0] == "Application exists":
                 reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?",
-                                        ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"])  # Ask to reinstall
+                                        ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"], last_option_exit=True)  # Ask to reinstall
                 if reinstall == "r":
                     status = prog_manage.install(install_arg, False, override_name=override_name)
                 elif reinstall == "o":
@@ -1026,11 +1035,11 @@ def parse_args(args_in=None):
 
     elif args.erase_arg in args.parsed_args:
         erase_sure = generic.get_input("Are you sure you would like to remove tarstall from your system?",
-                                    ['y', 'n'], 'n', ["Yes", "No"])
+                                    ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
         if erase_sure == 'y':
             erase_really_sure = generic.get_input('Are you absolutely sure?' +
                                                 'This will remove all programs installed with tarstall!',
-                                                ['y', 'n'], 'n', ["Yes", "No"])
+                                                ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if erase_really_sure == 'y':
                 status = tarstall_manage.erase()
                 if status == "Not installed":

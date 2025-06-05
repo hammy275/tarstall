@@ -100,6 +100,8 @@ def easy_get_action(options, replacements=[]):
         "is-default": False  # Optional. If specified and set to True, will be the default option on an enter press.*
     }
 
+    The last entry in the list must be an exit option!
+
     *: Note: If multiple parameters are passed in as default, only the first one will actually be the default.
     Note: If default is not specified for any options, the last option will be the default.
 
@@ -128,7 +130,7 @@ def easy_get_action(options, replacements=[]):
         msg += "\n" + selector + " - " + option["description"]
     for replacement in replacements:
         msg = msg.replace(list(replacement.keys())[0], list(replacement.values())[0])
-    return get_input(msg, options_list, default, gui_labels, True)
+    return get_input(msg, options_list, default, gui_labels, True, last_option_exit=True)
 
 
 def endi(state):
@@ -146,22 +148,23 @@ def endi(state):
     return "disabled"
 
 
-def ask(question):
+def ask(question, closable=False):
     """Get Any User Input.
 
     Get user input, with no expected response like with get_input
 
     Args:
         question (str): Question to ask user
+        closable (bool): Whether the window should be closable (optional)
 
     Returns:
-        str: User-supplied answer to question
+        str: User-supplied answer to question, or None if closable is True and the window was closed.
     
     """
-    return interactor.ask(question)
+    return interactor.ask(question, closable)
 
 
-def get_input(question, options, default, gui_labels=None, from_easy=False):
+def get_input(question, options, default, gui_labels=None, from_easy=False, last_option_exit=False):
     """Get User Input.
 
     Get user input, except make sure the input provided matches one of the options we're looking for
@@ -171,12 +174,14 @@ def get_input(question, options, default, gui_labels=None, from_easy=False):
         options (str[]): List of options the user can choose from
         default (str): Default option (used when user enters nothing)
         gui_labels (str[]): Labels to use for GUI buttons/dropdown menus (optional)
+        last_option_exit (bool): If True, the window is closable and a close causes the last option to be returned.
+                                 Otherwise, the window is not closable (optional)
 
     Returns:
         str: Option the user chose
 
     """
-    return interactor.get_input(question, options, default, gui_labels, from_easy)
+    return interactor.get_input(question, options, default, gui_labels, from_easy, last_option_exit)
 
 
 def pprint(st, title="tarstall-gui"):

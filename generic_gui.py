@@ -34,10 +34,14 @@ class GUIInteractions(Interactions):
             if not self.can_close:
                 event.ignore()
 
-    def ask(self, question):
+    def ask(self, question, closable=False):
         class AskDialog(GUIInteractions.CloseControllableDialog):
-            def __init__(self):
+            def __init__(self, last_option_exit):
                 super().__init__()
+
+                self.did_submit = False
+                if last_option_exit:
+                    self.can_close = True
 
                 self.setWindowTitle("tarstall-gui")
 
@@ -54,17 +58,22 @@ class GUIInteractions(Interactions):
             @QtCore.Slot()
             def on_submit(self):
                 self.can_close = True
+                self.did_submit = True
                 self.close()
-        dialog = AskDialog()
+        dialog = AskDialog(closable)
         dialog.exec()
-        return dialog.text_input.text()
+        return dialog.text_input.text() if dialog.did_submit else None
 
-    def get_input(self, question, options, default, gui_labels=None, from_easy=False):
+    def get_input(self, question, options, default, gui_labels=None, from_easy=False, last_option_exit=False):
         if gui_labels is None:
             gui_labels = options
         class AskDialog(GUIInteractions.CloseControllableDialog):
-            def __init__(self):
+            def __init__(self, last_option_exit):
                 super().__init__()
+
+                self.did_submit = False
+                if last_option_exit:
+                    self.can_close = True
 
                 self.output = 0
                 self.setWindowTitle("tarstall-gui")
@@ -89,6 +98,7 @@ class GUIInteractions(Interactions):
                     self.submit = QtWidgets.QPushButton("Submit")
                     def on_submit():
                         self.can_close = True
+                        self.did_submit = True
                         self.close()
                     self.submit.clicked.connect(on_submit)
 
@@ -99,10 +109,11 @@ class GUIInteractions(Interactions):
             def button_pushed(self):
                 self.output = gui_labels.index(self.sender().text())
                 self.can_close = True
+                self.did_submit = True
                 self.close()
-        dialog = AskDialog()
+        dialog = AskDialog(last_option_exit)
         dialog.exec()
-        return options[dialog.output]
+        return options[dialog.output] if dialog.did_submit else options[-1]
 
     def pprint(self, st, title="tarstall-gui"):
         class PopupDialog(QtWidgets.QDialog):

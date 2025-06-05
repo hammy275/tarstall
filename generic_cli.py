@@ -21,10 +21,10 @@ from interactions_base import Interactions
 
 
 class CLIInteractions(Interactions):
-    def ask(self, question):
+    def ask(self, question, closable=False):
         return input(question)
 
-    def get_input(self, question, options, default, gui_labels=None, from_easy=False):
+    def get_input(self, question, options, default, gui_labels=None, from_easy=False, last_option_exit=False):
         options_form = list(options)  # Otherwise, Python would "link" options_form with options
         options_form[options_form.index(default)] = options_form[options_form.index(default)].upper()
         if len(options) > 3 or from_easy:

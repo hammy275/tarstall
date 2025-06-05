@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 
 class Interactions(ABC):
     @abstractmethod
-    def ask(self, question):
+    def ask(self, question, closable=False):
         pass
 
     @abstractmethod
-    def get_input(self, question, options, default, gui_labels=None, from_easy=False):
+    def get_input(self, question, options, default, gui_labels=None, from_easy=False, last_option_exit=False):
         pass
 
     @abstractmethod
