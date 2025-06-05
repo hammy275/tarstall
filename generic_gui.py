@@ -24,8 +24,18 @@ except ImportError:
 
 
 class GUIInteractions(Interactions):
+
+    class CloseControllableDialog(QtWidgets.QDialog):
+        def __init__(self):
+            super().__init__()
+            self.can_close = False
+
+        def closeEvent(self, event):
+            if not self.can_close:
+                event.ignore()
+
     def ask(self, question):
-        class AskDialog(QtWidgets.QDialog):
+        class AskDialog(GUIInteractions.CloseControllableDialog):
             def __init__(self):
                 super().__init__()
 
@@ -43,6 +53,7 @@ class GUIInteractions(Interactions):
 
             @QtCore.Slot()
             def on_submit(self):
+                self.can_close = True
                 self.close()
         dialog = AskDialog()
         dialog.exec()
@@ -51,7 +62,7 @@ class GUIInteractions(Interactions):
     def get_input(self, question, options, default, gui_labels=None, from_easy=False):
         if gui_labels is None:
             gui_labels = options
-        class AskDialog(QtWidgets.QDialog):
+        class AskDialog(GUIInteractions.CloseControllableDialog):
             def __init__(self):
                 super().__init__()
 
@@ -64,13 +75,9 @@ class GUIInteractions(Interactions):
 
                 if len(options) <= 5:
                     self.inner_layout = QtWidgets.QHBoxLayout()
-                    for i in range(len(gui_labels)):
-                        label = gui_labels[i]
+                    for label in gui_labels:
                         button = QtWidgets.QPushButton(label)
-                        def button_pushed():
-                            self.output = i
-                            self.close()
-                        button.clicked.connect(button_pushed)
+                        button.clicked.connect(self.button_pushed)
                         self.inner_layout.addWidget(button)
                     self.layout.addLayout(self.inner_layout)
                 else:
@@ -81,11 +88,18 @@ class GUIInteractions(Interactions):
                     self.dropdown.currentIndexChanged.connect(on_dropdown_change)
                     self.submit = QtWidgets.QPushButton("Submit")
                     def on_submit():
+                        self.can_close = True
                         self.close()
                     self.submit.clicked.connect(on_submit)
 
                     self.layout.addWidget(self.dropdown)
                     self.layout.addWidget(self.submit)
+
+            @QtCore.Slot()
+            def button_pushed(self):
+                self.output = gui_labels.index(self.sender().text())
+                self.can_close = True
+                self.close()
         dialog = AskDialog()
         dialog.exec()
         return options[dialog.output]
