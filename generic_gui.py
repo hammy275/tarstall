@@ -25,14 +25,17 @@ except ImportError:
 
 class GUIInteractions(Interactions):
 
-    class CloseControllableDialog(QtWidgets.QDialog):
-        def __init__(self):
-            super().__init__()
-            self.can_close = False
+    try:
+        class CloseControllableDialog(QtWidgets.QDialog):
+            def __init__(self):
+                super().__init__()
+                self.can_close = False
 
-        def closeEvent(self, event):
-            if not self.can_close:
-                event.ignore()
+            def closeEvent(self, event):
+                if not self.can_close:
+                    event.ignore()
+    except NameError:  # Catches exception with failed PySide6 importing
+        pass
 
     def ask(self, question, closable=False):
         class AskDialog(GUIInteractions.CloseControllableDialog):
