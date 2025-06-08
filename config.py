@@ -21,7 +21,7 @@ import json
 from file import get_shell_file, unlock, full
 
 version = "1.8.0"
-prog_internal_version = 140
+prog_internal_version = 141
 file_version = 21
 
 #############
@@ -198,7 +198,7 @@ def get_db():
 
 
 db = get_db()
-verbose = vcheck()
+verbose = vcheck() and not sys.argv[0].endswith("args.py")  # Never verbose when doing argument parsing
 mode = read_config("Mode")
 
 install_bar = None  # Holds a progress bar if we're in a GUI
