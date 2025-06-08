@@ -209,6 +209,16 @@ def change_branch(branch, reset=False):
             return "Waiting"
 
 
+def write_autocomplete_string():
+    with open(file.full(f"{config.TARSTALL_DIR}/.bashrc"), "a") as f:
+        f.write("""__complete_tarstall() {
+local IFS=$'\n'
+COMPREPLY=($(""" + config.TARSTALL_DIR + """/args.py "${COMP_LINE}"))
+};
+complete -F __complete_tarstall tarstall
+""")
+
+
 def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_fix=False):
     """Run on Startup.
 
@@ -339,6 +349,16 @@ def tarstall_startup(start_fts=False, del_lock=False, old_upgrade=False, force_f
                     config.db["programs"][program]["update_archive_type"] = ".tar.gz"
                 else:
                     config.db["programs"][program]["update_archive_type"] = None
+
+        elif file_version == 20:
+            config.vprint("Adding autocompletion if not already available.")
+            write_autocomplete = False
+            with open(file.full(f"{config.TARSTALL_DIR}/.bashrc"), "r") as f:
+                content = f.read()
+                if "local IFS=$" not in content:
+                    write_autocomplete = True
+            if write_autocomplete:
+                write_autocomplete_string()
 
         config.db["version"]["file_version"] += 1
         file_version = get_file_version('file')
@@ -566,13 +586,7 @@ def first_time_setup():
     file.create(f"{config.TARSTALL_DIR}/database")
     create_db()
     file.create(f"{config.TARSTALL_DIR}/.bashrc")  # Create directories and files
-    with open(file.full(f"{config.TARSTALL_DIR}/.bashrc"), "a") as f:
-        f.write("""__complete_tarstall() {
-local IFS=$'\n'
-COMPREPLY=($(""" + config.TARSTALL_DIR + """/args.py "${COMP_LINE}"))
-};
-complete -F __complete_tarstall tarstall
-""")
+    write_autocomplete_string()
     if not file.exists("~/.config"):
         os.mkdir(file.full("~/.config"))
     if not file.exists("~/.config/fish"):
