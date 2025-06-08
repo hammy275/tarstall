@@ -33,6 +33,7 @@ import args
 mode = config.read_config("Mode")
 
 if mode == "gui":
+    # Force X11 under Crostini due to bugginess when running as a Wayland application
     if os.getenv("QT_QPA_PLATFORM") is None and file.exists("/dev/.cros_milestone"):
         os.environ["QT_QPA_PLATFORM"] = "xcb"
     try:
