@@ -879,7 +879,7 @@ def post_install(status, overwrite, program_internal_name):
         generic.pprint("git not installed! Please install it before using this feature!")
         exit_code = 1
     elif status == "Bad URL":
-        generic.pprint("Invalid URL supplied; make sure it ends in .git, .7z, .tar.gz, .tar.xz, .rar, or .zip!")
+        generic.pprint("Invalid URL supplied; make sure it ends in .git, .7z, .tar.gz, .tar.xz, .rar, .zip, or .AppImage!")
         exit_code = 1
     elif status == "No wget":
         generic.pprint("wget not installed! Please install it to install from URLs!")

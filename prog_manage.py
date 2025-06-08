@@ -302,7 +302,7 @@ def install(path, overwrite=None, show_progress=True, override_name=None):
     if is_url:
         if path.endswith(".git"):
             prog_type = "git"
-        for typ in ["7z", "rar", "zip", "tar.gz", "tar.xz"]:
+        for typ in ["7z", "rar", "zip", "tar.gz", "tar.xz", "AppImage"]:
             if path.endswith(typ):
                 prog_type = "wget"
                 break
@@ -718,7 +718,7 @@ def _wget_install(url, program_internal_name, reinstall=False, overwrite=False):
     config.vprint("Downloading archive...")
 
     extension = None
-    for typ in ["7z", "rar", "zip", "tar.gz", "tar.xz"]:
+    for typ in ["7z", "rar", "zip", "tar.gz", "tar.xz", "AppImage"]:
         if url.endswith(typ):
             extension = "." + typ
             break
