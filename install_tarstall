@@ -201,6 +201,9 @@ def setup(skip_questions=False, verbose=False):
     else:
         if verbose:
             print("rsync is already installed!")
+    if not verbose:
+        progress(20, "Installing package requirements")
+    install_package({"apt": "xcb libxcb-cursor0", "dnf": "xcb-util-cursor*", "pacman": "xcb-util-wm"}, verbose)
 
     # Clone repository
     if verbose:

@@ -85,6 +85,7 @@ def gui_loop():
 
             custom_program_name_row = QtWidgets.QHBoxLayout()
             self.custom_name_check = QtWidgets.QCheckBox()
+            self.custom_name_check.toggled.connect(self.update_custom_name)
             custom_program_name_row.addWidget(self.custom_name_check)
             custom_program_name_row.addWidget(QtWidgets.QLabel("Custom Program Name"))
             self.custom_name = QtWidgets.QLineEdit()
@@ -169,8 +170,9 @@ def gui_loop():
             self.remove_dropdown.setDisabled(True)
             self.manage_dropdown.setDisabled(True)
 
-        def enable_custom_name(self):
-            self.custom_name.setDisabled(False)
+        @QtCore.Slot()
+        def update_custom_name(self):
+            self.custom_name.setDisabled(not self.custom_name_check.isChecked())
             self.custom_name_check.setDisabled(False)
 
         @QtCore.Slot()
@@ -180,14 +182,14 @@ def gui_loop():
             if self.radio_value == "Install":
                 self.install_file.setDisabled(False)
                 self.install_browse.setDisabled(False)
-                self.enable_custom_name()
+                self.update_custom_name()
             elif self.radio_value == "Install Directory":
                 self.install_dir.setDisabled(False)
                 self.install_dir_browse.setDisabled(False)
-                self.enable_custom_name()
+                self.update_custom_name()
             elif self.radio_value == "Install from URL":
                 self.install_url.setDisabled(False)
-                self.enable_custom_name()
+                self.update_custom_name()
             elif self.radio_value == "Remove":
                 self.remove_dropdown.setDisabled(False)
             elif self.radio_value == "Manage":
