@@ -18,19 +18,21 @@ import sys
 import json
 
 ###VERSIONS###
-from file import get_shell_file, unlock, full, get_db
+from file import get_shell_file, unlock, full
 
-version = "1.7.0"
-prog_internal_version = 129
-file_version = 20
+version = "1.8.0"
+prog_internal_version = 142
+file_version = 21
 
 #############
+
+TARSTALL_DIR = "~/.tarstall"
 
 
 def read_config(key):
     """Read config value.
 
-    Gets the value stored in ~/.tarstall/config for the given key
+    Gets the value stored in TARSTALL_DIR/config for the given key
 
     Returns:
         Any type: The value found at the key supplied
@@ -39,9 +41,9 @@ def read_config(key):
     try:
         return db["options"][key]
     except KeyError:
-        if key in ["Verbose", "AutoInstall", "SkipQuestions", "UpdateURLPrograms"]:
+        if key in ["Verbose", "AutoInstall", "SkipQuestions", "UpdateURLPrograms", "WarnMissingDeps"]:
             return False
-        elif key in ["PressEnterKey", "WarnMissingDeps"]:
+        elif key in ["PressEnterKey"]:
             return True
         elif key == "ShellFile":
             return get_shell_file()
@@ -101,9 +103,9 @@ def vprint(to_print, end=None):
         elif mode == "gui":
             try:
                 if end is not None:
-                    output_area.Update(to_print)
+                    output_area.setText(to_print)
                 else:
-                    output_area.Update(to_print + end.replace("\n", "").replace("\r", ""))
+                    output_area.setText(to_print + end.replace("\n", "").replace("\r", ""))
             except AttributeError:
                 pass  # GUI hasn't loaded yet
 
@@ -133,7 +135,7 @@ def write_db():
 
     """
     try:
-        with open(full("~/.tarstall/database"), "w") as dbf:
+        with open(full(f"{TARSTALL_DIR}/database"), "w") as dbf:
             json.dump(db, dbf, indent=4)
         vprint("Database written!")
     except FileNotFoundError:
@@ -141,7 +143,7 @@ def write_db():
         print("The tarstall database could not be written to! Something is very wrong...")
         print("The database has been dumped to the screen; you should keep a copy of it.")
         print("You may be able to restore tarstall to working order by placing the above" +
-              " database dump into a file called \"database\" in ~/.tarstall")
+              f" database dump into a file called \"database\" in {TARSTALL_DIR}")
         print("Rest in peace if you're not in a CLI app right now...")
         unlock()
         sys.exit(3)
@@ -180,8 +182,23 @@ Database structure
 }
 """
 
+
+def get_db():
+    """Get Database.
+
+    Returns:
+        dict: Database. {} if database fails to be read or found on disk.
+
+    """
+    try:
+        with open(full(f"{TARSTALL_DIR}/database")) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.decoder.JSONDecodeError):
+        return {}
+
+
 db = get_db()
-verbose = vcheck()
+verbose = vcheck() and not sys.argv[0].endswith("args.py")  # Never verbose when doing argument parsing
 mode = read_config("Mode")
 
 install_bar = None  # Holds a progress bar if we're in a GUI

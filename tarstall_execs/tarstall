@@ -21,7 +21,6 @@ import sys
 
 sys.path.insert(1, os.path.abspath(os.path.expanduser("{}/..".format(os.path.dirname(__file__)))))
 
-import generic_cli
 import file
 import tarstall_manage
 import config
@@ -29,109 +28,217 @@ import generic
 import prog_manage
 import generic_manage
 from subprocess import call
+import args
 
 mode = config.read_config("Mode")
 
 if mode == "gui":
+    # Force X11 under Crostini due to bugginess when running as a Wayland application
+    if os.getenv("QT_QPA_PLATFORM") is None and file.exists("/dev/.cros_milestone"):
+        os.environ["QT_QPA_PLATFORM"] = "xcb"
     try:
-        import tkinter
-        del tkinter
-        try:
-            import PySimpleGUI as sg
-            sg.theme("Black")
-        except ImportError:
-            config.mode = "cli"
-            mode = "cli"
-            print("PySimpleGUI not installed! Defaulting to cli mode...")
+        from PySide6 import QtCore, QtWidgets, QtGui
     except ImportError:
         config.mode = "cli"
         mode = "cli"
-        print("Tkinter not installed! Defaulting to cli mode...")
+        print("PySide6 not installed! Defaulting to cli mode...")
 
 def gui_loop():
-    """Main Loop for GUI."""
-    to_disable = ["install", "install_browse", "dirinstall", "dirinstall_browse", "urlinstall", "remove", "manage"]
-    layout = [
-        [sg.Text("Select an option:")],
-        [sg.Radio("Install: ", "Todo", default=True, enable_events=True, key="should_install"), sg.InputText(key="install"), sg.FileBrowse(key="install_browse")],
-        [sg.Radio("Install Directory: ", "Todo", enable_events=True, key="should_dirinstall"), sg.InputText(key="dirinstall", disabled=True), sg.FolderBrowse(disabled=True, key="dirinstall_browse")],
-        [sg.Radio("Install from URL: ", "Todo", enable_events=True, key="should_urlinstall"), sg.InputText(key="urlinstall", disabled=True)],
-        [sg.Checkbox("Custom Program Name", default=False, enable_events=True, key="should_custom_name"), sg.InputText(key="custom_name", disabled=True)],
-        [sg.Radio("Remove: ", "Todo", enable_events=True, key="should_remove"), sg.Combo(prog_manage.list_programs(), key="remove", disabled=True)],
-        [sg.Radio("Erase tarstall", "Todo", enable_events=True, key="should_erase")],
-        [sg.Radio("Update tarstall", "Todo", enable_events=True, key="should_update")],
-        [sg.Radio("Manage: ", "Todo", enable_events=True, key="should_manage"), sg.Combo(prog_manage.list_programs(), key="manage", disabled=True)],
-        [sg.Radio("Configure tarstall", "Todo", enable_events=True, key="should_configure")],
-        [sg.Radio("Upgrade all programs that can be upgraded", "Todo", enable_events=True, key="should_update_programs")],
-        [sg.Button("Go"), sg.Button("Exit")],
-        [sg.ProgressBar(100, key="bar")],
-        [sg.Text(" "*100, key="status_area")]
-    ]
-    window = sg.Window('tarstall-gui', layout=layout)
-    while True:
-        event, values = window.Read()
-        config.install_bar = window.Element("bar")
-        config.output_area = window.Element("status_area")
-        config.install_bar.UpdateBar(0)
-        if event in (None, "Exit"):
-            sys.exit(0)
-        elif event == "Go":
+    app = QtWidgets.QApplication([])
+    class TarstallGUI(QtWidgets.QWidget):
+        def __init__(self):
+            super().__init__()
+
+            self.radio_value = "Install"
+
+            self.setWindowTitle("tarstall-gui")
+            self.layout = QtWidgets.QVBoxLayout(self)
+            self.layout.addWidget(QtWidgets.QLabel("Select an option:"))
+
+            install_row = QtWidgets.QHBoxLayout()
+            install_radio = QtWidgets.QRadioButton("Install")
+            install_radio.toggled.connect(self.radio_update)
+            install_row.addWidget(install_radio)
+            self.install_file = QtWidgets.QLineEdit()
+            install_row.addWidget(self.install_file)
+            self.install_browse = QtWidgets.QPushButton("Browse")
+            install_row.addWidget(self.install_browse)
+            self.layout.addLayout(install_row)
+
+            install_dir_row = QtWidgets.QHBoxLayout()
+            install_dir_radio = QtWidgets.QRadioButton("Install Directory")
+            install_dir_radio.toggled.connect(self.radio_update)
+            install_dir_row.addWidget(install_dir_radio)
+            self.install_dir = QtWidgets.QLineEdit()
+            install_dir_row.addWidget(self.install_dir)
+            self.install_dir_browse = QtWidgets.QPushButton("Browse")
+            install_dir_row.addWidget(self.install_dir_browse)
+            self.layout.addLayout(install_dir_row)
+
+            install_url_row = QtWidgets.QHBoxLayout()
+            install_url_radio = QtWidgets.QRadioButton("Install from URL")
+            install_url_radio.toggled.connect(self.radio_update)
+            install_url_row.addWidget(install_url_radio)
+            self.install_url = QtWidgets.QLineEdit()
+            install_url_row.addWidget(self.install_url)
+            self.layout.addLayout(install_url_row)
+
+            custom_program_name_row = QtWidgets.QHBoxLayout()
+            self.custom_name_check = QtWidgets.QCheckBox()
+            self.custom_name_check.toggled.connect(self.update_custom_name)
+            custom_program_name_row.addWidget(self.custom_name_check)
+            custom_program_name_row.addWidget(QtWidgets.QLabel("Custom Program Name"))
+            self.custom_name = QtWidgets.QLineEdit()
+            custom_program_name_row.addWidget(self.custom_name)
+            self.layout.addLayout(custom_program_name_row)
+
+            remove_row = QtWidgets.QHBoxLayout()
+            remove_radio = QtWidgets.QRadioButton("Remove")
+            remove_radio.toggled.connect(self.radio_update)
+            remove_row.addWidget(remove_radio)
+            self.remove_dropdown = QtWidgets.QComboBox()
+            remove_row.addWidget(self.remove_dropdown)
+            self.layout.addLayout(remove_row)
+
+            erase_row = QtWidgets.QHBoxLayout()
+            erase_radio = QtWidgets.QRadioButton("Erase tarstall")
+            erase_radio.toggled.connect(self.radio_update)
+            erase_row.addWidget(erase_radio)
+            self.layout.addLayout(erase_row)
+
+            update_row = QtWidgets.QHBoxLayout()
+            update_radio = QtWidgets.QRadioButton("Update tarstall")
+            update_radio.toggled.connect(self.radio_update)
+            update_row.addWidget(update_radio)
+            self.layout.addLayout(update_row)
+
+            manage_row = QtWidgets.QHBoxLayout()
+            manage_radio = QtWidgets.QRadioButton("Manage")
+            manage_radio.toggled.connect(self.radio_update)
+            manage_row.addWidget(manage_radio)
+            self.manage_dropdown = QtWidgets.QComboBox()
+            manage_row.addWidget(self.manage_dropdown)
+            self.layout.addLayout(manage_row)
+
+            configure_row = QtWidgets.QHBoxLayout()
+            configure_radio = QtWidgets.QRadioButton("Configure tarstall")
+            configure_radio.toggled.connect(self.radio_update)
+            configure_row.addWidget(configure_radio)
+            self.layout.addLayout(configure_row)
+
+            upgrade_all_row = QtWidgets.QHBoxLayout()
+            upgrade_all_radio = QtWidgets.QRadioButton("Upgrade all programs that can be upgraded")
+            upgrade_all_radio.toggled.connect(self.radio_update)
+            upgrade_all_row.addWidget(upgrade_all_radio)
+            self.layout.addLayout(upgrade_all_row)
+
+            buttons_layout = QtWidgets.QHBoxLayout()
+            self.go_button = QtWidgets.QPushButton("Go")
+            self.go_button.clicked.connect(self.go_button_press)
+            buttons_layout.addWidget(self.go_button)
+            self.exit_button = QtWidgets.QPushButton("Exit")
+            self.exit_button.clicked.connect(self.exit_button_press)
+            buttons_layout.addWidget(self.exit_button)
+            self.output_text = QtWidgets.QLabel("")
+            buttons_layout.addWidget(self.output_text)
+            config.output_area = self.output_text
+            self.layout.addLayout(buttons_layout)
+
+            self.progress_bar = QtWidgets.QProgressBar()
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(100)
+            self.layout.addWidget(self.progress_bar)
+            config.install_bar = self.progress_bar
+
+            self.update_dropdowns()
+            install_radio.setChecked(True)
+
+        def update_dropdowns(self):
+            self.remove_dropdown.clear()
+            self.remove_dropdown.addItems(prog_manage.list_programs())
+            self.manage_dropdown.clear()
+            self.manage_dropdown.addItems(prog_manage.list_programs())
+
+        def disable_all(self):
+            self.install_file.setDisabled(True)
+            self.install_browse.setDisabled(True)
+            self.install_dir.setDisabled(True)
+            self.install_dir_browse.setDisabled(True)
+            self.install_url.setDisabled(True)
+            self.custom_name_check.setDisabled(True)
+            self.custom_name.setDisabled(True)
+            self.remove_dropdown.setDisabled(True)
+            self.manage_dropdown.setDisabled(True)
+
+        @QtCore.Slot()
+        def update_custom_name(self):
+            self.custom_name.setDisabled(not self.custom_name_check.isChecked())
+            self.custom_name_check.setDisabled(False)
+
+        @QtCore.Slot()
+        def radio_update(self):
+            self.radio_value = self.sender().text()
+            self.disable_all()
+            if self.radio_value == "Install":
+                self.install_file.setDisabled(False)
+                self.install_browse.setDisabled(False)
+                self.update_custom_name()
+            elif self.radio_value == "Install Directory":
+                self.install_dir.setDisabled(False)
+                self.install_dir_browse.setDisabled(False)
+                self.update_custom_name()
+            elif self.radio_value == "Install from URL":
+                self.install_url.setDisabled(False)
+                self.update_custom_name()
+            elif self.radio_value == "Remove":
+                self.remove_dropdown.setDisabled(False)
+            elif self.radio_value == "Manage":
+                self.manage_dropdown.setDisabled(False)
+
+        @QtCore.Slot()
+        def exit_button_press(self):
+            app.exit(0)
+
+        @QtCore.Slot()
+        def go_button_press(self):
             custom_name_params = []
-            if (values["should_install"] or values["should_dirinstall"] or values["should_urlinstall"]) \
-                    and values["should_custom_name"] and values["custom_name"] != "":
-                custom_name_params = ["--name", values["custom_name"]]
-            if values["should_install"]:
-                status = parse_args(["--install", values["install"]] + custom_name_params)
-            elif values["should_dirinstall"]:
-                status = parse_args(["--install", values["dirinstall"]] + custom_name_params)
-            elif values["should_urlinstall"]:
-                status = parse_args(["--install", values["urlinstall"]] + custom_name_params)
-            elif values["should_remove"]:
-                status = parse_args(["--remove", values["remove"]])
-            elif values["should_erase"]:
+            if self.radio_value in ["Install", "Install Directory", "Install from URL"] and self.custom_name_check.isChecked()\
+                    and self.custom_name.text() != "":
+                custom_name_params = ["--name", self.custom_name.text()]
+            if self.radio_value == "Install":
+                status = parse_args(["--install", self.install_file.text()] + custom_name_params)
+            elif self.radio_value == "Install Directory":
+                status = parse_args(["--install", self.install_dir.text()] + custom_name_params)
+            elif self.radio_value == "Install from URL":
+                status = parse_args(["--install", self.install_url.text()] + custom_name_params)
+            elif self.radio_value == "Remove":
+                status = parse_args(["--remove", self.remove_dropdown.currentText()])
+            elif self.radio_value == "Erase tarstall":
                 status = parse_args(["--erase"])
-            elif values["should_update"]:
+            elif self.radio_value == "Update tarstall":
                 status = parse_args(["--update"])
-            elif values["should_manage"]:
-                status = parse_args(["--manage", values["manage"]])
-            elif values["should_configure"]:
+            elif self.radio_value == "Manage":
+                status = parse_args(["--manage", self.manage_dropdown.currentText()])
+            elif self.radio_value == "Configure tarstall":
                 status = parse_args(["--config"])
-            elif values["should_update_programs"]:
+            elif self.radio_value == "Upgrade all programs that can be upgraded":
                 status = parse_args(["--update-programs"])
+
             if status == "Locked":
                 generic.pprint("tarstall is locked! You can unlock it, but if another instance of tarstall is running, things will break!")
                 ul = generic.get_input("Would you like to unlock tarstall? Only do this if no other instances of tarstall are running!", ['y', 'n'], 'n',
-                ["Yes", "No"])
+                ["Yes", "No"], last_option_exit=True)
                 if ul == 'y':
                     parse_args(["--remove-lock"])
                     generic.pprint("tarstall unlocked! Please specify what you would like to do again!")
                 else:
                     sys.exit(1)
             else:
-                config.install_bar.UpdateBar(100)
-            window.Element("remove").Update(values=prog_manage.list_programs())
-            window.Element("manage").Update(values=prog_manage.list_programs())
-        else:
-            if event != "should_custom_name":
-                for o in to_disable:
-                    window.Element(o).Update(disabled=True)
-                if event == "should_install":
-                    window.Element("install").Update(disabled=False)
-                    window.Element("install_browse").Update(disabled=False)
-                elif event == "should_dirinstall":
-                    window.Element("dirinstall").Update(disabled=False)
-                    window.Element("dirinstall_browse").Update(disabled=False)
-                elif event == "should_urlinstall":
-                    window.Element("urlinstall").Update(disabled=False)
-                elif event == "should_remove":
-                    window.Element("remove").Update(disabled=False)
-                elif event == "should_manage":
-                    window.Element("manage").Update(disabled=False)
-
-            enable_set_custom_name = event == "should_install" or event == "should_dirinstall" \
-                                     or event == "should_urlinstall" or event == "should_custom_name"
-            window.Element("should_custom_name").Update(disabled=(not enable_set_custom_name))
-            window.Element("custom_name").Update(disabled=(not enable_set_custom_name) or (not values["should_custom_name"]))
+                config.install_bar.setValue(100)
+            self.update_dropdowns()
+    widget = TarstallGUI()
+    widget.show()
+    sys.exit(app.exec())
 
 
 def process_update_status(status):
@@ -166,7 +273,7 @@ def process_update_status(status):
 
 
 def repair_tarstall():
-    yn = generic.get_input("Would you like to repair tarstall? This process does require internet access!", ['y', 'n'], 'n', ["Yes", "No"])
+    yn = generic.get_input("Would you like to repair tarstall? This process does require internet access!", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
     if yn != 'y':
         generic.ppause("Repairs not attempted!")
     else:
@@ -193,15 +300,15 @@ If ~/.tarstall, ~/.tarstall/bin or ~/.tarstall/.bashrc were tampered with, than 
 
 Are you sure you would like to attempt repairing?
 #########################################"""
-    yn = generic.get_input(msg, ['y', 'n'], 'n', ["Yes", "No"])
+    yn = generic.get_input(msg, ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
     if yn != 'y':
         generic.ppause("Repairs not attempted!")
     else:
-        yn = generic.get_input("Are you SURE you would like to attempt database repair?", ['y', 'n'], 'n', ["Yes", "No"])
+        yn = generic.get_input("Are you SURE you would like to attempt database repair?", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
         if yn != 'y':
             generic.ppause("Repairs not attempted!")
         else:
-            yn = generic.get_input("If you proceed, (post-)upgrade script references will be lost, and programs may be misconfigured! Are you SURE you would like to continue?", ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input("If you proceed, (post-)upgrade script references will be lost, and programs may be misconfigured! Are you SURE you would like to continue?", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn != 'y':
                 generic.ppause("Repairs not attempted!")
             else:
@@ -224,18 +331,20 @@ def wget_wizard(program):
 Select an option:
 a - Add a URL to download a fresh copy of this program when upgraded{r_msg}
 e - Return to program management""".format(r_msg=r_msg)
-        options = ['a', 'e']
-        gui_options = ["Add a URL", "Return to Program Management"]
+        options = ['a']
+        gui_options = ["Add a URL"]
         if r_msg:
             options.append('r')
             gui_options.append("Remove URL from Program")
-        ans = generic.get_input(msg, options, 'e', gui_options)
+        options.append('e')
+        gui_options.append("Return to Program Management")
+        ans = generic.get_input(msg, options, 'e', gui_options, last_option_exit=True)
         if ans == 'a':
             new_url = ""
             while new_url == "":
                 new_url = generic.ask("Please enter a URL that points directly to an archive that contains" + 
-                "a full-copy of the program to install when upgrading. Type 'c' or 'cancel' to cancel: ")
-                if new_url.lower() == 'c' or new_url.lower() == "cancel":
+                "a full-copy of the program to install when upgrading. Type 'c' or 'cancel' to cancel: ", closable=True)
+                if new_url is None or new_url.lower() == 'c' or new_url.lower() == "cancel":
                     return
             res = prog_manage.add_upgrade_url(program, new_url)
             if res == "Need Type":
@@ -266,7 +375,7 @@ Select an option:
 u - Update program from currently configured branch
 b - Reset repository and change branches (WARNING: This will remove everything inside this program's directory!)
 e - Exit Git Wizard."""
-    ans = generic.get_input(msg, ['u', 'b', 'e'], 'e', ["Update", "Change branch", "Exit"])
+    ans = generic.get_input(msg, ['u', 'b', 'e'], 'e', ["Update", "Change branch", "Exit"], last_option_exit=True)
     if ans == 'u':
         status = prog_manage.update_git_program(program)
         if status == "Success":
@@ -276,7 +385,9 @@ e - Exit Git Wizard."""
         elif status == "Error updating":
             generic.pprint("An error occured while attempting to update {}.".format(program))
     elif ans == 'b':
-        branch = generic.ask("Enter branch to switch to: ")
+        branch = generic.ask("Enter branch to switch to: ", closable=True)
+        if branch is None:
+            return
         status = prog_manage.change_git_branch(program, branch)
         if status == "Success":
             generic.pprint("Branch change successful!")
@@ -305,7 +416,7 @@ Select a branch:
 m - Master branch. Less bugs, more stable, wait for updates.
 b - Beta branch. More bugs, less stable, updates ASAP.
 E - Exit branch wizard and don't change branches."""
-    ans = generic.get_input(msg, ['m', 'b', 'e'], 'e', ["Master", "Beta", "Exit"])
+    ans = generic.get_input(msg, ['m', 'b', 'e'], 'e', ["Master", "Beta", "Exit"], last_option_exit=True)
     if ans == 'e':
         generic.pprint("Not changing branches!")
         return
@@ -316,7 +427,7 @@ E - Exit branch wizard and don't change branches."""
         generic.pprint("Already on the beta branch, not switching!")
         return
     else:
-        check = generic.ask('Type "YES" (without the quotes) to confirm the branch switch! ')
+        check = generic.ask('Type "YES" (without the quotes) to confirm the branch switch! ', closable=True)
         if check != "YES":
             generic.pprint("Cancelling branch switch.")
             return
@@ -386,8 +497,8 @@ def configure():
         elif option == 'm':
             if config.read_config("Mode") == "cli":
                 config.change_config("Mode", "change", "gui")
-                prog_manage.create_desktop(None, "tarstall", "~/.tarstall/tarstall_execs/tarstall", 
-                "Run tarstall's GUI", "False", ["Utility"], "", "~/.tarstall/tarstall_execs/")
+                prog_manage.create_desktop(None, "tarstall", f"{config.TARSTALL_DIR}/tarstall_execs/tarstall", 
+                "Run tarstall's GUI", "False", ["Utility"], "", f"{config.TARSTALL_DIR}/tarstall_execs/")
                 generic.ppause("Changed to GUI mode! Restart tarstall to confirm your changes!")
             else:
                 config.change_config("Mode", "change", "cli")
@@ -444,7 +555,7 @@ def binlink(program):
         status = prog_manage.add_binlink(file_chosen, program)
         if status == "Already there":
             generic.ppause("Binlink not added since it already exists!")
-        yn = generic.get_input('Would you like to add another binlink?', ['y', 'n'], 'n')
+        yn = generic.get_input('Would you like to add another binlink?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
 
 
 def desktop_wizard(program, is_single=False):
@@ -462,19 +573,23 @@ def desktop_wizard(program, is_single=False):
         return
     comment = "/"
     while not comment.replace(" ", "").isalnum() and comment != "":
-        comment = generic.ask("Please input a comment for the application: ")
+        comment = generic.ask("Please input a comment for the application: ", closable=True)
+        if comment is None:
+            comment = ""
     icon = ";"
     while not icon.replace("-", "").replace("_", "").replace("/", "").isalnum() and icon != "":
-        icon = generic.ask("Enter the path to an icon, the name of the icon, or press ENTER for no icon! ")
-    terminal = generic.get_input("Should this program launch a terminal to run it in?", ['y', 'n'], 'n', ["Yes", "No"])
+        icon = generic.ask("Enter the path to an icon, the name of the icon, or press ENTER for no icon! ", closable=True)
+        if icon is None:
+            icon = ""
+    terminal = generic.get_input("Should this program launch a terminal to run it in?", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
     if terminal.lower() == 'y':
         should_terminal = "True"
     else:
         should_terminal = "False"
     name = "/"
     while not name.replace(" ", "").isalnum() and name != "":
-        name = generic.ask("Please enter a name: ")
-    if name == "":
+        name = generic.ask("Please enter a name: ", closable=True)
+    if name is None or name == "":
         name = program
     ans = " "
     chosen_categories = []
@@ -483,7 +598,7 @@ def desktop_wizard(program, is_single=False):
     while ans.lower() != "end":
         msg = "Please enter categories, one at a time, from the list of .desktop categories below (defaults to " \
                 "Utility). Type \"end\" to end category selection. \n" + ", ".join(categories) + "\n"
-        ans = generic.get_input(msg, categories, "utility")
+        ans = generic.get_input(msg, categories, "utility", last_option_exit=True)
         if ans.capitalize() in chosen_categories or ans == "end":
             pass
         else:
@@ -508,21 +623,21 @@ def install_wrap_up(program, is_single=False):
     """
     if not config.read_config("SkipQuestions"):
         if is_single:
-            yn = generic.get_input('Would you like to create the binlink for this program?', ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input('Would you like to create the binlink for this program?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 prog_manage.add_binlink(program, program)
                 generic.ppause("Binlink created!")
-            yn = generic.get_input('Would you like to create the desktop file for this program?', ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input('Would you like to create the desktop file for this program?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 desktop_wizard(program, True)
         else:
-            yn = generic.get_input('Would you like to add the program to your PATH?', ['y', 'n'], 'y', ["Yes", "No"])
+            yn = generic.get_input('Would you like to add the program to your PATH?', ['y', 'n'], 'y', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 pathify(program)
-            yn = generic.get_input('Would you like to create a binlink?', ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input('Would you like to create a binlink?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 binlink(program)
-            yn = generic.get_input('Would you like to create a desktop file?', ['y', 'n'], 'n', ["Yes", "No"])
+            yn = generic.get_input('Would you like to create a desktop file?', ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if yn == 'y':
                 desktop_wizard(program)
     generic.pprint("Installation complete!")
@@ -656,15 +771,15 @@ def manage(program):
                     msg += d + "\n"
                 inp = "/ choose desktop"
                 while not (inp in config.db["programs"][program]["desktops"]) and inp != "exit":
-                    inp = generic.ask(msg + "\nPlease enter the desktop you would like to remove or type \"exit\" to exit: ")
-                if inp != "exit":
+                    inp = generic.ask(msg + "\nPlease enter the desktop you would like to remove or type \"exit\" to exit: ", closable=True)
+                if inp != "exit" and inp is not None:
                     prog_manage.remove_desktop(program, inp)
         elif option == 's':
             if mode == "gui":
                 generic.pprint("This feature can only be used from the command line version of tarstall!")
             else:
                 generic.pprint("When you exit the shell, you will be returned to here.")
-                os.chdir(file.full("~/.tarstall/bin/" + program + "/"))
+                os.chdir(file.full(f"{config.TARSTALL_DIR}/bin/" + program + "/"))
                 if file.get_shell_file() == ".zshrc":
                     call(["/bin/zsh"])
                 elif "fish" in file.get_shell_file():
@@ -685,7 +800,7 @@ Leave blank to de-link the script from the program.
 Warning: The shell must be specified at the top of the file (ie. "#!/bin/sh")
 """
             generic.pprint(msg)
-            script_path = generic.file_browser(file.full("~/.tarstall/bin/{}".format(program)), 
+            script_path = generic.file_browser(file.full(f"{config.TARSTALL_DIR}/bin/{program}"),
                 stay_inside_dir=False, return_full_path=True)
             if script_path is None:
                 generic.ppause("Operation cancelled!")
@@ -734,25 +849,17 @@ def fts_status(status):
 
 def help():
     """Prints Help."""
-    generic.pprint(
-    """Usage: tarstall [COMMAND] [OPTION]
+    usage = """Usage: tarstall [COMMAND] [OPTION]
 
-Commands:
-\t-h, --help\tDisplays this help prompt
-\t-i, --install [ARCHIVE/DIRECTORY/FILE/URL]\tInstalls the supplied archive/directory/file/git URL/archive URL
-\t-n, --name [NAME]\tSpecify a name for the program manually. Required if installing an archive URL.
-\t-r, --remove [PROGRAM]\tUninstalls [PROGRAM] from tarstall
-\t-l, --list\tLists all installed programs
-\t-f, --first\tRuns first-time setup
-\t-e, --erase\tRemoves tarstall from your system
-\t-v, --verbose\tEnables verbose mode for this run of tarstall
-\t-u, --update\tUpdates tarstall if an update is available
-\t-m, --manage\t [PROGRAM] Manage the program named [PROGRAM]
-\t-k, --remove-lock\tRemoves tarstall's lock (only do this if tarstall isn't already running)
-\t-c, --config\tConfigure tarstall
-\t-q, --update-programs [PROGRAM]\tUpdates [PROGRAM], or all programs if [PROGRAM] is not specified
-    """
-    )
+Commands:\n"""
+#\t-h, --help\tDisplays this help prompt
+    for argument in args.arguments:
+        if argument.arg_desc:
+            extra_desc = " " + argument.arg_desc
+        else:
+            extra_desc = ""
+        usage += "\t-{}, --{}{}\t{}\n".format(argument.arg_short, argument.arg_long, extra_desc, argument.desc)
+    generic.pprint(usage)
 
 
 def post_install(status, overwrite, program_internal_name):
@@ -777,7 +884,7 @@ def post_install(status, overwrite, program_internal_name):
         generic.pprint("git not installed! Please install it before using this feature!")
         exit_code = 1
     elif status == "Bad URL":
-        generic.pprint("Invalid URL supplied; make sure it ends in .git, .7z, .tar.gz, .tar.xz, .rar, or .zip!")
+        generic.pprint("Invalid URL supplied; make sure it ends in .git, .7z, .tar.gz, .tar.xz, .rar, .zip, or .AppImage!")
         exit_code = 1
     elif status == "No wget":
         generic.pprint("wget not installed! Please install it to install from URLs!")
@@ -792,24 +899,25 @@ def post_install(status, overwrite, program_internal_name):
     return exit_code
 
 
-def parse_args(args=None):
+def parse_args(args_in=None):
     """Argument Parsing.
 
     Parses arguments and runs tarstall startup.
 
     """
     exit_code = 0
-    if args is None:
-        args = sys.argv[1:]
-    
-    if generic_cli.has_argument("v", "verbose", args):
+    if args_in is None:
+        args_in = sys.argv[1:]
+    args.parse_args(args_in)
+
+    if len(args.parsed_args) > 0 and args.verbose_arg in args.parsed_args:
         config.verbose = True
         generic.pprint("Running verbosely because of -v flag!")
 
-    did_fts = generic_cli.has_argument("f", "first", args)
-    unlock_flag = generic_cli.has_argument("k", "remove-lock", args)
+    do_fts = args.first_install_arg in args.parsed_args
+    unlock_flag = args.remove_lock_arg in args.parsed_args
 
-    status = tarstall_manage.tarstall_startup(start_fts=did_fts, del_lock=unlock_flag)
+    status = tarstall_manage.tarstall_startup(start_fts=do_fts, del_lock=unlock_flag)
 
     fts_status(status)
 
@@ -826,11 +934,11 @@ def parse_args(args=None):
 
     elif status == "Not installed":
         yn = generic.get_input('tarstall is not installed on your system. Would you like to install it?',
-                                ['y', 'n'], 'y')
+                                ['y', 'n'], 'y', last_option_exit=True)
         if yn == 'y':
             status = tarstall_manage.first_time_setup()
             exit_code = fts_status(status)
-            did_fts = True
+            do_fts = True
         else:
             generic.pprint('tarstall not installed.')
             file.unlock()
@@ -845,10 +953,10 @@ def parse_args(args=None):
     
     elif status == "Old upgrade":
         generic.ppause("You are upgrading from a VERY old version of tarstall. Upgradiing will wipe your database! To upgrade: ")
-        tarstall_manage.tarstall_startup(start_fts=did_fts, del_lock=unlock_flag, old_upgrade=True)
+        tarstall_manage.tarstall_startup(start_fts=do_fts, del_lock=unlock_flag, old_upgrade=True)
     
     elif status == "DB Broken":
-        yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as program update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"])
+        yn = generic.get_input("Your tarstall database is corrupt! Would you like to attempt to fix it? You will lose things such as program update URLs, and some other things!", ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
         if yn != 'y':
             file.unlock()
             generic.pprint("Not repairing DB.")
@@ -858,8 +966,8 @@ def parse_args(args=None):
             file.unlock()
             sys.exit(0)
 
-    if status == "Missing Deps" and config.read_config("WarnMissingDeps"):
-        yn = generic.get_input("You are missing some dependencies to allow full usage of tarstall! Would you like to re-run the installer to install the dependencies?", ['y', 'n'], 'y', ["Yes", "No"])
+    if status == "Missing Deps" and not config.read_config("WarnMissingDeps"):
+        yn = generic.get_input("You are missing some dependencies to allow full usage of tarstall! Would you like to re-run the installer to install the dependencies?", ['y', 'n'], 'y', ["Yes", "No"], last_option_exit=True)
         if yn == 'y':
             exit_code = 1
             status = tarstall_manage.reinstall_deps()
@@ -875,21 +983,21 @@ def parse_args(args=None):
             file.unlock()
             sys.exit(exit_code)
 
-    if generic_cli.has_argument("h", "help", args):
+    if args.help_arg in args.parsed_args:
         help()
 
-    elif generic_cli.get_arg_extra("i", "install", args) is not None:
-        install_arg = generic_cli.get_arg_extra("i", "install", args)
-        if install_arg == -1:
-            generic.pprint("Please specify something to install!")
+    elif args.install_arg in args.parsed_args:
+        install_arg = args.install_arg.val[0]
+        if install_arg is None:
+            generic.pprint("Please specify a program to install!")
             exit_code = 1
         else:
             overwrite = False
-            override_name = generic_cli.get_arg_extra("n", "name", args)
+            override_name = args.name_arg.val[0] if args.name_arg in args.parsed_args else None
             status = prog_manage.install(install_arg, override_name=override_name)
             if status[0] == "Application exists":
                 reinstall = generic.get_input("Application already exists! Would you like to reinstall/overwrite?",
-                                        ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"])  # Ask to reinstall
+                                        ["r", "o", "n"], "n", ["Reinstall", "Overwrite", "Cancel"], last_option_exit=True)  # Ask to reinstall
                 if reinstall == "r":
                     status = prog_manage.install(install_arg, False, override_name=override_name)
                 elif reinstall == "o":
@@ -899,9 +1007,9 @@ def parse_args(args=None):
                     generic.pprint("Reinstall cancelled.")
             exit_code = post_install(status[0], overwrite, status[1])
 
-    elif generic_cli.get_arg_extra("r", "remove", args) is not None:
-        remove_arg = generic_cli.get_arg_extra("r", "remove", args)
-        if remove_arg == -1:
+    elif args.remove_arg in args.parsed_args:
+        remove_arg = args.remove_arg.val[0]
+        if remove_arg is None:
             generic.pprint("Please specify a program to remove!")
             exit_code = 1
         else:
@@ -911,15 +1019,15 @@ def parse_args(args=None):
             elif status == "Not installed":
                 generic.pprint("{} isn't an installed program!".format(remove_arg))
 
-    elif generic_cli.get_arg_extra("m", "manage", args) is not None:
-        manage_arg = generic_cli.get_arg_extra("m", "manage", args)
-        if manage_arg == -1:
+    elif args.manage_program_arg in args.parsed_args:
+        manage_arg = args.manage_program_arg.val[0]
+        if manage_arg is None:
             generic.pprint("Please specify a program to manage!")
             exit_code = 1
         else:
             manage(manage_arg)
 
-    elif generic_cli.has_argument("l", "list", args):
+    elif args.list_arg in args.parsed_args:
         programs = prog_manage.list_programs()
         if programs == []:
             generic.pprint("No programs installed!")
@@ -930,13 +1038,13 @@ def parse_args(args=None):
             msg = msg.rstrip()
             generic.pprint(msg)
 
-    elif generic_cli.has_argument("e", "erase", args):
+    elif args.erase_arg in args.parsed_args:
         erase_sure = generic.get_input("Are you sure you would like to remove tarstall from your system?",
-                                    ['y', 'n'], 'n', ["Yes", "No"])
+                                    ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
         if erase_sure == 'y':
             erase_really_sure = generic.get_input('Are you absolutely sure?' +
                                                 'This will remove all programs installed with tarstall!',
-                                                ['y', 'n'], 'n', ["Yes", "No"])
+                                                ['y', 'n'], 'n', ["Yes", "No"], last_option_exit=True)
             if erase_really_sure == 'y':
                 status = tarstall_manage.erase()
                 if status == "Not installed":
@@ -952,22 +1060,22 @@ def parse_args(args=None):
         else:
             generic.pprint('Erase cancelled.')
 
-    elif generic_cli.has_argument("u", "update", args):
+    elif args.update_tarstall_arg in args.parsed_args:
         status = tarstall_manage.update()
         process_update_status(status)
 
-    elif generic_cli.has_argument("c", "config", args):
+    elif args.config_arg in args.parsed_args:
         configure()
 
-    elif generic_cli.get_arg_extra("q", "update-programs", args) is not None and generic_cli.get_arg_extra("q", "update-programs", args) != -1:
-        program_update_arg = generic_cli.get_arg_extra("q", "update-programs", args)
-        if not program_update_arg in config.db["programs"]:
+    elif args.upgrade_arg in args.parsed_args and args.upgrade_arg.val[0] is not True:  # True for 0 count argument
+        program_update_arg = args.upgrade_arg.val[0]
+        if program_update_arg not in config.db["programs"]:
             generic.pprint("{} not installed!".format(program_update_arg))
             exit_code = 1
         else:
             update_program_gui(program_update_arg)
     
-    elif generic_cli.has_argument("q", "update-programs", args):
+    elif args.upgrade_arg in args.parsed_args:
         status = prog_manage.update_programs()
         if status == "No git":
             generic.pprint("git isn't installed, please install it!")
@@ -978,24 +1086,25 @@ def parse_args(args=None):
         else:
             msg = "Program Update Information:\n\n"
             exit_code = 0
+            programs_updated = 0
             for p in status.keys():
                 if status[p] == "Success":
                     msg += p + " updated successfully!\n"
-                elif status[p] == "No update":
-                    msg += p + " is already up to date!\n"
+                    programs_updated += 1
                 elif status[p] == "OSError":
                     msg += p + " does not have #!/bin/sh or similar specified at the top of its file!\n"
                     exit_code = 1
-                elif status[p] == "Does not update":
-                    msg += p + " does not update or has a URL as its only update option!\n"
-                else:
+                elif status[p] != "No update" and status[p] != "Does not update":
                     msg += p + " did not update successfully!\n"
                     exit_code = 1
+            if programs_updated > 0:
+                suffix = "" if programs_updated == 1 else "s"
+                msg += "\nUpdated {} program{}.".format(programs_updated, suffix)
+            else:
+                msg = "All programs are already up-to-date or have no update mechanism!"
             generic.pprint(msg)
-    
 
-
-    elif not did_fts and len(sys.argv) == 1:
+    elif not do_fts and len(sys.argv) == 1:
         generic.pprint("""
 tarstall. A Python based package manager to manage archives.
 Written by: hammy275
@@ -1012,7 +1121,7 @@ https://github.com/hammy275/tarstall/wiki
         """.format(user_version=config.get_version("version"), file_version=config.get_version("file_version"),
                 prog_version=config.get_version("prog_internal_version"), branch=config.branch))
 
-    elif not did_fts:
+    elif not do_fts:
         generic.pprint('Invalid command(s)! Run "tarstall -h" for help!')
         exit_code = 1
 

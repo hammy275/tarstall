@@ -22,7 +22,7 @@ def test_vcheck():
 
 
 def test_get_db():
-    assert file.get_db() == {
+    assert config.get_db() == {
         "options": {
             "Verbose": True,
             "AutoInstall": False,
@@ -54,6 +54,6 @@ def test_write_db():
     tarstall_manage.update({"test": "here"})
     config.write_db()
     tarstall_manage.update({"test": "here"})
-    with open(file.full("~/.tarstall/database")) as f:
+    with open(file.full(f"{config.TARSTALL_DIR}/database")) as f:
         db = json.load(f)
     assert old_db == db

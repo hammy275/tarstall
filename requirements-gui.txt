@@ -1,1 +1,1 @@
-PySimpleGUI
+pyside6
