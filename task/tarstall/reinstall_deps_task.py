@@ -22,7 +22,6 @@ class ReinstallDepsTask(Task):
                 raise TarstallHumanReadableError("An error occurred while downloading the archive!")
             task_runner.progress(0.6)
             config.vprint("Running tarstall setup to (re)-install dependencies")
-            input("")
             err = call([sys.executable, "install_tarstall", "--skip-questions"], stdout=c_out, stderr=c_out)
             task_runner.progress(1)
             if err != 0:
