@@ -29,42 +29,6 @@ import generic
 from generic_manage import wget_with_progress, git_clone_with_progress, c_out, can_update
 
 
-def reinstall_deps():
-    """Reinstall Dependencies
-
-    Install the dependencies for tarstall by using the installer.
-
-    Returns:
-        str: "No wget", "Wget error", "Installer error", or "Success"
-
-    """
-    if which("wget") is None:
-        return "No wget"
-    config.vprint("Deleting and re-creating temp directory")
-    try:
-        rmtree("/tmp/tarstall-temp")
-    except FileNotFoundError:
-        pass
-    os.mkdir("/tmp/tarstall-temp/")
-    os.chdir("/tmp/tarstall-temp/")
-    generic.progress(5)
-    config.vprint("Obtaining tarstall installer...")
-    url = "https://raw.githubusercontent.com/hammy275/tarstall/{}/install_tarstall".format(config.db["version"]["branch"])
-    err = wget_with_progress(url, 5, 60)
-    if err != 0:
-        return "Wget error"
-    generic.progress(60)
-    config.vprint("Running tarstall setup to (re)-install dependencies")
-    input("")
-    err = call([sys.executable, "install_tarstall", "--skip-questions"], stdout=c_out, stderr=c_out)
-    generic.progress(95)
-    config.vprint("Removing installer skip file")
-    generic.progress(100)
-    if err != 0:
-        return "Installer error"
-    return "Success"
-
-
 def repair_tarstall():
     """Attempts to Repair Tarstall.
 
@@ -76,82 +40,6 @@ def repair_tarstall():
     """
     config.vprint("Forcing tarstall update to repair tarstall!")
     return update(True, True)
-
-
-def repair_db():
-    """Attempts to Repair Tarstall DB.
-
-    WARNING: THIS SHOULD NOT BE USED UNLESS THE DATABASE CANNOT BE RECOVERED OTHERWISE!!!
-    BECAUSE AN EMPTY DATABASE ONLY HAS LIMITED KNOWLEDGE OF PAST OPERATIONS, SEVERAL THINGS CANNOT
-    AND WILL NOT BE RECOVERED!!!!!!
-    """
-    config.vprint("Attempting repair of database...")
-
-    config.vprint("Getting stock database to build off of")
-    new_db = get_default_db()
-    generic.progress(5)
-
-    config.vprint("Re-discovering programs:")
-    for pf in os.listdir(file.full(f"{config.TARSTALL_DIR}/bin/")):
-        config.vprint("Re-discovering " + pf, end="\r")
-        prog_info = {pf: {"install_type": "default", "desktops": [],
-        "post_upgrade_script": None, "update_url": None, "has_path": False, "binlinks": []}}
-        if ".git" in os.listdir(file.full(f"{config.TARSTALL_DIR}/bin/{pf}")):
-            prog_info[pf]["install_type"] = "git"
-        elif len(os.listdir(file.full(f"{config.TARSTALL_DIR}/bin/{pf}"))) == 1:
-            prog_info[pf]["install_type"] = "single"
-        new_db["programs"].update(prog_info)
-
-    generic.progress(20)
-
-    config.vprint("Reading tarstall's bashrc file for further operations...")
-    with open(file.full(f"{config.TARSTALL_DIR}/.bashrc")) as f:
-        bashrc_lines = f.readlines()
-
-    generic.progress(25)
-
-    config.vprint("Re-registering PATHs")
-    for l in bashrc_lines:
-        if l.startswith("export PATH=$PATH") and '#' in l:
-            program = l[l.find("#")+2:].rstrip()
-            config.vprint("Re-registering PATH for " + program, end="\r")
-            new_db["programs"][program]["has_path"] = True
-
-    generic.progress(35)
-
-    config.vprint("Re-registering binlinks")
-    for l in bashrc_lines:
-        if l.startswith("alias ") and '#' in l:
-            program = l[l.find("#")+2:].rstrip()
-            config.vprint("Re-registering a binlink or binlinks for " + program, end="\r")
-            binlinked_file = l[6:l.find("=")]
-            new_db["programs"][program]["binlinks"].append(binlinked_file)
-
-    generic.progress(60)
-
-    config.vprint("Backing up old database...")
-    date_str = datetime.datetime.today().strftime("%d-%m-%Y-%H-%M-%S")
-    move(file.full(f"{config.TARSTALL_DIR}/database"), file.full(f"{config.TARSTALL_DIR}/database-backup-{date_str}.bak"))
-
-    generic.progress(80)
-
-    config.vprint("Re-discovering .desktop files...")
-    for d in os.listdir(file.full("~/.local/share/applications/tarstall")):
-        # File name: {program}-{package}.desktop
-        # Stored in DB as {program}-package
-        desktop_name = file.name(file.full("~/.local/share/applications/tarstall/{}".format(d)))  # Returns "{program}-{package}"
-        desktop_info = desktop_name.split("-")
-        new_db["programs"][desktop_info[1]]["desktops"].append("{}-{}".format(desktop_info[0], desktop_info[1]))
-
-    generic.progress(95)
-
-    config.vprint("Writing new database...")
-    config.db = new_db
-    config.write_db()
-
-    config.vprint("Database repair complete!")
-    generic.progress(100)
-    return
 
 
 def change_branch(branch, reset=False):
