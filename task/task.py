@@ -1,6 +1,7 @@
 from __future__ import annotations  # For forward declaring type-hints (they internally become strings)
 from abc import ABC, abstractmethod
 
+import config
 import generic
 
 
@@ -38,7 +39,7 @@ class TaskRunner:
             amount (float): An amount in the range [0.0, 1.0] of how close to complete the task is.
         """
         new_progress = self.base_progress + amount * self.current_task_weight
-        generic.progress(new_progress)
+        generic.progress(new_progress, config.verbose)
 
 class Task(ABC):
     """Task.

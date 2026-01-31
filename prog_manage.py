@@ -589,58 +589,6 @@ def _git_install(git_url, program_internal_name, overwrite=False, reinstall=Fals
         return "Installed"
 
 
-def add_binlink(file_chosen, program_internal_name):
-    """Add Binlink.
-
-    Args:
-        file_chosen (str): File to add
-        program_internal_name (str): Name of program to binlink
-
-    Returns:
-        str: "Added" or "Already there"
-
-    """
-    name = file_chosen
-    if "/" in name:
-        name += ".tar.gz"
-        name = file.name(name)
-    if name in config.db["programs"][program_internal_name]["binlinks"]:
-        return "Already there"
-    line_to_add = '\nalias ' + name + "='cd " + file.full(f'{config.TARSTALL_DIR}/bin/' + program_internal_name) + \
-    '/ && ./' + file_chosen + "' # " + program_internal_name
-    config.vprint("Adding alias to bashrc and fishrc")
-    file.add_line(line_to_add, f"{config.TARSTALL_DIR}/.bashrc")
-    line_to_add = "\nfunction " + name + ";cd " + file.full(f"{config.TARSTALL_DIR}/bin/" + program_internal_name) + "/;./" + file_chosen + ";end # " + program_internal_name
-    file.add_line(line_to_add, f"{config.TARSTALL_DIR}/.fishrc")
-    config.db["programs"][program_internal_name]["binlinks"].append(name)
-    config.write_db()
-    return "Added"
-
-
-def pathify(program_internal_name):
-    """Add Program to Path.
-
-    Adds a program to PATH through tarstall's .bashrc and .fishrc
-
-    Args:
-        program_internal_name (str): Name of program to add to PATH
-
-    Returns:
-        "Complete" or "Already there"
-
-    """
-    if config.db["programs"][program_internal_name]["has_path"]:
-        return "Already there"
-    config.vprint('Adding program to PATH')
-    line_to_write = f"\nexport PATH=$PATH:{config.TARSTALL_DIR}/bin/" + program_internal_name + ' # ' + program_internal_name
-    file.add_line(line_to_write, f"{config.TARSTALL_DIR}/.bashrc")
-    line_to_write = f"\nset PATH $PATH {config.TARSTALL_DIR}/bin/" + program_internal_name + ' # ' + program_internal_name
-    file.add_line(line_to_write, f"{config.TARSTALL_DIR}/.fishrc")
-    config.db["programs"][program_internal_name]["has_path"] = True
-    config.write_db()
-    return "Complete"
-
-
 def create_command(file_extension, program):
     """Create Extraction Command.
 
