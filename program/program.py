@@ -10,7 +10,7 @@ class Program:
     Args:
         name (str): Name of installed program. Should correspond to the folder name in ~/.tarstall/bin.
         install_type (InstallType): The method of installation the program uses.
-        shortcuts (list[str]: The list of shortcuts (formerly desktops) the program has.
+        shortcuts (list[str]: The list of shortcuts (formerly desktops) the program has. Should be the filename, not including extension or the rest of the path.
         post_upgrade_script (str): The script to run after the program upgrades.
         update_url (str): The URL to update the program from if it's not a GIT program.
         in_path (bool): Whether the program's folder has been added to PATH.

@@ -15,4 +15,3 @@ class Pathify(ProgramTask):
         line_to_write = f"\nset PATH $PATH {config.TARSTALL_DIR}/bin/" + self.program.name + ' # ' + self.program.name
         file.add_line(line_to_write, f"{config.TARSTALL_DIR}/.fishrc")
         self.program.in_path = True
-        return "Complete"

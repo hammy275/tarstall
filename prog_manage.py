@@ -174,64 +174,6 @@ def update_program(program, show_progress=False):
     return "Does not update"
 
 
-def update_script(program, script_path):
-    """Set Update Script.
-
-    Set a script to run when a program is updated.
-
-    Args:
-        program (str): Program to set an update script for
-        script_path (str): Path to script to run as an/after update.
-
-    Returns:
-        str: "Bad path" if the path doesn't exist, "Success" on success, and "Wiped" on clear.
-
-    """
-    if script_path == "":
-        config.db["programs"][program]["post_upgrade_script"] = None
-        return "Wiped"
-    if not file.exists(file.full(script_path)):
-        return "Bad path"
-    config.db["programs"][program]["post_upgrade_script"] = file.full(script_path)
-    config.write_db()
-    return "Success"
-
-
-def update_git_program(program, show_progress=False, progress_modifier=1):
-    """Update Git Program.
-
-    Args:
-        program (str): Name of program to update
-        show_progress (bool): Whether to display a progress bar. Defaults to False.
-        progress_modifier (int): The number to divide the total progress by. Defaults to 1.
-
-    Returns:
-        str: "No git" if git isn't found, "Error updating" on a generic failure, "Success" on a successful update, and
-        "No update" if the program is already up-to-date.
-
-    """
-    if not file.check_bin("git"):
-        config.vprint("git isn't installed!")
-        return "No git"
-    generic.progress(5 / progress_modifier, show_progress)
-    outp = run(["git", "pull"], cwd=file.full(f"{config.TARSTALL_DIR}/bin/{program}"), stdout=PIPE, stderr=PIPE)
-    generic.progress(95 / progress_modifier, show_progress)
-    err = outp.returncode
-    output = str(outp.stdout) + "\n\n\n" + str(outp.stderr)
-    if err != 0:
-        config.vprint("Failed updating: {}".format(program))
-        generic.progress(100 / progress_modifier, show_progress)
-        return "Error updating"
-    else:
-        if "Already up to date." in output:
-            config.vprint("{} is already up to date!".format(program))
-            generic.progress(100 / progress_modifier, show_progress)
-            return "No update"
-        else:
-            config.vprint("Successfully updated: {}".format(program))
-            generic.progress(100 / progress_modifier, show_progress)
-            return "Success"
-
 
 def update_programs():
     """Update Programs Installed through Git or Ones with Upgrade Scripts.
@@ -357,44 +299,6 @@ def _install(program, program_type, program_internal_name, overwrite=False, rein
         return _archive_install(program, program_internal_name=program_internal_name, overwrite=overwrite, reinstall=reinstall, show_progress=show_progress)
     elif program_type == "wget":
         return _wget_install(program, program_internal_name, overwrite=overwrite, reinstall=reinstall)
-
-def remove_desktop(program, desktop):
-    """Remove .desktop
-
-    Removes a .desktop file assosciated with a program and its corresponding entry in the database
-    This process is walked through with the end-user
-
-    Args:
-        program (str): Program to remove
-        desktop (str): Name of .desktop to remove
-
-    """
-    try:
-        os.remove(file.full("~/.local/share/applications/tarstall/{}.desktop".format(desktop)))
-    except FileNotFoundError:
-        pass
-    config.db["programs"][program]["desktops"].remove(desktop)
-    config.write_db()
-
-
-def remove_paths_and_binlinks(program):
-    """Remove PATHs and binlinks for "program"
-
-    Args:
-        program (str): Program to remove PATHs and binlinks of
-
-    Returns:
-        str: "Complete" or "None exist"
-
-    """
-    if not config.db["programs"][program]["has_path"] and config.db["programs"][program]["binlinks"] == []:
-        return "None exist"
-    file.remove_line(program, f"{config.TARSTALL_DIR}/.bashrc", 'poundword')
-    file.remove_line(program, f"{config.TARSTALL_DIR}/.fishrc", 'poundword')
-    config.db["programs"][program]["has_path"] = False
-    config.db["programs"][program]["binlinks"] = []
-    config.write_db()
-    return "Complete"
 
 
 def rename(program, new_name):

@@ -36,4 +36,3 @@ class AddBinlinkTask(ProgramTask):
             f"{config.TARSTALL_DIR}/bin/" + self.program.name) + "/;./" + self.file_chosen + ";end # " + self.program.name
         file.add_line(line_to_add, f"{config.TARSTALL_DIR}/.fishrc")
         self.program.binlinks.append(binlink_name)
-        return "Added"
