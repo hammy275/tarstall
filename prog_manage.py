@@ -29,47 +29,6 @@ from generic_manage import c_out
 from config import verbose
 
 
-def add_upgrade_url(program, url, type_in=None):
-    """Adds an Upgrade URL to a Program.
-
-    Args:
-        program (str): The program that will be upgraded
-        url (str): The URL containing the archive to upgrade from. THIS MUST BE A VALID URL!!!!!
-        type_in (str): File extension for updating. If None, tarstall tries to determine it.
-    
-    Returns:
-        str: Success on success, Need Type if tarstall needs the archive type supplied to it, or
-        Bad Type if the supplied type is invalid.
-
-    """
-    supported_types = [".tar.gz", ".tar.xz", ".zip", ".7z", ".rar"]
-    has_type = type_in is not None
-    if not has_type:
-        for typ in supported_types:
-            if url.endswith(typ):
-                has_type = True
-                type_in = typ
-                break
-        if not has_type:
-            return "Need Type"
-    elif type_in not in supported_types:
-        return "Bad Type"
-    config.db["programs"][program]["update_url"] = url
-    config.db["programs"][program]["update_archive_type"] = type_in
-    config.write_db()
-
-
-def remove_update_url(program):
-    """Removes Upgrade URL for Program.
-
-    Args:
-        program (str): Program to remove URL of.
-
-    """
-    config.db["programs"][program]["update_url"] = None
-    config.write_db()
-
-
 def wget_program(program, show_progress=False, progress_modifier=1):
     """Wget an Archive and Overwrite Program.
 
