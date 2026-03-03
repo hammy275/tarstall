@@ -29,55 +29,6 @@ from generic_manage import c_out
 from config import verbose
 
 
-def wget_program(program, show_progress=False, progress_modifier=1):
-    """Wget an Archive and Overwrite Program.
-
-    Args:
-        program (str): Program that has an update_url to update
-        show_progress (bool): Whether to display a progress bar. Defaults to False.
-        progress_modifier (int): The number to divide the total progress by. Defaults to 1.
-
-    Returns:
-        str: "No wget", "Wget error", "Install error" if install() fails, "Success" on success.
-
-    """
-    if not file.check_bin("wget"):
-        return "No wget"
-    else:
-        config.vprint("Creating second temp folder for archive.")
-        try:
-            rmtree(file.full("/tmp/tarstall-temp2"))
-        except FileNotFoundError:
-            pass
-        os.mkdir("/tmp/tarstall-temp2")
-        os.chdir("/tmp/tarstall-temp2")
-        generic.progress(10 / progress_modifier, show_progress)
-        config.vprint("Downloading archive...")
-        url = config.db["programs"][program]["update_url"]
-        extension = config.db["programs"][program]["update_archive_type"]
-        err = wget_with_progress(url, 10 / progress_modifier, 65 / progress_modifier, show_progress=show_progress)
-        if err != 0:
-            return "Wget error"
-        generic.progress(65 / progress_modifier, show_progress)
-        files = os.listdir()
-        config.vprint("Renaming archive")
-        os.rename("/tmp/tarstall-temp2/{}".format(files[0]), "/tmp/tarstall-temp2/{}".format(program + extension))
-        os.chdir("/tmp/")
-        generic.progress(70 / progress_modifier, show_progress)
-        config.vprint("Using install to install the program.")
-        inst_status = install("/tmp/tarstall-temp2/{}".format(program + extension), True, show_progress=False)[0]
-        generic.progress(95 / progress_modifier, show_progress)
-        try:
-            rmtree(file.full("/tmp/tarstall-temp2"))
-        except FileNotFoundError:
-            pass
-        generic.progress(100 / progress_modifier, show_progress)
-        if inst_status != "Installed":
-            return "Install error"
-        else:
-            return "Success"
-
-
 def update_program(program, show_progress=False):
     """Update Program.
 
