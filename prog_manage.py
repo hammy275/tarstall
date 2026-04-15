@@ -29,62 +29,6 @@ from generic_manage import c_out
 from config import verbose
 
 
-def update_program(program, show_progress=False):
-    """Update Program.
-
-    Args:
-        program (str): Name of program to update
-
-    Returns:
-        str: "No script" if script doesn't exist, "Script error" if script
-        failed to execute, or "Success" on a success. Can also be something
-        from update_git_program if the program supplied is a
-        git installed program. Can also return "OSError" if the supplied
-        script doesn't specify the shell to be used. Can also return
-        something from wget_program().
-
-    """
-    progs = 0
-    if config.db["programs"][program]["install_type"] == "git" or config.db["programs"][program]["update_url"] is not None:
-        progs += 1
-    if config.db["programs"][program]["post_upgrade_script"] is not None:
-        if not file.exists(config.db["programs"][program]["post_upgrade_script"]):
-            config.db["programs"][program]["post_upgrade_script"] = None
-            config.write_db()
-            return "No script"
-        else:
-            progs += 1
-    if config.db["programs"][program]["install_type"] == "git":
-        status = update_git_program(program, show_progress, progs)
-        if status != "Success" and status != "No update":
-            return status
-        elif config.db["programs"][program]["post_upgrade_script"] is None:
-            return status
-        elif status == "No update":
-            generic.progress(100, show_progress)
-            return status
-    elif config.db["programs"][program]["update_url"] is not None:
-        status = wget_program(program, show_progress, progs)
-        if status != "Success":
-            return status
-        elif config.db["programs"][program]["post_upgrade_script"] is None:
-            return status
-    if config.db["programs"][program]["post_upgrade_script"] is not None:
-        try:
-            generic.progress(50 * (progs - 1), show_progress)
-            err = call(config.db["programs"][program]["post_upgrade_script"],
-                       cwd=file.full(f"{config.TARSTALL_DIR}/bin/{program}"), stdout=c_out)
-            generic.progress(100, show_progress)
-            if err != 0:
-                return "Script error"
-            else:
-                return "Success"
-        except OSError:
-            return "OSError"
-    return "Does not update"
-
-
-
 def update_programs():
     """Update Programs Installed through Git or Ones with Upgrade Scripts.
 

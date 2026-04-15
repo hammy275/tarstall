@@ -11,7 +11,7 @@ from task.task import TaskRunner, sub_task_runner, Task
 
 class WgetAndOverwriteProgram(ProgramTask):
     def run(self, task_runner: TaskRunner):
-=        sub_task_runner([
+        sub_task_runner([
             (SetupTask(self.program), 0.1),
             (WgetTask(self.program_update_url), 0.55),
             (PostWgetTask(self.program), 0.05),
