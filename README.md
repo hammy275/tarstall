@@ -1,5 +1,9 @@
 # tarstall
 
+## NOTE
+
+This is an in-progress rewrite of tarstall to Rust while simultaneously fixing many outdated portions of tarstall's codebase.
+
 Feature-rich package management for archives!
 
 ![tarstall Terminal Interface](readme-images/terminal.png)

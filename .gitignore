@@ -1,5 +1,2 @@
-**/.pytest_cache/
-**/.DS_Store
+/target
 .idea/
-**/__pycache__
-/.vscode
