@@ -1,0 +1,61 @@
+/// A basic type containing a task and its weight.
+type TaskWithWeight = (Box<dyn Task>, f64);
+
+/// Something that runs one or more tasks, keeping active progress as it progresses.
+pub struct TaskRunner {
+    prev_task_progress: f64,
+    tasks: Vec<TaskWithWeight>,
+    current_weight: f64
+}
+
+impl TaskRunner {
+
+    /// Update the progress for the task runner. Should only be called from within a task.
+    pub fn progress(&mut self, amount: f64) {
+        match amount {
+            0.0..1.0 => {
+                let new_progress = self.prev_task_progress + self.current_weight * amount;
+                todo!("Broadcast progress")
+            }
+            _ => panic!("Progress should be in the range [0.0, 1.0]")
+        }
+    }
+
+    /// Run the tasks contained within the task runner.
+    pub fn run_tasks(&mut self) -> TaskResult {
+        self.normalize_task_weights();
+        for (task, weight) in &self.tasks {
+            self.current_weight = *weight;
+            let result: TaskResult = todo!("Run task");
+            match result {
+                Ok(_) => {
+                    self.prev_task_progress += self.current_weight
+                },
+                Err(msg) => {
+                    todo!("Perform rollback");
+                    return result
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn normalize_task_weights(&mut self) {
+        todo!("Normalize weights within all tasks so they add to 1.0")
+    }
+}
+
+/// The result of a task. Either a success (returning unit) or an error message.
+type TaskResult = Result<(), String>;
+
+/// A task that performs some operation, marking progress using the provided task runner, then
+/// returns a success or failure.
+pub trait Task {
+    /// Called when the task is run. Progress should be reported via the task_runner's progress()
+    /// method.
+    fn run(&self, task_runner: &mut TaskRunner) -> TaskResult;
+    /// Called when the task fails, and it should undo any changes it made (if any). Progress for
+    /// this should not be reported to the task_runner. One should especially expect this to be
+    /// called if run() returns an Error.
+    fn undo(&self, task_runner: &mut TaskRunner) -> TaskResult;
+}
