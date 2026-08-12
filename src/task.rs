@@ -28,16 +28,16 @@ impl TaskRunner {
             self.current_weight = *weight;
             let result: TaskResult = todo!("Run task");
             match result {
-                Ok(_) => {
+                TaskResult::Ok => {
                     self.prev_task_progress += self.current_weight
                 },
-                Err(msg) => {
+                TaskResult::Err(_) => {
                     todo!("Perform rollback");
                     return result
                 }
             }
         }
-        Ok(())
+        TaskResult::Ok
     }
 
     fn normalize_task_weights(&mut self) {
@@ -51,7 +51,21 @@ impl TaskRunner {
 }
 
 /// The result of a task. Either a success (returning unit) or an error message.
-type TaskResult = Result<(), String>;
+/// Doesn't use the pre-existing Result to avoid the .0 pattern from newtypes and to still allow
+/// implementing traits on it.
+pub enum TaskResult {
+    Ok,
+    Err(String)
+}
+
+impl<T> From<std::io::Result<T>> for TaskResult {
+    fn from(io_result: std::io::Result<T>) -> Self {
+        match io_result {
+            Ok(_) => TaskResult::Ok,
+            Err(error) => TaskResult::Err(error.to_string())
+        }
+    }
+}
 
 /// A task that performs some operation, marking progress using the provided task runner, then
 /// returns a success or failure.
