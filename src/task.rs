@@ -41,7 +41,12 @@ impl TaskRunner {
     }
 
     fn normalize_task_weights(&mut self) {
-        todo!("Normalize weights within all tasks so they add to 1.0")
+        let total: f64 = self.tasks.iter()
+            .map(| task_and_weight | { task_and_weight.1 })
+            .sum();
+        for task in self.tasks.iter_mut() {
+            (*task).1 = (*task).1 / total
+        }
     }
 }
 
