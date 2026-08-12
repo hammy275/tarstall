@@ -1,5 +1,7 @@
+use std::rc::Rc;
+
 /// A basic type containing a task and its weight.
-type TaskWithWeight = (Box<dyn Task>, f64);
+type TaskWithWeight = (Rc<dyn Task>, f64);
 
 /// Something that runs one or more tasks, keeping active progress as it progresses.
 pub struct TaskRunner {
@@ -24,9 +26,10 @@ impl TaskRunner {
     /// Run the tasks contained within the task runner.
     pub fn run_tasks(&mut self) -> TaskResult {
         self.normalize_task_weights();
-        for (task, weight) in &self.tasks {
-            self.current_weight = *weight;
-            let result: TaskResult = todo!("Run task");
+        let tasks = self.tasks.clone();
+        for (task, weight) in tasks {
+            self.current_weight = weight;
+            let result: TaskResult = task.run(self);
             match result {
                 TaskResult::Ok => {
                     self.prev_task_progress += self.current_weight
