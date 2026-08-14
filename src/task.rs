@@ -1,14 +1,16 @@
 use std::rc::Rc;
 
-/// A basic type containing a task and its weight.
-type TaskWithWeight = (Rc<dyn Task>, f64);
+/// A type alias for a tuple containing a task and its weight.
+pub type TaskWithWeight = (Rc<dyn Task>, f64);
+/// A type alias for the list of tasks.
+pub type Tasks = Vec<TaskWithWeight>;
 
 /// Something that runs one or more tasks, keeping active progress as it progresses.
 pub struct TaskRunner {
     prev_task_progress: f64,
-    tasks: Vec<TaskWithWeight>,
+    tasks: Tasks,
     current_weight: f64,
-    progress_consumer: dyn FnMut(f64)
+    progress_consumer: Box<dyn FnMut(f64)>
 }
 
 impl TaskRunner {
@@ -50,6 +52,15 @@ impl TaskRunner {
             .sum();
         for task in self.tasks.iter_mut() {
             (*task).1 = (*task).1 / total
+        }
+    }
+
+    pub fn create(tasks: Tasks, progress_consumer: Box<dyn FnMut(f64)>) -> TaskRunner {
+        TaskRunner {
+            prev_task_progress: 0.0,
+            tasks,
+            current_weight: 0.0,
+            progress_consumer,
         }
     }
 }
