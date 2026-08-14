@@ -7,7 +7,8 @@ type TaskWithWeight = (Rc<dyn Task>, f64);
 pub struct TaskRunner {
     prev_task_progress: f64,
     tasks: Vec<TaskWithWeight>,
-    current_weight: f64
+    current_weight: f64,
+    progress_consumer: dyn FnMut(f64)
 }
 
 impl TaskRunner {
@@ -17,7 +18,7 @@ impl TaskRunner {
         match amount {
             0.0..1.0 => {
                 let new_progress = self.prev_task_progress + self.current_weight * amount;
-                todo!("Broadcast progress")
+                (self.progress_consumer)(new_progress)
             }
             _ => panic!("Progress should be in the range [0.0, 1.0]")
         }

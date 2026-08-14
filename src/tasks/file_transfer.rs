@@ -11,13 +11,13 @@ pub struct TransferFile {
 
 impl Task for TransferFile {
     fn run(&self, task_runner: &mut TaskRunner) -> crate::task::TaskResult {
-        task_runner.progress(0.1);
         if let Some(parent_path) = self.dst.parent() {
             let result = fs::create_dir_all(parent_path);
             if let Err(_) = result {
                 return result.into()
             }
         }
+        task_runner.progress(0.1);
         let result = match self.transfer_mode {
             TransferMode::COPY => fs::copy(&self.src, &self.dst).into(),
             TransferMode::MOVE => fs::rename(&self.src, &self.dst).into()
