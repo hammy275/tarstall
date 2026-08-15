@@ -18,7 +18,7 @@ impl TaskRunner {
     /// Update the progress for the task runner. Should only be called from within a task.
     pub fn progress(&self, amount: f64) {
         match amount {
-            0.0..1.0 => {
+            0.0..=1.0 => {
                 let new_progress = self.prev_task_progress + self.current_weight * amount;
                 self.progress_consumer.consume_progress(self, new_progress)
             }

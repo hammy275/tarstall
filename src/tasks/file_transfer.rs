@@ -4,9 +4,9 @@ use crate::task::{Task, TaskResult, TaskRunner};
 
 /// Task to copy or move a singular file.
 pub struct TransferFile {
-    src: PathBuf,
-    dst: PathBuf,
-    transfer_mode: TransferMode
+    pub src: PathBuf,
+    pub dst: PathBuf,
+    pub transfer_mode: TransferMode
 }
 
 impl Task for TransferFile {
@@ -48,7 +48,7 @@ impl Task for TransferFile {
     }
 }
 
-enum TransferMode {
+pub enum TransferMode {
     COPY,
     MOVE
 }
