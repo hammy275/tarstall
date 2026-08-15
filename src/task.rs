@@ -10,17 +10,17 @@ pub struct TaskRunner {
     prev_task_progress: f64,
     tasks: Tasks,
     current_weight: f64,
-    progress_consumer: Box<dyn FnMut(f64)>
+    progress_consumer: Box<dyn ProgressConsumer>
 }
 
 impl TaskRunner {
 
     /// Update the progress for the task runner. Should only be called from within a task.
-    pub fn progress(&mut self, amount: f64) {
+    pub fn progress(&self, amount: f64) {
         match amount {
             0.0..1.0 => {
                 let new_progress = self.prev_task_progress + self.current_weight * amount;
-                (self.progress_consumer)(new_progress)
+                self.progress_consumer.consume_progress(self, new_progress)
             }
             _ => panic!("Progress should be in the range [0.0, 1.0]")
         }
@@ -55,7 +55,7 @@ impl TaskRunner {
         }
     }
 
-    pub fn create(tasks: Tasks, progress_consumer: Box<dyn FnMut(f64)>) -> TaskRunner {
+    pub fn create(tasks: Tasks, progress_consumer: Box<dyn ProgressConsumer>) -> TaskRunner {
         TaskRunner {
             prev_task_progress: 0.0,
             tasks,
@@ -82,14 +82,21 @@ impl<T> From<std::io::Result<T>> for TaskResult {
     }
 }
 
+/// An object that can consume progress updates from a TaskRunner.
+pub trait ProgressConsumer {
+
+    /// Consume a progress update in the range [0.0, 1.0]
+    fn consume_progress(&self, task_runner: &TaskRunner, progress: f64);
+}
+
 /// A task that performs some operation, marking progress using the provided task runner, then
 /// returns a success or failure.
 pub trait Task {
     /// Called when the task is run. Progress should be reported via the task_runner's progress()
     /// method.
-    fn run(&self, task_runner: &mut TaskRunner) -> TaskResult;
+    fn run(&self, task_runner: &TaskRunner) -> TaskResult;
     /// Called when the task fails, and it should undo any changes it made (if any). Progress for
     /// this should not be reported to the task_runner. One should especially expect this to be
     /// called if run() returns an Error.
-    fn undo(&self, task_runner: &mut TaskRunner) -> TaskResult;
+    fn undo(&self, task_runner: &TaskRunner) -> TaskResult;
 }

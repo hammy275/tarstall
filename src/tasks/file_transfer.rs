@@ -10,7 +10,7 @@ pub struct TransferFile {
 }
 
 impl Task for TransferFile {
-    fn run(&self, task_runner: &mut TaskRunner) -> crate::task::TaskResult {
+    fn run(&self, task_runner: &TaskRunner) -> crate::task::TaskResult {
         if let Some(parent_path) = self.dst.parent() {
             let result = fs::create_dir_all(parent_path);
             if let Err(_) = result {
@@ -26,7 +26,7 @@ impl Task for TransferFile {
         result
     }
 
-    fn undo(&self, task_runner: &mut TaskRunner) -> crate::task::TaskResult {
+    fn undo(&self, task_runner: &TaskRunner) -> crate::task::TaskResult {
         match self.transfer_mode {
             TransferMode::COPY => fs::remove_file(&self.dst).into(),
             TransferMode::MOVE => {
