@@ -1,5 +1,6 @@
-use std::rc::Rc;
-use crate::task::{ProgressConsumer, TaskResult, TaskRunner, Tasks};
+use std::sync::Arc;
+use std::sync::mpsc::channel;
+use crate::task::{TaskResult, TaskRunner, Tasks};
 use crate::tasks::file_transfer::{TransferFile, TransferMode};
 
 mod program;
@@ -18,20 +19,29 @@ fn main() {
         transfer_mode: TransferMode::COPY
     };
     let mut tasks: Tasks = Vec::new();
-    tasks.push((Rc::new(task1), 0.5));
-    tasks.push((Rc::new(task2), 0.5));
-    let progress_consumer = BasicProgressConsumer{};
-    let mut task_runner = TaskRunner::create(tasks, Box::new(progress_consumer));
-    match task_runner.run_tasks() {
-        TaskResult::Ok => println!("Ok"),
-        TaskResult::Err(msg) => println!("Error: {}", msg)
+    tasks.push((Arc::new(task1), 0.5));
+    tasks.push((Arc::new(task2), 0.5));
+    let (sender, receiver) = channel();
+    let mut task_runner = TaskRunner::create(tasks, sender);
+    let run_tasks_handle = task_runner.run_tasks();
+    let mut progress = 0.0;
+    while (progress < 1.0) {
+        match receiver.recv() {
+            Result::Ok(amount) => {
+                progress = amount;
+                println!("Progress: {}", progress)
+            }
+            _ => break
+        }
     }
-}
-
-struct BasicProgressConsumer {}
-
-impl ProgressConsumer for BasicProgressConsumer {
-    fn consume_progress(&self, task_runner: &TaskRunner, progress: f64) {
-        println!("Progress: {}", progress)
+    match run_tasks_handle.join() {
+        Result::Ok(task_result) => {
+            match task_result {
+                TaskResult::Ok => println!("Done!"),
+                TaskResult::Err(msg) => println!("Error: {}", msg)
+            }
+        }
+        Result::Err(err) => println!("Join error")
     }
+
 }

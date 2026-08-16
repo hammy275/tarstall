@@ -1,49 +1,46 @@
-use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::mpsc::Sender;
+use std::thread;
+use std::thread::JoinHandle;
 
 /// A type alias for a tuple containing a task and its weight.
-pub type TaskWithWeight = (Rc<dyn Task>, f64);
+pub type TaskWithWeight = (Arc<dyn Task>, f64);
 /// A type alias for the list of tasks.
 pub type Tasks = Vec<TaskWithWeight>;
 
 /// Something that runs one or more tasks, keeping active progress as it progresses.
 pub struct TaskRunner {
-    prev_task_progress: f64,
     tasks: Tasks,
-    current_weight: f64,
-    progress_consumer: Box<dyn ProgressConsumer>
+    progress_sender: Sender<f64>
 }
 
 impl TaskRunner {
 
-    /// Update the progress for the task runner. Should only be called from within a task.
-    pub fn progress(&self, amount: f64) {
-        match amount {
-            0.0..=1.0 => {
-                let new_progress = self.prev_task_progress + self.current_weight * amount;
-                self.progress_consumer.consume_progress(self, new_progress)
-            }
-            _ => panic!("Progress should be in the range [0.0, 1.0]")
-        }
-    }
-
-    /// Run the tasks contained within the task runner.
-    pub fn run_tasks(&mut self) -> TaskResult {
+    /// Run the tasks contained within the task runner. These run on a separate thread
+    pub fn run_tasks(&mut self) -> JoinHandle<TaskResult> {
         self.normalize_task_weights();
         let tasks = self.tasks.clone();
-        for (task, weight) in tasks {
-            self.current_weight = weight;
-            let result: TaskResult = task.run(self);
-            match result {
-                TaskResult::Ok => {
-                    self.prev_task_progress += self.current_weight
-                },
-                TaskResult::Err(_) => {
-                    todo!("Perform rollback");
-                    return result
+        let mut progress_reporter = ProgressReporter{
+            prev_task_progress: 0.0,
+            current_weight: 0.0,
+            sender: self.progress_sender.clone(),
+        };
+        thread::spawn(move || {
+            for (task, weight) in tasks {
+                progress_reporter.current_weight = weight;
+                let result: TaskResult = task.run(progress_reporter.clone());
+                match result {
+                    TaskResult::Ok => {
+                        progress_reporter.prev_task_progress += weight
+                    },
+                    TaskResult::Err(_) => {
+                        todo!("Perform rollback");
+                        return result
+                    }
                 }
             }
-        }
-        TaskResult::Ok
+            TaskResult::Ok
+        })
     }
 
     fn normalize_task_weights(&mut self) {
@@ -55,13 +52,24 @@ impl TaskRunner {
         }
     }
 
-    pub fn create(tasks: Tasks, progress_consumer: Box<dyn ProgressConsumer>) -> TaskRunner {
+    pub fn create(tasks: Tasks, progress_sender: Sender<f64>) -> TaskRunner {
         TaskRunner {
-            prev_task_progress: 0.0,
             tasks,
-            current_weight: 0.0,
-            progress_consumer,
+            progress_sender,
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct ProgressReporter {
+    prev_task_progress: f64,
+    current_weight: f64,
+    sender: Sender<f64>
+}
+
+impl ProgressReporter {
+    pub fn progress(&self, progress: f64) {
+        _ = self.sender.send(self.prev_task_progress + self.current_weight * progress);
     }
 }
 
@@ -82,21 +90,12 @@ impl<T> From<std::io::Result<T>> for TaskResult {
     }
 }
 
-/// An object that can consume progress updates from a TaskRunner.
-pub trait ProgressConsumer {
-
-    /// Consume a progress update in the range [0.0, 1.0]
-    fn consume_progress(&self, task_runner: &TaskRunner, progress: f64);
-}
-
 /// A task that performs some operation, marking progress using the provided task runner, then
 /// returns a success or failure.
-pub trait Task {
-    /// Called when the task is run. Progress should be reported via the task_runner's progress()
-    /// method.
-    fn run(&self, task_runner: &TaskRunner) -> TaskResult;
-    /// Called when the task fails, and it should undo any changes it made (if any). Progress for
-    /// this should not be reported to the task_runner. One should especially expect this to be
-    /// called if run() returns an Error.
-    fn undo(&self, task_runner: &TaskRunner) -> TaskResult;
+pub trait Task: Send + Sync {
+    /// Called when the task is run. Progress should be reported via the provided ProgressReporter.
+    fn run(&self, progress_reporter: ProgressReporter) -> TaskResult;
+    /// Called when the task fails, and it should undo any changes it made (if any). One should
+    /// especially expect this to be called if run() returns an Error.
+    fn undo(&self) -> TaskResult;
 }

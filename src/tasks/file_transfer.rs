@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::{PathBuf};
-use crate::task::{Task, TaskResult, TaskRunner};
+use crate::task::{ProgressReporter, Task, TaskResult, TaskRunner};
 
 /// Task to copy or move a singular file.
 pub struct TransferFile {
@@ -10,23 +10,23 @@ pub struct TransferFile {
 }
 
 impl Task for TransferFile {
-    fn run(&self, task_runner: &TaskRunner) -> crate::task::TaskResult {
+    fn run(&self, progress_reporter: ProgressReporter) -> TaskResult {
         if let Some(parent_path) = self.dst.parent() {
             let result = fs::create_dir_all(parent_path);
             if let Err(_) = result {
                 return result.into()
             }
         }
-        task_runner.progress(0.1);
+        progress_reporter.progress(0.1);
         let result = match self.transfer_mode {
             TransferMode::COPY => fs::copy(&self.src, &self.dst).into(),
             TransferMode::MOVE => fs::rename(&self.src, &self.dst).into()
         };
-        task_runner.progress(1.0);
+        progress_reporter.progress(1.0);
         result
     }
 
-    fn undo(&self, task_runner: &TaskRunner) -> crate::task::TaskResult {
+    fn undo(&self) -> TaskResult {
         match self.transfer_mode {
             TransferMode::COPY => fs::remove_file(&self.dst).into(),
             TransferMode::MOVE => {
