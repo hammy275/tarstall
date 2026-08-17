@@ -11,7 +11,7 @@ pub type Tasks = Vec<TaskWithWeight>;
 /// Something that runs one or more tasks, keeping active progress as it progresses.
 pub struct TaskRunner {
     tasks: Tasks,
-    progress_sender: Sender<f64>
+    progress_sender: ProgressSender
 }
 
 impl TaskRunner {
@@ -23,7 +23,7 @@ impl TaskRunner {
         let mut progress_reporter = ProgressReporter{
             prev_task_progress: 0.0,
             current_weight: 0.0,
-            sender: self.progress_sender.clone(),
+            sender: Box::new(self.progress_sender.clone()),
         };
         thread::spawn(move || {
             for (task, weight) in tasks {
@@ -52,7 +52,7 @@ impl TaskRunner {
         }
     }
 
-    pub fn create(tasks: Tasks, progress_sender: Sender<f64>) -> TaskRunner {
+    pub fn create(tasks: Tasks, progress_sender: ProgressSender) -> TaskRunner {
         TaskRunner {
             tasks,
             progress_sender,
@@ -64,13 +64,34 @@ impl TaskRunner {
 pub struct ProgressReporter {
     prev_task_progress: f64,
     current_weight: f64,
-    sender: Sender<f64>
+    sender: Box<ProgressSender>
 }
 
 impl ProgressReporter {
     pub fn progress(&self, progress: f64) {
-        _ = self.sender.send(self.prev_task_progress + self.current_weight * progress);
+        let amount = self.prev_task_progress + self.current_weight * progress;
+        match self.sender.as_ref() {
+            ProgressSender::Sender(sender) => _ = sender.send(amount),
+            ProgressSender::Reporter(progress_reporter) => progress_reporter.progress(amount)
+        }
     }
+
+    pub fn create(sender: Box<ProgressSender>) -> ProgressReporter {
+        ProgressReporter {
+            prev_task_progress: 0.0,
+            current_weight: 0.0,
+            sender,
+        }
+    }
+}
+
+/// Something that sends progress.
+#[derive(Clone)]
+pub enum ProgressSender {
+    /// A sender that passes along the final value to a receiver.
+    Sender(Sender<f64>),
+    /// Another ProgressReporter, allowing for chaining multiple ProgressReporters together.
+    Reporter(ProgressReporter)
 }
 
 /// The result of a task. Either a success (returning unit) or an error message.
