@@ -16,7 +16,7 @@ pub struct TaskRunner {
 
 impl TaskRunner {
 
-    /// Run the tasks contained within the task runner. These run on a separate thread
+    /// Run the tasks contained within the task runner. These run on a separate thread.
     pub fn run_tasks(&mut self) -> JoinHandle<TaskResult> {
         self.normalize_task_weights();
         let tasks = self.tasks.clone();
@@ -43,6 +43,7 @@ impl TaskRunner {
         })
     }
 
+    /// Normalize the task weights so they add up to 1.0.
     fn normalize_task_weights(&mut self) {
         let total: f64 = self.tasks.iter()
             .map(| task_and_weight | { task_and_weight.1 })
@@ -52,6 +53,7 @@ impl TaskRunner {
         }
     }
 
+    /// Create a task runner from the provided tasks and progress sender.
     pub fn create(tasks: Tasks, progress_sender: ProgressSender) -> TaskRunner {
         TaskRunner {
             tasks,
@@ -60,6 +62,10 @@ impl TaskRunner {
     }
 }
 
+/// Something that handles progress reporting. Unlike the progress sender, which simply handles
+/// moving a progress update from point A to point B, a progress reporter is what is provided to
+/// tasks to report their progress, where it is modified by its weighting and overall progress
+/// before being sent.
 #[derive(Clone)]
 pub struct ProgressReporter {
     prev_task_progress: f64,
@@ -68,19 +74,12 @@ pub struct ProgressReporter {
 }
 
 impl ProgressReporter {
+    /// Main method to be called by tasks to report their progress so far.
     pub fn progress(&self, progress: f64) {
         let amount = self.prev_task_progress + self.current_weight * progress;
         match self.sender.as_ref() {
             ProgressSender::Sender(sender) => _ = sender.send(amount),
             ProgressSender::Reporter(progress_reporter) => progress_reporter.progress(amount)
-        }
-    }
-
-    pub fn create(sender: Box<ProgressSender>) -> ProgressReporter {
-        ProgressReporter {
-            prev_task_progress: 0.0,
-            current_weight: 0.0,
-            sender,
         }
     }
 }
@@ -98,7 +97,9 @@ pub enum ProgressSender {
 /// Doesn't use the pre-existing Result to avoid the .0 pattern from newtypes and to still allow
 /// implementing traits on it.
 pub enum TaskResult {
+    /// Task completed successfully.
     Ok,
+    /// Task had some error with the provided error message.
     Err(String)
 }
 
