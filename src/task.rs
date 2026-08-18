@@ -39,6 +39,8 @@ impl TaskRunner {
                     }
                 }
             }
+            // Send exactly 1.0 to mark that we're done.
+            progress_reporter.sender.raw_progress(1.0);
             TaskResult::Ok
         })
     }
@@ -76,11 +78,9 @@ pub struct ProgressReporter {
 impl ProgressReporter {
     /// Main method to be called by tasks to report their progress so far.
     pub fn progress(&self, progress: f64) {
-        let amount = self.prev_task_progress + self.current_weight * progress;
-        match self.sender.as_ref() {
-            ProgressSender::Sender(sender) => _ = sender.send(amount),
-            ProgressSender::Reporter(progress_reporter) => progress_reporter.progress(amount)
-        }
+        // Use min here to prevent rounding errors with weights from sending above 1.0
+        let amount = f64::min(1.0, self.prev_task_progress + self.current_weight * progress);
+        self.sender.raw_progress(amount)
     }
 }
 
@@ -91,6 +91,16 @@ pub enum ProgressSender {
     Sender(Sender<f64>),
     /// Another ProgressReporter, allowing for chaining multiple ProgressReporters together.
     Reporter(ProgressReporter)
+}
+
+impl ProgressSender {
+    // Sends the progress amount provided without any modification
+    pub fn raw_progress(&self, amount: f64) {
+        match self {
+            ProgressSender::Sender(sender) => _ = sender.send(amount),
+            ProgressSender::Reporter(progress_reporter) => progress_reporter.progress(amount)
+        }
+    }
 }
 
 /// The result of a task. Either a success (returning unit) or an error message.

@@ -48,6 +48,7 @@ impl Task for TransferFile {
     }
 }
 
+#[derive(Copy, Clone)]
 pub enum TransferMode {
     COPY,
     MOVE
