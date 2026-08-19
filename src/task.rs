@@ -64,6 +64,16 @@ impl TaskRunner {
     }
 }
 
+/// Run a single task immediately. Useful for quick-to-run tasks that aren't part of a main
+/// operation.
+pub fn run_task(task: &dyn Task) -> TaskResult {
+    task.run(ProgressReporter{
+        prev_task_progress: 0.0,
+        current_weight: 0.0,
+        sender: Box::new(ProgressSender::None),
+    })
+}
+
 /// Something that handles progress reporting. Unlike the progress sender, which simply handles
 /// moving a progress update from point A to point B, a progress reporter is what is provided to
 /// tasks to report their progress, where it is modified by its weighting and overall progress
@@ -90,7 +100,9 @@ pub enum ProgressSender {
     /// A sender that passes along the final value to a receiver.
     Sender(Sender<f64>),
     /// Another ProgressReporter, allowing for chaining multiple ProgressReporters together.
-    Reporter(ProgressReporter)
+    Reporter(ProgressReporter),
+    /// Progress is not actually sent anywhere
+    None
 }
 
 impl ProgressSender {
@@ -98,7 +110,8 @@ impl ProgressSender {
     pub fn raw_progress(&self, amount: f64) {
         match self {
             ProgressSender::Sender(sender) => _ = sender.send(amount),
-            ProgressSender::Reporter(progress_reporter) => progress_reporter.progress(amount)
+            ProgressSender::Reporter(progress_reporter) => progress_reporter.progress(amount),
+            ProgressSender::None => ()
         }
     }
 }
