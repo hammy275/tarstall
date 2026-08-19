@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::sync::mpsc::channel;
 use crate::task::{TaskResult, TaskRunner, Tasks};
 use crate::task::ProgressSender::Sender;
-use crate::tasks::file_transfer::{TransferFile, TransferMode};
+use crate::tasks::file_transfer::{FileTransfer, TransferMode};
 use crate::tasks::folder_transfer::create_folder_transfer;
 use crate::tasks::task_of_tasks::TaskOfTasks;
 
@@ -12,24 +12,24 @@ mod tasks;
 
 fn main() {
     // Basic file transfer
-    let task1 = TransferFile{
+    let task1 = FileTransfer {
         src: "tarstall.exe".parse().unwrap(),
         dst: "tarstall.exe2".parse().unwrap(),
         transfer_mode: TransferMode::COPY
     };
     // Another basic file transfer
-    let task2 = TransferFile{
+    let task2 = FileTransfer {
         src: "tarstall.exe".parse().unwrap(),
         dst: "tarstall.exe3".parse().unwrap(),
         transfer_mode: TransferMode::COPY
     };
     // A task of tasks
-    let sub_task1 = TransferFile{
+    let sub_task1 = FileTransfer {
         src: "tarstall.exe".parse().unwrap(),
         dst: "tarstall.exe4".parse().unwrap(),
         transfer_mode: TransferMode::COPY
     };
-    let sub_task2 = TransferFile{
+    let sub_task2 = FileTransfer {
         src: "tarstall.exe".parse().unwrap(),
         dst: "tarstall.exe5".parse().unwrap(),
         transfer_mode: TransferMode::COPY

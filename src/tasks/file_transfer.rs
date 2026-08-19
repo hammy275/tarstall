@@ -3,13 +3,13 @@ use std::path::{PathBuf};
 use crate::task::{ProgressReporter, Task, TaskResult, TaskRunner};
 
 /// Task to copy or move a singular file.
-pub struct TransferFile {
+pub struct FileTransfer {
     pub src: PathBuf,
     pub dst: PathBuf,
     pub transfer_mode: TransferMode
 }
 
-impl Task for TransferFile {
+impl Task for FileTransfer {
     fn run(&self, progress_reporter: ProgressReporter) -> TaskResult {
         if let Some(parent_path) = self.dst.parent() {
             let result = fs::create_dir_all(parent_path);

@@ -2,9 +2,10 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 use crate::task::Tasks;
-use crate::tasks::file_transfer::{TransferFile, TransferMode};
+use crate::tasks::file_transfer::{FileTransfer, TransferMode};
 use crate::tasks::task_of_tasks::TaskOfTasks;
 
+/// Create a task to move a folder and its contents from source to destination.
 pub fn create_folder_transfer(source: PathBuf, destination: PathBuf, transfer_mode: TransferMode) -> Option<TaskOfTasks> {
     let mut tasks: Tasks = Vec::new();
     let source_paths = walk(source.clone());
@@ -12,7 +13,7 @@ pub fn create_folder_transfer(source: PathBuf, destination: PathBuf, transfer_mo
         for src in paths {
             if let Ok(dst_stripped) = src.strip_prefix(source.clone()) {
                 let dst = destination.clone().join(dst_stripped);
-                tasks.push((Arc::new(TransferFile{
+                tasks.push((Arc::new(FileTransfer {
                     src,
                     dst,
                     transfer_mode
