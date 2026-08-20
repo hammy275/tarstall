@@ -12,6 +12,7 @@ pub struct FsCreate {
 
 impl Task for FsCreate {
     fn run(&self, progress_reporter: ProgressReporter) -> TaskResult {
+        progress_reporter.progress(0.0);
         match self.create_type {
             CreateType::FILE => {
                 let path = self.path.clone();
@@ -22,6 +23,7 @@ impl Task for FsCreate {
                         return folder_create.into()
                     }
                 }
+                progress_reporter.progress(0.05);
                 File::create(path).into()
             },
             CreateType::FOLDER => fs::create_dir_all(self.path.clone()).into()

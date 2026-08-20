@@ -31,6 +31,9 @@ impl TaskRunner {
                 let result: TaskResult = task.run(progress_reporter.clone());
                 match result {
                     TaskResult::Ok => {
+                        // Say that the task is done so the task itself doesn't have to.
+                        progress_reporter.progress(1.0);
+                        // Then prepare for the next task.
                         progress_reporter.prev_task_progress += weight
                     },
                     TaskResult::Err(_) => {
@@ -126,11 +129,11 @@ pub enum TaskResult {
     Err(String)
 }
 
-impl<T> From<std::io::Result<T>> for TaskResult {
-    fn from(io_result: std::io::Result<T>) -> Self {
-        match io_result {
+impl<O, E: ToString> From<Result<O, E>> for TaskResult {
+    fn from(result: Result<O, E>) -> Self {
+        match result {
             Ok(_) => TaskResult::Ok,
-            Err(error) => TaskResult::Err(error.to_string())
+            Err(err_msg) => TaskResult::Err(err_msg.to_string())
         }
     }
 }
