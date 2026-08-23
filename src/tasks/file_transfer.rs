@@ -53,3 +53,31 @@ pub enum TransferMode {
     COPY,
     MOVE
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use crate::task::run_task;
+    use crate::tasks::file_transfer::{FileTransfer, TransferMode};
+    use crate::util::get_temp_dir;
+
+    #[test]
+    fn test_copy_file() {
+        let file_contents = "test contents\ntest contents 2";
+        let tmp = get_temp_dir().unwrap();
+        let src = tmp.path.join("src.txt");
+        let dst = tmp.path.join("dst.txt");
+        fs::write(src.clone(), file_contents).unwrap();
+        let transfer_task = FileTransfer{
+            src: src.clone(),
+            dst: dst.clone(),
+            transfer_mode: TransferMode::COPY,
+        };
+        assert!(run_task(&transfer_task).is_ok());
+
+        assert!(fs::exists(src.clone()).unwrap());
+        assert!(fs::exists(dst.clone()).unwrap());
+        assert_eq!(fs::read_to_string(src).unwrap(), file_contents);
+        assert_eq!(fs::read_to_string(dst).unwrap(), file_contents);
+    }
+}

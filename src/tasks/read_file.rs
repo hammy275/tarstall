@@ -36,3 +36,30 @@ impl ReadFile {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use crate::task::run_task;
+    use crate::tasks::read_file::ReadFile;
+    use crate::util::get_temp_dir;
+
+    #[test]
+    fn test_read_file() {
+        let file_contents = "test contents\ntest contents 2";
+        let tmp = get_temp_dir().unwrap();
+        let path = tmp.path.join("file.txt");
+        fs::write(path.clone(), file_contents).unwrap();
+        let read_task = ReadFile::create(path);
+        assert!(run_task(&read_task).is_ok());
+        assert_eq!(read_task.contents.get().unwrap(), file_contents)
+    }
+
+    #[test]
+    fn test_read_missing_file() {
+        let tmp = get_temp_dir().unwrap();
+        let path = tmp.path.join("file.txt");
+        let read_task = ReadFile::create(path);
+        assert!(run_task(&read_task).is_err());
+    }
+}

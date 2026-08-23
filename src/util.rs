@@ -2,6 +2,7 @@ use std::{env, fs, io};
 use std::path::PathBuf;
 use std::time::{SystemTime};
 
+/// Get a temporary directory that will remove itself when dropped.
 pub fn get_temp_dir() -> Result<TempDir, String> {
     let tmp_root = env::temp_dir().join("tarstall");
     if let Ok(diff) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {

@@ -57,8 +57,8 @@ mod tests {
             path: path.clone(),
             create_type: CreateType::FILE
         };
-        run_task(&task).unwrap();
-        assert!(path.is_file())
+        assert!(run_task(&task).is_ok());
+        assert!(path.is_file());
     }
 
     #[test]
@@ -69,7 +69,7 @@ mod tests {
             path: path.clone(),
             create_type: CreateType::FOLDER
         };
-        run_task(&task).unwrap();
-        assert!(path.is_dir())
+        assert!(run_task(&task).is_ok());
+        assert!(path.is_dir());
     }
 }
