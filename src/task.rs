@@ -30,13 +30,13 @@ impl TaskRunner {
                 progress_reporter.current_weight = weight;
                 let result: TaskResult = task.run(progress_reporter.clone());
                 match result {
-                    TaskResult::Ok => {
+                    Ok(_) => {
                         // Say that the task is done so the task itself doesn't have to.
                         progress_reporter.progress(1.0);
                         // Then prepare for the next task.
                         progress_reporter.prev_task_progress += weight
                     },
-                    TaskResult::Err(_) => {
+                    Err(_) => {
                         todo!("Perform rollback");
                         return result
                     }
@@ -44,7 +44,7 @@ impl TaskRunner {
             }
             // Send exactly 1.0 to mark that we're done.
             progress_reporter.sender.raw_progress(1.0);
-            TaskResult::Ok
+            Ok(())
         })
     }
 
@@ -119,29 +119,17 @@ impl ProgressSender {
     }
 }
 
-/// The result of a task. Either a success (returning unit) or an error message.
-/// Doesn't use the pre-existing Result to avoid the .0 pattern from newtypes and to still allow
-/// implementing traits on it.
-pub enum TaskResult {
-    /// Task completed successfully.
-    Ok,
-    /// Task had some error with the provided error message.
-    Err(String)
+pub type TaskResult = Result<(), String>;
+
+pub trait ToTaskResultExt {
+    fn task_result(&self) -> TaskResult;
 }
 
-impl<O, E: ToString> From<Result<O, E>> for TaskResult {
-    fn from(result: Result<O, E>) -> Self {
-        match result {
-            Ok(_) => TaskResult::Ok,
-            Err(err_msg) => TaskResult::Err(err_msg.to_string())
-        }
-    }
-}
-
-impl TaskResult {
-    pub fn assert_ok(&self) {
-        if let TaskResult::Err(err_msg) = self {
-            assert!(false, "expected ok but got error {}", err_msg)
+impl<O, E: ToString> ToTaskResultExt for Result<O, E> {
+    fn task_result(&self) -> TaskResult {
+        match self {
+            Ok(_) => Ok(()),
+            Err(err) => Err(err.to_string())
         }
     }
 }

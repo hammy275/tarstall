@@ -8,11 +8,11 @@ pub fn get_temp_dir() -> Result<TempDir, String> {
         let maybe_subdir = diff.as_nanos().to_string();
         let path = tmp_root.join(maybe_subdir);
         return match fs::create_dir_all(path.clone()) {
-            Ok(_) => Result::Ok(TempDir{path}),
-            Err(err) => Result::Err(err.to_string())
+            Ok(_) => Ok(TempDir{path}),
+            Err(err) => Err(err.to_string())
         }
     }
-    Result::Err("cannot make temporary directory on system with time before Jan. 1 1970".to_string())
+    Err("cannot make temporary directory on system with time before Jan. 1 1970".to_string())
 }
 
 pub struct TempDir {

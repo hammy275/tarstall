@@ -1,7 +1,7 @@
 use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
-use crate::task::{ProgressReporter, Task, TaskResult};
+use crate::task::{ProgressReporter, Task, TaskResult, ToTaskResultExt};
 
 /// Task to create a file or folder on the filesystem at the specified path, creating folders as
 /// needed.
@@ -20,20 +20,20 @@ impl Task for FsCreate {
                 if let Some(valid_parent_path) = parent_path {
                     let folder_create = fs::create_dir_all(valid_parent_path);
                     if let Err(_) = folder_create {
-                        return folder_create.into()
+                        return folder_create.task_result()
                     }
                 }
                 progress_reporter.progress(0.05);
-                File::create(path).into()
+                File::create(path).task_result()
             },
-            CreateType::FOLDER => fs::create_dir_all(self.path.clone()).into()
+            CreateType::FOLDER => fs::create_dir_all(self.path.clone()).task_result()
         }
     }
 
     fn undo(&self) -> TaskResult {
         match self.create_type {
-            CreateType::FILE => fs::remove_file(self.path.clone()).into(),
-            CreateType::FOLDER => fs::remove_dir(self.path.clone()).into()
+            CreateType::FILE => fs::remove_file(self.path.clone()).task_result(),
+            CreateType::FOLDER => fs::remove_dir(self.path.clone()).task_result()
         }
     }
 }
@@ -57,7 +57,7 @@ mod tests {
             path: path.clone(),
             create_type: CreateType::FILE
         };
-        run_task(&task).assert_ok();
+        run_task(&task).unwrap();
         assert!(path.is_file())
     }
 
@@ -69,7 +69,7 @@ mod tests {
             path: path.clone(),
             create_type: CreateType::FOLDER
         };
-        run_task(&task).assert_ok();
+        run_task(&task).unwrap();
         assert!(path.is_dir())
     }
 }

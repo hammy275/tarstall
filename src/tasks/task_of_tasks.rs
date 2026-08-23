@@ -12,7 +12,7 @@ impl Task for TaskOfTasks {
                                                  ProgressSender::Reporter(parent_progress_reporter));
         task_runner.run_tasks()
             .join()
-            .unwrap_or_else(|_| TaskResult::Err("failed to join child task runner thread".to_string()))
+            .unwrap_or_else(|_| Err("failed to join child task runner thread".to_string()))
     }
 
     fn undo(&self) -> TaskResult {

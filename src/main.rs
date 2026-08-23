@@ -60,7 +60,7 @@ fn main() {
     let mut progress = 0.0;
     while (progress < 1.0) {
         match receiver.recv() {
-            Result::Ok(amount) => {
+            Ok(amount) => {
                 progress = amount;
                 println!("Progress: {}", progress)
             }
@@ -68,12 +68,12 @@ fn main() {
         }
     }
     match run_tasks_handle.join() {
-        Result::Ok(task_result) => {
+        Ok(task_result) => {
             match task_result {
-                TaskResult::Ok => println!("Done!"),
-                TaskResult::Err(msg) => println!("Error: {}", msg)
+                Ok(_) => println!("Done!"),
+                Err(msg) => println!("Error: {}", msg)
             }
         }
-        Result::Err(err) => println!("Join error")
+        Err(_) => println!("Join error")
     }
 }
