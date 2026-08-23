@@ -4,9 +4,9 @@ use std::sync::OnceLock;
 use crate::task::{ProgressReporter, Task, TaskResult};
 
 /// Task to read the contents of a file. The contents are stored in the contents variable.
-struct ReadFile {
+pub struct ReadFile {
     path: PathBuf,
-    contents: OnceLock<String>
+    pub contents: OnceLock<String>
 }
 
 impl Task for ReadFile {
@@ -25,5 +25,14 @@ impl Task for ReadFile {
 
     fn undo(&self) -> TaskResult {
         TaskResult::Ok
+    }
+}
+
+impl ReadFile {
+    pub fn create(path: PathBuf) -> ReadFile {
+        ReadFile{
+            path,
+            contents: OnceLock::new(),
+        }
     }
 }
