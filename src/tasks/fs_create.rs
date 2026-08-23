@@ -46,12 +46,12 @@ pub enum CreateType {
 #[cfg(test)]
 mod tests {
     use crate::task::run_task;
-    use crate::util::get_temp_dir;
+    use crate::util::temp_dir;
     use super::*;
 
     #[test]
     fn test_create_file() {
-        let tmp = get_temp_dir().unwrap();
+        let tmp = temp_dir().unwrap();
         let path = tmp.path.join("file.txt");
         let task = FsCreate{
             path: path.clone(),
@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn test_create_folder() {
-        let tmp = get_temp_dir().unwrap();
+        let tmp = temp_dir().unwrap();
         let path = tmp.path.join("folder");
         let task = FsCreate{
             path: path.clone(),

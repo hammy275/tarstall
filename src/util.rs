@@ -1,9 +1,18 @@
 use std::{env, fs, io};
+use std::cell::OnceCell;
 use std::path::PathBuf;
+use std::sync::{Arc, LazyLock, OnceLock};
 use std::time::{SystemTime};
 
+pub fn home_dir() -> PathBuf {
+    // tarstall assumes you have a home directory
+    env::home_dir().unwrap_or_else(|| {
+        panic!("tarstall cannot be run on a system without a home directory")
+    })
+}
+
 /// Get a temporary directory that will remove itself when dropped.
-pub fn get_temp_dir() -> Result<TempDir, String> {
+pub fn temp_dir() -> Result<TempDir, String> {
     let tmp_root = env::temp_dir().join("tarstall");
     if let Ok(diff) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
         let maybe_subdir = diff.as_nanos().to_string();

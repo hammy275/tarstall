@@ -59,12 +59,12 @@ mod tests {
     use std::fs;
     use crate::task::run_task;
     use crate::tasks::file_transfer::{FileTransfer, TransferMode};
-    use crate::util::get_temp_dir;
+    use crate::util::temp_dir;
 
     #[test]
     fn test_copy_file() {
         let file_contents = "test contents\ntest contents 2";
-        let tmp = get_temp_dir().unwrap();
+        let tmp = temp_dir().unwrap();
         let src = tmp.path.join("src.txt");
         let dst = tmp.path.join("dst.txt");
         fs::write(src.clone(), file_contents).unwrap();

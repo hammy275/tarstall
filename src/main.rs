@@ -5,7 +5,7 @@ use crate::task::ProgressSender::Sender;
 use crate::tasks::file_transfer::{FileTransfer, TransferMode};
 use crate::tasks::folder_transfer::create_folder_transfer;
 use crate::tasks::task_of_tasks::TaskOfTasks;
-use crate::util::{get_temp_dir, TempDir};
+use crate::util::{temp_dir, TempDir};
 
 mod program;
 mod task;
@@ -13,7 +13,7 @@ mod tasks;
 mod util;
 
 fn extra_get_tempdir() -> TempDir {
-    get_temp_dir().unwrap()
+    temp_dir().unwrap()
 }
 
 fn main() {
