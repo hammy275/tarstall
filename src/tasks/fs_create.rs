@@ -42,3 +42,34 @@ pub enum CreateType {
     FILE,
     FOLDER
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::task::run_task;
+    use crate::util::get_temp_dir;
+    use super::*;
+
+    #[test]
+    fn test_create_file() {
+        let tmp = get_temp_dir().unwrap();
+        let path = tmp.path.join("file.txt");
+        let task = FsCreate{
+            path: path.clone(),
+            create_type: CreateType::FILE
+        };
+        run_task(&task).assert_ok();
+        assert!(path.is_file())
+    }
+
+    #[test]
+    fn test_create_folder() {
+        let tmp = get_temp_dir().unwrap();
+        let path = tmp.path.join("folder");
+        let task = FsCreate{
+            path: path.clone(),
+            create_type: CreateType::FOLDER
+        };
+        run_task(&task).assert_ok();
+        assert!(path.is_dir())
+    }
+}

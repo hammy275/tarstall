@@ -138,6 +138,14 @@ impl<O, E: ToString> From<Result<O, E>> for TaskResult {
     }
 }
 
+impl TaskResult {
+    pub fn assert_ok(&self) {
+        if let TaskResult::Err(err_msg) = self {
+            assert!(false, "expected ok but got error {}", err_msg)
+        }
+    }
+}
+
 /// A task that performs some operation, marking progress using the provided task runner, then
 /// returns a success or failure.
 pub trait Task: Send + Sync {
