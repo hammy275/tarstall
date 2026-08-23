@@ -119,13 +119,17 @@ impl ProgressSender {
     }
 }
 
+/// The result of running a task.
 pub type TaskResult = Result<(), String>;
 
+/// An extension trait to allow converting other Results into TaskResults.
 pub trait ToTaskResultExt {
     fn task_result(&self) -> TaskResult;
 }
 
 impl<O, E: ToString> ToTaskResultExt for Result<O, E> {
+    /// Convert this result into a TaskResult. If this Result is Ok, it loses its result. If this
+    /// Result is an Err, the inner error is converted to a string.
     fn task_result(&self) -> TaskResult {
         match self {
             Ok(_) => Ok(()),
