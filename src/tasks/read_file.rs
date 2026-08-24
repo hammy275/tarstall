@@ -10,7 +10,7 @@ pub struct ReadFile {
 }
 
 impl Task for ReadFile {
-    fn run(&self, progress_reporter: ProgressReporter) -> TaskResult {
+    fn run(&self, _: ProgressReporter) -> TaskResult {
         let result = fs::read_to_string(self.path.clone());
         match result {
             Ok(contents) => {

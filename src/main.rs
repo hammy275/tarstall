@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::sync::mpsc::channel;
-use crate::task::{TaskResult, TaskRunner, Tasks};
+use crate::task::{TaskRunner, Tasks};
 use crate::task::ProgressSender::Sender;
 use crate::tasks::file_transfer::{FileTransfer, TransferMode};
 use crate::tasks::folder_transfer::create_folder_transfer;
@@ -58,7 +58,7 @@ fn main() {
     let mut task_runner = TaskRunner::create(tasks, Sender(sender));
     let run_tasks_handle = task_runner.run_tasks();
     let mut progress = 0.0;
-    while (progress < 1.0) {
+    while progress < 1.0 {
         match receiver.recv() {
             Ok(amount) => {
                 progress = amount;
