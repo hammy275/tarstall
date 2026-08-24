@@ -1,10 +1,11 @@
 use std::fmt::{Display, Formatter};
 use std::path::{PathBuf};
-use serde_json::{Value, Map};
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, Map, from_value, to_value};
 use crate::util::home_dir;
 
 /// Represents a single installed program via tarstall.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Program {
     /// The name of the program. This is also the name of the folder within the tarstall directory
     /// where this program is installed.
@@ -28,8 +29,11 @@ impl Display for Program {
 }
 
 impl Program {
-    pub fn serialize(&self) -> Value {
-        todo!("Add serialization")
+    pub fn serialize(&self) -> Option<Value> {
+        match to_value(self) {
+            Ok(res) => Some(res),
+            Err(_) => None
+        }
     }
 
     /// Deserialize inner-body of JSON to a Program.
@@ -38,15 +42,11 @@ impl Program {
             if map.contains_key("has_path") {
                 return old_deserialize(map, name)
             } else {
-                return deserialize(map, name)
+                return from_value(Value::Object(map)).unwrap_or(None)
             }
         }
         None
     }
-}
-
-fn deserialize(json: Map<String, Value>, name: &str) -> Option<Program> {
-    todo!("2.x deserialization")
 }
 
 fn old_deserialize(json: Map<String, Value>, name: &str) -> Option<Program> {
@@ -91,8 +91,10 @@ fn old_deserialize(json: Map<String, Value>, name: &str) -> Option<Program> {
         return None
     }
     // Update URL
-    let Ok(update_url) = deserialize_update_url(&json) else {
-        return None
+    let update_url = match json.get("update_url") {
+        Some(Value::Null) => None,
+        Some(Value::String(url)) => Some(url.to_string()),
+        _ => return None
     };
     let in_path;
     if let Some(Value::Bool(res)) = json.get("has_path") {
@@ -112,16 +114,8 @@ fn old_deserialize(json: Map<String, Value>, name: &str) -> Option<Program> {
     })
 }
 
-fn deserialize_update_url(json: &Map<String, Value>) -> Result<Option<String>, ()> {
-    match json.get("update_url") {
-        Some(Value::Null) => Ok(None),
-        Some(Value::String(url)) => Ok(Some(url.to_string())),
-        _ => Err(())
-    }
-}
-
 /// The method of how the program was installed and is kept up-to-date.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InstallType {
     /// Program was installed from an archive and is not a single file when extracted. String holds
     /// the file extension of the archive.
@@ -135,9 +129,10 @@ pub enum InstallType {
 #[cfg(test)]
 mod tests {
     use std::assert_matches;
-use serde_json::{Map, Value};
-    use crate::program::{deserialize, Program, InstallType};
-    use crate::program::InstallType::GIT;
+    use std::path::PathBuf;
+    use std::str::FromStr;
+    use serde_json::{Value};
+    use crate::program::{Program, InstallType};
 
     #[test]
     fn test_deserialize_old_tarstall_program() {
@@ -161,5 +156,29 @@ use serde_json::{Map, Value};
         assert_matches!(program.update_url, None);
         assert_matches!(program.in_path, true);
         // No assert for binlinks as we don't have those anymore
+    }
+
+    #[test]
+    fn test_deserialize_tarstall_program() {
+        let json_str = "{
+            \"name\": \"tarstall\",
+            \"install_type\": \"GIT\",
+            \"shortcut_paths\": [
+                \"/path/to/install_tarstall-tarstall.desktop\"
+            ],
+            \"post_update_script\": null,
+            \"update_url\": null,
+            \"in_path\": true
+        }";
+        let json: Value = serde_json::from_str(json_str).unwrap();
+        let program = Program::deserialize(json, "tarstall").unwrap();
+        assert_eq!(program, Program{
+            name: "tarstall".to_string(),
+            install_type: InstallType::GIT,
+            shortcut_paths: vec![PathBuf::from_str("/path/to/install_tarstall-tarstall.desktop").unwrap()],
+            post_update_script: None,
+            update_url: None,
+            in_path: true,
+        });
     }
 }
