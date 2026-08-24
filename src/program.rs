@@ -29,89 +29,70 @@ impl Display for Program {
 }
 
 impl Program {
-    pub fn serialize(&self) -> Option<Value> {
-        match to_value(self) {
-            Ok(res) => Some(res),
-            Err(_) => None
-        }
-    }
-
-    /// Deserialize inner-body of JSON to a Program.
-    pub fn deserialize(json: Value, name: &str) -> Option<Program> {
-        if let Value::Object(map) = json {
-            if map.contains_key("has_path") {
-                return old_deserialize(map, name)
-            } else {
-                return from_value(Value::Object(map)).unwrap_or(None)
+    pub fn old_deserialize(json: &Map<String, Value>, name: &str) -> Option<Program> {
+        let install_type = match json.get("install_type")?.as_str()? {
+            "default" => {
+                let update_archive_type = json.get("update_archive_type")?.as_str()?;
+                InstallType::ARCHIVE{update_archive_type: update_archive_type.to_string()}
             }
-        }
-        None
-    }
-}
-
-fn old_deserialize(json: Map<String, Value>, name: &str) -> Option<Program> {
-    let install_type = match json.get("install_type")?.as_str()? {
-        "default" => {
-            let update_archive_type = json.get("update_archive_type")?.as_str()?;
-            InstallType::ARCHIVE{update_archive_type: update_archive_type.to_string()}
-        }
-        "git" => InstallType::GIT,
-        "single" => InstallType::SINGLE,
-        _ => return None
-    };
-    let mut shortcut_paths: Vec<PathBuf> = Vec::new();
-    let Some(Value::Array(desktops)) = json.get("desktops") else {
-        return None
-    };
-    let home = home_dir();
-    for maybe_desktop in desktops {
-        let Value::String(desktop) = maybe_desktop else {
+            "git" => InstallType::GIT,
+            "single" => InstallType::SINGLE,
+            _ => return None
+        };
+        let mut shortcut_paths: Vec<PathBuf> = Vec::new();
+        let Some(Value::Array(desktops)) = json.get("desktops") else {
             return None
         };
-        shortcut_paths.push(home
-            .join(".local")
-            .join("share")
-            .join("applications")
-            .join("tarstall")
-            .join(desktop)
-            .with_extension(".desktop"))
-    }
-    // Post-update script
-    let post_update_script: Option<PathBuf>;
-    if let Some(value) = json.get("post_upgrade_script") {
-        match value {
-            Value::Null => post_update_script = None,
-            Value::String(path_str) => match path_str.parse::<PathBuf>() {
-                Ok(path) => post_update_script = Some(path),
-                Err(_) => return None
-            }
-            _ => return None
+        let home = home_dir();
+        for maybe_desktop in desktops {
+            let Value::String(desktop) = maybe_desktop else {
+                return None
+            };
+            shortcut_paths.push(home
+                .join(".local")
+                .join("share")
+                .join("applications")
+                .join("tarstall")
+                .join(desktop)
+                .with_extension(".desktop"))
         }
-    } else {
-        return None
+        // Post-update script
+        let post_update_script: Option<PathBuf>;
+        if let Some(value) = json.get("post_upgrade_script") {
+            match value {
+                Value::Null => post_update_script = None,
+                Value::String(path_str) => match path_str.parse::<PathBuf>() {
+                    Ok(path) => post_update_script = Some(path),
+                    Err(_) => return None
+                }
+                _ => return None
+            }
+        } else {
+            return None
+        }
+        // Update URL
+        let update_url = match json.get("update_url") {
+            Some(Value::Null) => None,
+            Some(Value::String(url)) => Some(url.to_string()),
+            _ => return None
+        };
+        let in_path;
+        if let Some(Value::Bool(res)) = json.get("has_path") {
+            in_path = *res
+        } else if let Some(Value::Bool(res)) = json.get("in_path") {
+            in_path = *res
+        } else {
+            return None
+        }
+        Some(Program{
+            name: name.to_string(),
+            install_type,
+            shortcut_paths,
+            post_update_script,
+            update_url,
+            in_path
+        })
     }
-    // Update URL
-    let update_url = match json.get("update_url") {
-        Some(Value::Null) => None,
-        Some(Value::String(url)) => Some(url.to_string()),
-        _ => return None
-    };
-    let in_path;
-    if let Some(Value::Bool(res)) = json.get("has_path") {
-        in_path = *res
-    } else if let Some(Value::Bool(res)) = json.get("in_path") {
-        in_path = *res
-    } else {
-        return None
-    }
-    Some(Program{
-        name: name.to_string(),
-        install_type,
-        shortcut_paths,
-        post_update_script,
-        update_url,
-        in_path
-    })
 }
 
 /// The method of how the program was installed and is kept up-to-date.
@@ -130,7 +111,8 @@ mod tests {
     use std::assert_matches;
     use std::path::PathBuf;
     use std::str::FromStr;
-    use serde_json::{Value};
+    use serde::Deserialize;
+    use serde_json::{Map, Value};
     use crate::program::{Program, InstallType};
 
     #[test]
@@ -147,37 +129,13 @@ mod tests {
                 \"install_tarstall\"
             ]
         }";
-        let json: Value = serde_json::from_str(json_str).unwrap();
-        let program = Program::deserialize(json, "tarstall").unwrap();
+        let json: Map<String, Value> = serde_json::from_str(json_str).unwrap();
+        let program = Program::old_deserialize(&json, "tarstall").unwrap();
         assert_eq!(program.install_type, InstallType::GIT);
         assert_eq!(program.shortcut_paths.len(), 1);
         assert_matches!(program.post_update_script, None);
         assert_matches!(program.update_url, None);
         assert_matches!(program.in_path, true);
         // No assert for binlinks as we don't have those anymore
-    }
-
-    #[test]
-    fn test_deserialize_tarstall_program() {
-        let json_str = "{
-            \"name\": \"tarstall\",
-            \"install_type\": \"GIT\",
-            \"shortcut_paths\": [
-                \"/path/to/install_tarstall-tarstall.desktop\"
-            ],
-            \"post_update_script\": null,
-            \"update_url\": null,
-            \"in_path\": true
-        }";
-        let json: Value = serde_json::from_str(json_str).unwrap();
-        let program = Program::deserialize(json, "tarstall").unwrap();
-        assert_eq!(program, Program{
-            name: "tarstall".to_string(),
-            install_type: InstallType::GIT,
-            shortcut_paths: vec![PathBuf::from_str("/path/to/install_tarstall-tarstall.desktop").unwrap()],
-            post_update_script: None,
-            update_url: None,
-            in_path: true,
-        });
     }
 }

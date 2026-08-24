@@ -11,6 +11,8 @@ mod program;
 mod task;
 mod tasks;
 mod util;
+mod db;
+mod config;
 
 fn extra_get_tempdir() -> TempDir {
     temp_dir().unwrap()
