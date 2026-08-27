@@ -37,6 +37,26 @@ pub struct Version {
     pub branch: String
 }
 
+/// Retrieve a database used to represent a database that hasn't been loaded yet.
+pub const fn empty_db() -> Database {
+    Database{
+        options: Options {
+            verbose: false,
+            auto_install: false,
+            shell_file: None,
+            skip_questions: false,
+            update_url_programs: false,
+            press_enter_key: true,
+        },
+        version: Version {
+            file_version: FILE_VERSION,
+            program_internal_version: INTERNAL_PROGRAM_VERSION,
+            branch: String::new(),
+        },
+        programs: Vec::new(),
+    }
+}
+
 /// Retrieve a copy of the default database for fresh tarstall installations.
 pub fn default_db() -> Database {
     Database{
@@ -59,7 +79,7 @@ pub fn default_db() -> Database {
 
 /// Serialize a database to JSON.
 pub fn serialize(db: &Database) -> Option<String> {
-    serde_json::to_string(db).ok()
+    serde_json::to_string_pretty(db).ok()
 }
 
 /// Deserialize a database from JSON.

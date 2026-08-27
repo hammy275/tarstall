@@ -78,4 +78,5 @@ fn main() {
         }
         Err(_) => println!("Join error")
     }
+    config::load().unwrap()
 }
