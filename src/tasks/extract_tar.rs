@@ -1,10 +1,12 @@
 use std::{fs};
 use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use flate2::read::GzDecoder;
+use lzma_rust2::XzReader;
 use tar::Archive;
 use crate::task::{ProgressReporter, Task, TaskResult, ToTaskResultExt};
-use crate::tasks::extract_tar::ExtractTarMode::{Tar, TarGz};
+use crate::tasks::extract_tar::ExtractTarMode::{Tar, TarGz, TarXz};
 
 pub struct ExtractTar {
     pub src: PathBuf,
@@ -21,13 +23,22 @@ impl Task for ExtractTar {
         progress_reporter.progress(0.05);
         match File::open(self.src.clone()) {
             Ok(file) => {
-                if mode == TarGz {
-                    let tar = GzDecoder::new(file);
-                    let mut archive = Archive::new(tar);
-                    archive.unpack(self.dst.clone()).task_result()
-                } else {
-                    let mut archive = Archive::new(file);
-                    archive.unpack(self.dst.clone()).task_result()
+                match mode {
+                    Tar => {
+                        let archive = Archive::new(file);
+                        self.unpack(archive)
+                    }
+                    TarGz => {
+                        let gz = GzDecoder::new(file);
+                        let archive = Archive::new(gz);
+                        self.unpack(archive)
+                    }
+                    TarXz => {
+                        let xz = XzReader::new(file, true);
+                        let archive = Archive::new(xz);
+                        self.unpack(archive)
+                    }
+                    ExtractTarMode::Auto => panic!("should be unreachable")
                 }
             }
             Err(err) => Err(err.to_string())
@@ -47,6 +58,8 @@ impl ExtractTar {
             };
             if path_str.ends_with(".tar.gz") {
                 Ok(TarGz)
+            } else if path_str.ends_with(".tar.xz") {
+                Ok(TarXz)
             } else if path_str.ends_with(".tar") {
                 Ok(Tar)
             } else {
@@ -56,12 +69,17 @@ impl ExtractTar {
             Ok(self.mode)
         }
     }
+
+    fn unpack<T: Read>(&self, mut archive: Archive<T>) -> TaskResult {
+        archive.unpack(self.dst.clone()).task_result()
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum ExtractTarMode {
     Tar,
     TarGz,
+    TarXz,
     Auto
 }
 
@@ -72,10 +90,11 @@ mod tests {
     use std::str::FromStr;
     use flate2::Compression;
     use flate2::write::GzEncoder;
+    use lzma_rust2::{XzOptions, XzWriter};
     use tar::Builder;
     use crate::task::run_task;
     use crate::tasks::extract_tar::{ExtractTar, ExtractTarMode};
-    use crate::tasks::extract_tar::ExtractTarMode::{Auto, Tar, TarGz};
+    use crate::tasks::extract_tar::ExtractTarMode::{Auto, Tar, TarGz, TarXz};
     use crate::util::temp_dir;
 
     #[test]
@@ -120,6 +139,33 @@ mod tests {
         let file = File::create(path.clone()).unwrap();
         let file_gz = GzEncoder::new(file, Compression::fast());
         let mut builder = Builder::new(file_gz);
+        builder.append_path(PathBuf::from_str("./.gitignore").unwrap()).unwrap();
+        builder.into_inner().unwrap();
+
+        let task = ExtractTar{
+            src: path,
+            dst: temp_dir.path.clone(),
+            mode,
+        };
+        assert!(run_task(&task).is_ok());
+    }
+
+    #[test]
+    fn test_tar_xz_extraction() {
+        do_test_tar_xz_extraction(TarXz)
+    }
+
+    #[test]
+    fn test_tar_xz_extraction_auto() {
+        do_test_tar_xz_extraction(Auto)
+    }
+
+    fn do_test_tar_xz_extraction(mode: ExtractTarMode) {
+        let temp_dir = temp_dir().unwrap();
+        let path = temp_dir.path.join("test.tar.xz");
+        let file = File::create(path.clone()).unwrap();
+        let file_xz = XzWriter::new(file, XzOptions::default()).unwrap().auto_finish();
+        let mut builder = Builder::new(file_xz);
         builder.append_path(PathBuf::from_str("./.gitignore").unwrap()).unwrap();
         builder.into_inner().unwrap();
 
