@@ -1,13 +1,7 @@
-use serde::{Deserialize, Serialize};
-use serde_json::{from_str, json, Value, to_string};
+use crate::config::{FILE_VERSION, INTERNAL_PROGRAM_VERSION};
 use crate::program::Program;
-
-/// The database version tarstall uses. Should be incremented whenever tarstall needs to perform
-/// database changes.
-pub static FILE_VERSION: u32 = 22;
-/// The internal program version tarstall uses. Should be incremented whenever tarstall as a
-/// program updates.
-pub static INTERNAL_PROGRAM_VERSION: u32 = 144;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, from_str};
 
 /// The in-memory representation of tarstall's database.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -119,7 +113,7 @@ pub fn deserialize(json_str: &str) -> Option<Database> {
 
 #[cfg(test)]
 mod tests {
-    use crate::db::{deserialize, Database, Options, Version};
+    use crate::db::{Database, Options, Version, deserialize};
     use crate::program::{InstallType, Program};
 
     #[test]

@@ -1,16 +1,23 @@
-use std::env;
-use std::path::{Path, PathBuf};
-use std::sync::{ OnceLock, RwLock, RwLockWriteGuard};
-use crate::{db, tasks};
 use crate::db::{Database, empty_db};
-use crate::task::{run_task,};
+use crate::task::run_task;
 use crate::tasks::fs_create::{CreateType, FsCreate};
 use crate::tasks::read_file::ReadFile;
 use crate::util::home_dir;
+use crate::{db, tasks};
+use std::env;
+use std::path::{Path, PathBuf};
+use std::sync::{OnceLock, RwLock, RwLockWriteGuard};
 
 /// tarstall's user-facing version number
 pub static VERSION: &str = "2.0.0";
+/// The database version tarstall uses. Should be incremented whenever tarstall needs to perform
+/// database changes.
+pub static FILE_VERSION: u32 = 22;
+/// The internal program version tarstall uses. Should be incremented whenever tarstall as a
+/// program updates.
+pub static INTERNAL_PROGRAM_VERSION: u32 = 144;
 /// Mutex holding the database. Should call load() before accessing.
+/// Safe to simply unwrap(), as if that fails, then we've already panic()'d.
 pub static DB: RwLock<Database> = RwLock::new(empty_db());
 /// Path to tarstall home directory. Should call load() before accessing.
 static HOME: OnceLock<&Path> = OnceLock::new();
