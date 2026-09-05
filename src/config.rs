@@ -1,7 +1,6 @@
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{ OnceLock, RwLock, RwLockWriteGuard};
-use serde_json::to_string;
 use crate::{db, tasks};
 use crate::db::{Database, empty_db};
 use crate::task::{run_task,};
@@ -9,6 +8,8 @@ use crate::tasks::fs_create::{CreateType, FsCreate};
 use crate::tasks::read_file::ReadFile;
 use crate::util::home_dir;
 
+/// tarstall's user-facing version number
+pub static VERSION: &str = "2.0.0";
 /// Mutex holding the database. Should call load() before accessing.
 pub static DB: RwLock<Database> = RwLock::new(empty_db());
 /// Path to tarstall home directory. Should call load() before accessing.
