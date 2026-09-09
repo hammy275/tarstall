@@ -1,9 +1,9 @@
+use crate::task::Tasks;
+use crate::tasks::file::file_transfer::{FileTransfer, TransferMode};
+use crate::tasks::file::task_of_tasks::TaskOfTasks;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
-use crate::task::Tasks;
-use crate::tasks::file_transfer::{FileTransfer, TransferMode};
-use crate::tasks::task_of_tasks::TaskOfTasks;
 
 /// Create a task to move a folder and its contents from source to destination.
 pub fn create_folder_transfer(source: PathBuf, destination: PathBuf, transfer_mode: TransferMode) -> Option<TaskOfTasks> {

@@ -1,7 +1,7 @@
+use crate::task::{ProgressReporter, Task, TaskResult, ToTaskResultExt};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use crate::task::{ProgressReporter, Task, TaskResult, ToTaskResultExt};
 
 /// Task to read the contents of a file. The contents are stored in the contents variable.
 pub struct ReadFile {
@@ -39,10 +39,10 @@ impl ReadFile {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use crate::task::run_task;
-    use crate::tasks::read_file::ReadFile;
+    use crate::tasks::file::read_file::ReadFile;
     use crate::util::temp_dir;
+    use std::fs;
 
     #[test]
     fn test_read_file() {

@@ -96,7 +96,7 @@ impl Program {
 }
 
 /// The method of how the program was installed and is kept up-to-date.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub enum InstallType {
     /// Program was installed from an archive and is not a single file when extracted.
     ARCHIVE{update_archive_type: String},

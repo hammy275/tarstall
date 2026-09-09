@@ -1,12 +1,13 @@
 use crate::db::{Database, empty_db};
 use crate::task::run_task;
-use crate::tasks::fs_create::{CreateType, FsCreate};
-use crate::tasks::read_file::ReadFile;
+use crate::tasks::file::fs_create::{CreateType, FsCreate};
+use crate::tasks::file::read_file::ReadFile;
 use crate::util::home_dir;
-use crate::{db, tasks};
+use crate::db;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{OnceLock, RwLock, RwLockWriteGuard};
+use crate::tasks::file::write_file::WriteFile;
 
 /// tarstall's user-facing version number
 pub static VERSION: &str = "2.0.0";
@@ -76,7 +77,7 @@ pub fn save_db(db: RwLockWriteGuard<Database>) -> Result<(), String> {
     match db::serialize(&db) {
         Some(str) => {
             let db_path = tarstall_home().join("database");
-            let save_task = tasks::write_file::WriteFile::create(db_path, str);
+            let save_task = WriteFile::create(db_path, str);
             run_task(&save_task)
         },
         None => Err("Failed to serialize database".to_string())

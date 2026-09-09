@@ -1,8 +1,8 @@
+use crate::task::{ProgressReporter, Task, TaskResult, ToTaskResultExt, run_task};
+use crate::tasks::file::read_file::ReadFile;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use crate::task::{run_task, ProgressReporter, Task, TaskResult, ToTaskResultExt};
-use crate::tasks::read_file::ReadFile;
 
 /// Task to read the contents of a file. The contents are stored in the contents variable.
 pub struct WriteFile {
