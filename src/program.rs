@@ -5,7 +5,7 @@ use serde_json::{Value, Map, from_value, to_value};
 use crate::util::home_dir;
 
 /// Represents a single installed program via tarstall.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub struct Program {
     /// The name of the program. This is also the name of the folder within the tarstall directory
     /// where this program is installed.
