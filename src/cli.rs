@@ -1,8 +1,9 @@
 use clap::{Args, Parser, Subcommand};
+use crate::install::install;
 
 #[derive(Parser, Debug)]
 #[command(about)]
-pub struct TarstallCli {
+pub struct TarstallArgs {
     #[arg(short, long, default_value_t = false)]
     /// Enables verbose mode for this run of tarstall
     pub verbose: bool,
@@ -58,6 +59,20 @@ pub struct UpdateArgs {
     pub program: Option<String>
 }
 
-pub fn get_args() -> TarstallCli {
-    TarstallCli::parse()
+pub fn get_args() -> TarstallArgs {
+    TarstallArgs::parse()
+}
+
+pub fn run(args: &TarstallArgs) -> Result<(), String> {
+    match args.command {
+        Command::Install(ref install_args) => install(install_args),
+        Command::Remove(_) => todo!(),
+        Command::List { .. } => todo!(),
+        Command::First { .. } => todo!(),
+        Command::Erase { .. } => todo!(),
+        Command::Update(_) => todo!(),
+        Command::Manage(_) => todo!(),
+        Command::RemoveLock { .. } => todo!(),
+        Command::Config { .. } => todo!(),
+    }
 }

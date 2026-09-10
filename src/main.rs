@@ -8,6 +8,8 @@ mod util;
 mod db;
 mod config;
 mod cli;
+mod install;
+
 fn main() {
     if let Err(err) = config::load() {
         println!("Failed to load tarstall database: {}", err);
