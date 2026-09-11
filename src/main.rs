@@ -1,5 +1,6 @@
 use std::env;
 use std::process::exit;
+use crate::ui::{cli_ui, UI};
 
 mod program;
 mod task;
@@ -7,8 +8,9 @@ mod tasks;
 mod util;
 mod db;
 mod config;
-mod cli;
+mod args;
 mod install;
+mod ui;
 
 fn main() {
     if let Err(err) = config::load() {
@@ -30,7 +32,11 @@ For additional help, visit the tarstall wiki: https://github.com/hammy275/tarsta
             config::VERSION, config::FILE_VERSION, config::INTERNAL_PROGRAM_VERSION,
             config::DB.read().unwrap().version.branch)
     } else {
-        let cli = cli::get_args();
-        println!("{:?}", cli)
+        let args = args::get_args();
+        let mut ui = Box::new(cli_ui::new());
+        match args::run(&args, &mut *ui) {
+            Ok(_) => {}
+            Err(msg) => println!("Error: {}", msg)
+        }
     }
 }

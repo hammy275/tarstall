@@ -1,5 +1,6 @@
 use clap::{Args, Parser, Subcommand};
 use crate::install::install;
+use crate::ui::UI;
 
 #[derive(Parser, Debug)]
 #[command(about)]
@@ -63,9 +64,9 @@ pub fn get_args() -> TarstallArgs {
     TarstallArgs::parse()
 }
 
-pub fn run(args: &TarstallArgs) -> Result<(), String> {
+pub fn run(args: &TarstallArgs, ui: &mut dyn UI) -> Result<(), String> {
     match args.command {
-        Command::Install(ref install_args) => install(install_args),
+        Command::Install(ref install_args) => install(install_args, ui),
         Command::Remove(_) => todo!(),
         Command::List { .. } => todo!(),
         Command::First { .. } => todo!(),

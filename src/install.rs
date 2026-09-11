@@ -1,14 +1,67 @@
 use std::path::PathBuf;
-use crate::cli::InstallArgs;
+use std::sync::{Arc};
+use crate::args::InstallArgs;
+use crate::config::tarstall_home;
 use crate::install::InstallSource::{File, Folder, Git, Url};
+use crate::program::InstallType;
+use crate::program::InstallType::DEFAULT;
+use crate::task::{Task, TaskWithWeight, Tasks};
+use crate::tasks::db::add_program::AddProgram;
+use crate::tasks::file::exctract_zip::ExtractZip;
+use crate::tasks::file::extract_tar::{ExtractTar, ExtractTarMode};
+use crate::tasks::file::file_transfer::TransferMode;
+use crate::tasks::file::folder_transfer::create_folder_transfer;
+use crate::ui::UI;
+use crate::util::wait_for_tasks;
 
-pub fn install(args: &InstallArgs) -> Result<(), String> {
+pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> Result<(), String> {
     let source = parse_source(args.source.clone())?;
     let name = match &args.name {
         None => get_name(&source).ok_or("Name could not be automatically determined, please provide a name for this program".to_string())?,
         Some(name) => name.clone()
     };
-    todo!("finish install() implementation")
+
+    let dst = tarstall_home().join("bin").join(name.clone());
+    let mut tasks: Tasks = Vec::new();
+    match source {
+        Url(_) => todo!("url install unimplemented"),
+        File(ref file_path) => tasks.push(get_file_extract_task(file_path, &dst)),
+        Folder(ref folder_path) => match create_folder_transfer(folder_path.to_path_buf(), dst.clone(), TransferMode::COPY) {
+            Some(folder_transfer) => tasks.push((Arc::new(folder_transfer), 100.0)),
+            None => return Err("failed to get directories for copying".to_string())
+        }
+        Git(_) => todo!("git install unimplemented"),
+    }
+    tasks.push((Arc::new(AddProgram{
+        name,
+        install_type: match source {
+            Url(_) => todo!("url install unimplemented"),
+            // Both unwraps here are safe as they are in get_file_extract_task()
+            File(ref file_path) => DEFAULT {update_archive_type: Some(file_path.extension().unwrap().to_str().unwrap().to_string())},
+            Folder(_) => DEFAULT {update_archive_type: None},
+            Git(_) => todo!("git install unimplemented")
+        },
+        update_url: None,
+    }), 1.0));
+    wait_for_tasks(tasks, ui)
+}
+
+fn get_file_extract_task(file_path: &PathBuf, dst: &PathBuf) -> TaskWithWeight {
+    // First unwrap safe since File() means there is a file extension already.
+    // Second unwrap safe since it came from a string earlier anyway
+    let extension = file_path.extension().unwrap().to_str().unwrap();
+    if extension.to_lowercase() == "zip" {
+        (Arc::new(ExtractZip{
+            src: file_path.to_path_buf(),
+            dst: dst.clone(),
+        }), 1.0)
+    } else {
+        (Arc::new(ExtractTar{
+            src: file_path.to_path_buf(),
+            dst: dst.clone(),
+            mode: ExtractTarMode::Auto,
+        }), 1.0)
+    }
 }
 
 fn parse_source(source: String) -> Result<InstallSource, String> {

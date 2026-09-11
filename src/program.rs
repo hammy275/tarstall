@@ -32,8 +32,8 @@ impl Program {
     pub fn old_deserialize(json: &Map<String, Value>, name: &str) -> Option<Program> {
         let install_type = match json.get("install_type")?.as_str()? {
             "default" => {
-                let update_archive_type = json.get("update_archive_type")?.as_str()?;
-                InstallType::ARCHIVE{update_archive_type: update_archive_type.to_string()}
+                let update_archive_type = json.get("update_archive_type")?.as_str().map(| str | { str.to_string() });
+                InstallType::DEFAULT {update_archive_type }
             }
             "git" => InstallType::GIT,
             "single" => InstallType::SINGLE,
@@ -98,8 +98,8 @@ impl Program {
 /// The method of how the program was installed and is kept up-to-date.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub enum InstallType {
-    /// Program was installed from an archive and is not a single file when extracted.
-    ARCHIVE{update_archive_type: String},
+    /// Program was installed from an archive or folder and is not a single file when extracted.
+    DEFAULT {update_archive_type: Option<String>},
     /// Program was installed via git.
     GIT,
     /// Program is a single file when extracted.

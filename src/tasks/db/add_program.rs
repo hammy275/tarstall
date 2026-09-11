@@ -1,4 +1,3 @@
-use std::sync::LockResult;
 use crate::config::{save_db, DB};
 use crate::program::{InstallType, Program};
 use crate::task::{ProgressReporter, Task, TaskResult};

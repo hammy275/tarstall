@@ -1,6 +1,31 @@
 use std::{env, fs};
 use std::path::PathBuf;
+use std::sync::mpsc;
 use std::time::{SystemTime};
+use crate::task::{ProgressSender, TaskRunner, Tasks};
+use crate::ui::UI;
+
+pub fn wait_for_tasks(tasks: Tasks, ui: &mut dyn UI) -> Result<(), String> {
+    let (sender, receiver) = mpsc::channel();
+    let mut task_runner = TaskRunner::create(tasks, ProgressSender::Sender(sender));
+    let handle = task_runner.run_tasks();
+    // TODO: Handle the error case (progress won't hit 1.0 if a task errors out)
+    loop {
+        match receiver.recv() {
+            Ok(progress) => {
+                ui.progress(progress);
+                if progress == 1.0 {
+                    break
+                }
+            },
+            Err(_) => break
+        }
+    }
+    match handle.join() {
+        Ok(result) => result,
+        Err(_) => Err("task thread panicked".to_string())
+    }
+}
 
 pub fn home_dir() -> PathBuf {
     // tarstall assumes you have a home directory

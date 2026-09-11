@@ -178,7 +178,7 @@ mod tests {
             programs: vec![
                 Program{
                     name: "archive_program".to_string(),
-                    install_type: InstallType::ARCHIVE {update_archive_type: ".tar.gz".to_string()},
+                    install_type: InstallType::DEFAULT {update_archive_type: Some(".tar.gz".to_string())},
                     shortcut_paths: Vec::new(),
                     post_update_script: None,
                     update_url: Some("https://example.com/archive_program.tar.gz".to_string()),

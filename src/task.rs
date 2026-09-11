@@ -26,6 +26,7 @@ impl TaskRunner {
             sender: Box::new(self.progress_sender.clone()),
         };
         thread::spawn(move || {
+            progress_reporter.sender.raw_progress(0.0);
             for (task, weight) in tasks {
                 progress_reporter.current_weight = weight;
                 let result: TaskResult = task.run(progress_reporter.clone());

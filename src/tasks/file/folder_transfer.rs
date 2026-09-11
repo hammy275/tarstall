@@ -18,8 +18,12 @@ pub fn create_folder_transfer(source: PathBuf, destination: PathBuf, transfer_mo
                     dst,
                     transfer_mode
                 }), 1.0))
+            } else {
+                return None
             }
         }
+    } else {
+        return None
     }
     Some(TaskOfTasks{ tasks })
 
