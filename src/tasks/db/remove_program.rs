@@ -3,7 +3,7 @@ use crate::config::{save_db, DB};
 use crate::program::Program;
 use crate::task::{ProgressReporter, Task, TaskResult};
 
-struct RemoveProgram {
+pub struct RemoveProgram {
     name: String,
     old_program: OnceLock<Program>
 }
@@ -37,6 +37,15 @@ impl Task for RemoveProgram {
                 db.programs.push(program.clone());
                 save_db(db)
             }
+        }
+    }
+}
+
+impl RemoveProgram {
+    pub fn create(name: String) -> RemoveProgram {
+        RemoveProgram{
+            name,
+            old_program: OnceLock::new(),
         }
     }
 }

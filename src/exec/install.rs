@@ -1,11 +1,8 @@
-use std::path::PathBuf;
-use std::sync::{Arc};
 use crate::args::InstallArgs;
-use crate::config::tarstall_home;
-use crate::install::InstallSource::{File, Folder, Git, Url};
-use crate::program::InstallType;
+use crate::config::{has_program, tarstall_home};
+use crate::exec::install::InstallSource::{File, Folder, Git, Url};
 use crate::program::InstallType::DEFAULT;
-use crate::task::{Task, TaskWithWeight, Tasks};
+use crate::task::{Task, TaskResult, TaskWithWeight, Tasks};
 use crate::tasks::db::add_program::AddProgram;
 use crate::tasks::file::exctract_zip::ExtractZip;
 use crate::tasks::file::extract_tar::{ExtractTar, ExtractTarMode};
@@ -13,14 +10,18 @@ use crate::tasks::file::file_transfer::TransferMode;
 use crate::tasks::file::folder_transfer::create_folder_transfer;
 use crate::ui::UI;
 use crate::util::wait_for_tasks;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> Result<(), String> {
+pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
     let source = parse_source(args.source.clone())?;
     let name = match &args.name {
         None => get_name(&source).ok_or("Name could not be automatically determined, please provide a name for this program".to_string())?,
         Some(name) => name.clone()
     };
-
+    if has_program(name.as_str()) {
+        return Err(format!("{} is already installed!", name))
+    }
     let dst = tarstall_home().join("bin").join(name.clone());
     let mut tasks: Tasks = Vec::new();
     match source {
@@ -121,9 +122,9 @@ enum InstallSource {
 
 #[cfg(test)]
 mod tests {
+    use crate::exec::install::InstallSource::{File, Folder, Git, Url};
+    use crate::exec::install::{get_name, parse_source};
     use std::path::PathBuf;
-    use crate::install::InstallSource::{File, Folder, Git, Url};
-    use crate::install::{get_name, parse_source};
 
     #[test]
     fn test_parse_url() {
@@ -160,30 +161,30 @@ mod tests {
     #[test]
     fn test_parse_file() {
         let res = parse_source("./Cargo.toml".to_string());
-        assert_eq!(res.clone().unwrap(), File(PathBuf::from("./Cargo.toml").canonicalize().unwrap()));
+        assert_eq!(res.clone().unwrap(), File(PathBuf::from("../../Cargo.toml").canonicalize().unwrap()));
         let res2 = parse_source("Cargo.toml".to_string());
-        assert_eq!(res2.clone().unwrap(), File(PathBuf::from("./Cargo.toml").canonicalize().unwrap()));
+        assert_eq!(res2.clone().unwrap(), File(PathBuf::from("../../Cargo.toml").canonicalize().unwrap()));
         assert_eq!(res.unwrap(), res2.unwrap());
     }
 
     #[test]
     fn test_get_name_file() {
-        let res = get_name(&File(PathBuf::from("./Cargo.toml")));
+        let res = get_name(&File(PathBuf::from("../../Cargo.toml")));
         assert_eq!(res.unwrap(), "Cargo".to_string());
     }
 
     #[test]
     fn test_parse_folder() {
         let res = parse_source("./src".to_string());
-        assert_eq!(res.clone().unwrap(), Folder(PathBuf::from("./src").canonicalize().unwrap()));
+        assert_eq!(res.clone().unwrap(), Folder(PathBuf::from("..").canonicalize().unwrap()));
         let res2 = parse_source("src".to_string());
-        assert_eq!(res2.clone().unwrap(), Folder(PathBuf::from("./src").canonicalize().unwrap()));
+        assert_eq!(res2.clone().unwrap(), Folder(PathBuf::from("..").canonicalize().unwrap()));
         assert_eq!(res.unwrap(), res2.unwrap())
     }
 
     #[test]
     fn test_get_name_folder() {
-        let res = get_name(&Folder(PathBuf::from("./src")));
+        let res = get_name(&Folder(PathBuf::from("..")));
         assert_eq!(res.unwrap(), "src".to_string());
     }
 }

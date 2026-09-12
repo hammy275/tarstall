@@ -1,6 +1,6 @@
+use crate::ui::{UI, cli_ui};
 use std::env;
 use std::process::exit;
-use crate::ui::{cli_ui, UI};
 
 mod program;
 mod task;
@@ -9,8 +9,8 @@ mod util;
 mod db;
 mod config;
 mod args;
-mod install;
 mod ui;
+mod exec;
 
 fn main() {
     if let Err(err) = config::load() {

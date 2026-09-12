@@ -7,6 +7,7 @@ use crate::db;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{OnceLock, RwLock, RwLockWriteGuard};
+use crate::program::Program;
 use crate::tasks::file::write_file::WriteFile;
 
 /// tarstall's user-facing version number
@@ -82,4 +83,12 @@ pub fn save_db(db: RwLockWriteGuard<Database>) -> Result<(), String> {
         },
         None => Err("Failed to serialize database".to_string())
     }
+}
+
+
+/// Whether a program with the provided name exists.
+pub fn has_program(name: &str) -> bool {
+    DB.read().unwrap().programs.iter()
+        .find(| program | { program.name == name })
+        .is_some()
 }
