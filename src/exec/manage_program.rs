@@ -1,7 +1,6 @@
 use std::env::consts::OS;
 use std::string::ToString;
 use directories::UserDirs;
-use lnks::Shortcut;
 use crate::args::ProgramArgs;
 use crate::config::{has_program, tarstall_home};
 use crate::task::TaskResult;
@@ -30,7 +29,9 @@ pub fn manage(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
     }
 }
 
+#[cfg(target_os = "windows")]
 fn windows_shortcut(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
+    use lnks::Shortcut; // use in here since it's Windows-only
     // Note: Windows shortcuts are not tracked in tarstall's database since they're easily-visible
     // files.
     match ui.ask_file(tarstall_home().join("bin").join(args.program.clone())) {
@@ -48,4 +49,9 @@ fn windows_shortcut(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
         },
         Err(err) => Err(err)
     }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn windows_shortcut(_: &ProgramArgs, _: &mut dyn UI) -> TaskResult {
+    Err("Windows shortcut creation is only supported on Windows.".to_string())
 }
