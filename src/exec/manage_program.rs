@@ -3,6 +3,7 @@ use std::string::ToString;
 use directories::UserDirs;
 use crate::args::ProgramArgs;
 use crate::config::{has_program, tarstall_home};
+use crate::exec::remove::remove;
 use crate::task::TaskResult;
 use crate::ui::{ChooseOption, UI};
 
@@ -16,6 +17,8 @@ pub fn manage(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
     } else if OS == "linux" {
         // TODO: Linux .desktop support
     }
+    let remove_msg = format!("Remove {}", args.program);
+    opts.push(ChooseOption{ short: "r", msg: remove_msg.as_str() });
     opts.push(ChooseOption{ short: "e", msg: "Exit" });
     loop {
         let choice = ui.choose("Select an option: ".to_string(), &opts);
@@ -23,6 +26,7 @@ pub fn manage(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
             "s" => if let Err(err) = windows_shortcut(args, ui) {
                 return Err(err)
             }
+            "r" => return remove(args, ui),
             "e" => return Ok(()),
             _ => return Err("Invalid option".to_string())
         }
