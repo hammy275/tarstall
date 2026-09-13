@@ -15,7 +15,14 @@ pub trait UI {
     /// previous rules.
     fn progress(&mut self, progress: f64) -> ();
     /// Ask the user the provided message and require them to pick one of the provided options.
-    fn choose(&mut self, msg: String, options: Vec<String>) -> usize;
+    fn choose(&mut self, msg: String, options: &Vec<ChooseOption>) -> usize;
     /// Ask the user to select a file.
-    fn ask_file(&mut self) -> PathBuf;
+    fn ask_file(&mut self, root_path: PathBuf) -> Result<PathBuf, String>;
+}
+
+pub struct ChooseOption<'a> {
+    /// Short input for CLI.
+    pub short: &'a str,
+    /// Message to show for the question.
+    pub msg: &'a str
 }
