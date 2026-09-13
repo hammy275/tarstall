@@ -55,7 +55,7 @@ impl Task for ExtractZip {
                     use std::os::unix::fs::PermissionsExt;
 
                     if let Some(mode) = file.unix_mode() {
-                        if let Err(err) = fs::set_permissions(&out_path, Permissions::from_mode(mode)) {
+                        if let Err(err) = fs::set_permissions(&out_path, PermissionsExt::from_mode(mode)) {
                             return Err(err.to_string())
                         }
                     }
