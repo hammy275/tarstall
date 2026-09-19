@@ -161,30 +161,30 @@ mod tests {
     #[test]
     fn test_parse_file() {
         let res = parse_source("./Cargo.toml".to_string());
-        assert_eq!(res.clone().unwrap(), File(PathBuf::from("../../Cargo.toml").canonicalize().unwrap()));
+        assert_eq!(res.clone().unwrap(), File(PathBuf::from("./Cargo.toml").canonicalize().unwrap()));
         let res2 = parse_source("Cargo.toml".to_string());
-        assert_eq!(res2.clone().unwrap(), File(PathBuf::from("../../Cargo.toml").canonicalize().unwrap()));
+        assert_eq!(res2.clone().unwrap(), File(PathBuf::from("./Cargo.toml").canonicalize().unwrap()));
         assert_eq!(res.unwrap(), res2.unwrap());
     }
 
     #[test]
     fn test_get_name_file() {
-        let res = get_name(&File(PathBuf::from("../../Cargo.toml")));
+        let res = get_name(&File(PathBuf::from("./Cargo.toml")));
         assert_eq!(res.unwrap(), "Cargo".to_string());
     }
 
     #[test]
     fn test_parse_folder() {
         let res = parse_source("./src".to_string());
-        assert_eq!(res.clone().unwrap(), Folder(PathBuf::from("..").canonicalize().unwrap()));
+        assert_eq!(res.clone().unwrap(), Folder(PathBuf::from("./src").canonicalize().unwrap()));
         let res2 = parse_source("src".to_string());
-        assert_eq!(res2.clone().unwrap(), Folder(PathBuf::from("..").canonicalize().unwrap()));
+        assert_eq!(res2.clone().unwrap(), Folder(PathBuf::from("./src").canonicalize().unwrap()));
         assert_eq!(res.unwrap(), res2.unwrap())
     }
 
     #[test]
     fn test_get_name_folder() {
-        let res = get_name(&Folder(PathBuf::from("..")));
+        let res = get_name(&Folder(PathBuf::from("./src")));
         assert_eq!(res.unwrap(), "src".to_string());
     }
 }
