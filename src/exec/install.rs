@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use crate::program::InstallFileFormat;
 use crate::tasks::file::download_file::DownloadFileTask;
+use crate::tasks::file::hoist_folder::HoistFolder;
 
 pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
     let source = parse_source(args.source.clone())?;
@@ -54,12 +55,14 @@ pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
                 Ok(task) => tasks.push(task),
                 Err(err) => return Err(err)
             }
+            tasks.push((Arc::new(HoistFolder{target: dst.clone()}), 0.1));
         },
         File(ref file_path) => {
             match get_file_extract_task(file_path, &dst, args.file_format) {
                 Ok(task) => tasks.push(task),
                 Err(err) => return Err(err)
-            }
+            };
+            tasks.push((Arc::new(HoistFolder{target: dst.clone()}), 0.1));
         },
         Folder(ref folder_path) => match create_folder_transfer(folder_path.to_path_buf(), dst.clone(), TransferMode::COPY) {
             Some(folder_transfer) => tasks.push((Arc::new(folder_transfer), 1.0)),

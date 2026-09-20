@@ -8,3 +8,4 @@ pub mod extract_tar;
 pub mod exctract_zip;
 pub mod delete_dir;
 pub mod download_file;
+pub mod hoist_folder;
