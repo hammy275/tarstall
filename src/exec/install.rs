@@ -12,6 +12,7 @@ use crate::ui::UI;
 use crate::util::wait_for_tasks;
 use std::path::PathBuf;
 use std::sync::Arc;
+use crate::program::InstallFileFormat;
 
 pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
     let source = parse_source(args.source.clone())?;
@@ -26,7 +27,12 @@ pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
     let mut tasks: Tasks = Vec::new();
     match source {
         Url(_) => todo!("url install unimplemented"),
-        File(ref file_path) => tasks.push(get_file_extract_task(file_path, &dst)),
+        File(ref file_path) => {
+            match get_file_extract_task(file_path, &dst, args.file_format) {
+                Ok(task) => tasks.push(task),
+                Err(err) => return Err(err)
+            }
+        },
         Folder(ref folder_path) => match create_folder_transfer(folder_path.to_path_buf(), dst.clone(), TransferMode::COPY) {
             Some(folder_transfer) => tasks.push((Arc::new(folder_transfer), 100.0)),
             None => return Err("failed to get directories for copying".to_string())
@@ -38,7 +44,13 @@ pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
         install_type: match source {
             Url(_) => todo!("url install unimplemented"),
             // Both unwraps here are safe as they are in get_file_extract_task()
-            File(ref file_path) => DEFAULT {update_archive_type: Some(file_path.extension().unwrap().to_str().unwrap().to_string())},
+            File(ref file_path) => {
+                let update_archive_type = match args.file_format {
+                    None => file_path.extension().unwrap().to_str().unwrap().try_into().ok(),
+                    Some(_) => args.file_format
+                };
+                DEFAULT { update_archive_type }
+            },
             Folder(_) => DEFAULT {update_archive_type: None},
             Git(_) => todo!("git install unimplemented")
         },
@@ -47,21 +59,33 @@ pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
     wait_for_tasks(tasks, ui)
 }
 
-fn get_file_extract_task(file_path: &PathBuf, dst: &PathBuf) -> TaskWithWeight {
+fn get_file_extract_task(file_path: &PathBuf, dst: &PathBuf, file_format: Option<InstallFileFormat>) -> Result<TaskWithWeight, String> {
     // First unwrap safe since File() means there is a file extension already.
     // Second unwrap safe since it came from a string earlier anyway
-    let extension = file_path.extension().unwrap().to_str().unwrap();
-    if extension.to_lowercase() == "zip" {
-        (Arc::new(ExtractZip{
-            src: file_path.to_path_buf(),
-            dst: dst.clone(),
-        }), 1.0)
-    } else {
-        (Arc::new(ExtractTar{
-            src: file_path.to_path_buf(),
-            dst: dst.clone(),
-            mode: ExtractTarMode::Auto,
-        }), 1.0)
+    let extension_opt: Option<InstallFileFormat> = file_path.extension().and_then(| ext | { ext.to_str() }).and_then( | ext | { ext.try_into().ok() } );
+    match file_format.or(extension_opt) {
+        None => Err("could not determine file extension".to_string()),
+        Some(extension) => match extension {
+            InstallFileFormat::Zip => Ok((Arc::new(ExtractZip{
+                src: file_path.to_path_buf(),
+                dst: dst.clone(),
+            }), 1.0)),
+            InstallFileFormat::Tar => Ok((Arc::new(ExtractTar{
+                src: file_path.to_path_buf(),
+                dst: dst.clone(),
+                mode: ExtractTarMode::Tar,
+            }), 1.0)),
+            InstallFileFormat::Tgz => Ok((Arc::new(ExtractTar{
+                src: file_path.to_path_buf(),
+                dst: dst.clone(),
+                mode: ExtractTarMode::TarGz,
+            }), 1.0)),
+            InstallFileFormat::Txz => Ok((Arc::new(ExtractTar{
+                src: file_path.to_path_buf(),
+                dst: dst.clone(),
+                mode: ExtractTarMode::TarXz,
+            }), 1.0))
+        }
     }
 }
 
@@ -75,9 +99,9 @@ fn parse_source(source: String) -> Result<InstallSource, String> {
     } else {
         let path = PathBuf::from(source);
         if path.is_file() {
-            Ok(File(path.canonicalize().map_err(| err | { "could not get path to file" })?))
+            Ok(File(path.canonicalize().map_err(| _ | { "could not get path to file" })?))
         } else if path.is_dir() {
-            Ok(Folder(path.canonicalize().map_err(| err | { "could not get path to folder" })?))
+            Ok(Folder(path.canonicalize().map_err(| _ | { "could not get path to folder" })?))
         } else {
             // Safe to unwrap since it came from a string earlier
             Err(format!("{} not found", path.to_str().unwrap()))

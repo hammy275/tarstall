@@ -1,9 +1,10 @@
 use crate::exec::install::install;
 use crate::ui::UI;
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use crate::exec::list::list;
 use crate::exec::manage_program::manage;
 use crate::exec::remove::remove;
+use crate::program::InstallFileFormat;
 
 #[derive(Parser, Debug)]
 #[command(about)]
@@ -44,7 +45,10 @@ pub struct InstallArgs {
     pub source: String,
     #[arg(short, long)]
     /// The name for the installed program
-    pub name: Option<String>
+    pub name: Option<String>,
+    #[arg(short, long)]
+    /// The file format of the archive to install. Ignored when installing a directory.
+    pub file_format: Option<InstallFileFormat>
 }
 
 #[derive(Args, Debug)]

@@ -115,6 +115,7 @@ pub fn deserialize(json_str: &str) -> Option<Database> {
 mod tests {
     use crate::db::{Database, Options, Version, deserialize};
     use crate::program::{InstallType, Program};
+    use crate::program::InstallFileFormat::Tgz;
 
     #[test]
     fn test_old_db_deserialize() {
@@ -178,7 +179,7 @@ mod tests {
             programs: vec![
                 Program{
                     name: "archive_program".to_string(),
-                    install_type: InstallType::DEFAULT {update_archive_type: Some(".tar.gz".to_string())},
+                    install_type: InstallType::DEFAULT {update_archive_type: Some(Tgz)},
                     shortcut_paths: Vec::new(),
                     post_update_script: None,
                     update_url: Some("https://example.com/archive_program.tar.gz".to_string()),

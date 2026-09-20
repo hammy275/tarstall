@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::path::{PathBuf};
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, Map, from_value, to_value};
 use crate::util::home_dir;
@@ -32,7 +33,8 @@ impl Program {
     pub fn old_deserialize(json: &Map<String, Value>, name: &str) -> Option<Program> {
         let install_type = match json.get("install_type")?.as_str()? {
             "default" => {
-                let update_archive_type = json.get("update_archive_type")?.as_str().map(| str | { str.to_string() });
+                let update_archive_type_str = json.get("update_archive_type")?.as_str()?;
+                let update_archive_type = update_archive_type_str.try_into().ok();
                 InstallType::DEFAULT {update_archive_type }
             }
             "git" => InstallType::GIT,
@@ -99,11 +101,35 @@ impl Program {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub enum InstallType {
     /// Program was installed from an archive or folder and is not a single file when extracted.
-    DEFAULT {update_archive_type: Option<String>},
+    DEFAULT {update_archive_type: Option<InstallFileFormat>},
     /// Program was installed via git.
     GIT,
     /// Program is a single file when extracted.
     SINGLE,
+}
+
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum InstallFileFormat {
+    Tar,
+    Tgz,
+    Txz,
+    Zip
+}
+
+impl TryFrom<&str> for InstallFileFormat {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        // Trim leading . since old 1.x tarstall databases have one.
+        let trimmed = value.strip_prefix(".").unwrap_or(value);
+        match trimmed {
+            "tar.gz" => Ok(InstallFileFormat::Tgz),
+            "tar.xz" => Ok(InstallFileFormat::Txz),
+            "tar" => Ok(InstallFileFormat::Tar),
+            "zip" => Ok(InstallFileFormat::Zip),
+            _ => Err("invalid extension".to_string())
+        }
+    }
 }
 
 #[cfg(test)]
