@@ -120,14 +120,28 @@ impl TryFrom<&str> for InstallFileFormat {
     type Error = String;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        // Trim leading . since old 1.x tarstall databases have one.
-        let trimmed = value.strip_prefix(".").unwrap_or(value);
+        // Strip to the last 6 characters (or less if the string is shorter)
+        let trimmed = match value.len() {
+            6.. => &value[value.len() - 6 .. value.len()],
+            _ => value
+        };
         match trimmed {
             "tar.gz" => Ok(InstallFileFormat::Tgz),
             "tar.xz" => Ok(InstallFileFormat::Txz),
             "tar" => Ok(InstallFileFormat::Tar),
             "zip" => Ok(InstallFileFormat::Zip),
             _ => Err("invalid extension".to_string())
+        }
+    }
+}
+
+impl Display for InstallFileFormat {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InstallFileFormat::Tar => f.write_str("tar"),
+            InstallFileFormat::Tgz => f.write_str("tar.gz"),
+            InstallFileFormat::Txz => f.write_str("tar.xz"),
+            InstallFileFormat::Zip => f.write_str("zip")
         }
     }
 }

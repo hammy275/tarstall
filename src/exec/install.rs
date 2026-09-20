@@ -9,15 +9,21 @@ use crate::tasks::file::extract_tar::{ExtractTar, ExtractTarMode};
 use crate::tasks::file::file_transfer::TransferMode;
 use crate::tasks::file::folder_transfer::create_folder_transfer;
 use crate::ui::UI;
-use crate::util::wait_for_tasks;
+use crate::util::{wait_for_tasks, TempDir, temp_dir};
 use std::path::PathBuf;
 use std::sync::Arc;
 use crate::program::InstallFileFormat;
+use crate::tasks::file::download_file::DownloadFileTask;
 
 pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
     let source = parse_source(args.source.clone())?;
     let name = match &args.name {
-        None => get_name(&source).ok_or("Name could not be automatically determined, please provide a name for this program".to_string())?,
+        None => {
+            match &source {
+                Url(_) | Git(_) => return Err("please provide a name for this program".to_string()),
+                File(_) | Folder(_) => get_name(&source).ok_or("name could not be automatically determined, please provide a name for this program".to_string())?,
+            }
+        }
         Some(name) => name.clone()
     };
     if has_program(name.as_str()) {
@@ -25,8 +31,30 @@ pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
     }
     let dst = tarstall_home().join("bin").join(name.clone());
     let mut tasks: Tasks = Vec::new();
+    let temp: TempDir;
     match source {
-        Url(_) => todo!("url install unimplemented"),
+        Url(ref url) => {
+            let file_format = match args.file_format {
+                None => match url.as_str().try_into().ok() {
+                    Some(file_format) => file_format,
+                    None => return Err("could not determine file extension".to_string())
+                },
+                Some(file_format) => file_format
+            };
+            temp = match temp_dir() {
+                Ok(temp) => temp,
+                Err(err) => return Err(err.to_string())
+            };
+            let src = temp.path.join(&name).with_extension(file_format.to_string());
+            tasks.push((Arc::new(DownloadFileTask{
+                url: url.to_string(),
+                dst: src.clone(),
+            }), 3.0));
+            match get_file_extract_task(&src, &dst, Some(file_format)) {
+                Ok(task) => tasks.push(task),
+                Err(err) => return Err(err)
+            }
+        },
         File(ref file_path) => {
             match get_file_extract_task(file_path, &dst, args.file_format) {
                 Ok(task) => tasks.push(task),
@@ -34,7 +62,7 @@ pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
             }
         },
         Folder(ref folder_path) => match create_folder_transfer(folder_path.to_path_buf(), dst.clone(), TransferMode::COPY) {
-            Some(folder_transfer) => tasks.push((Arc::new(folder_transfer), 100.0)),
+            Some(folder_transfer) => tasks.push((Arc::new(folder_transfer), 1.0)),
             None => return Err("failed to get directories for copying".to_string())
         }
         Git(_) => todo!("git install unimplemented"),
@@ -42,7 +70,7 @@ pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
     tasks.push((Arc::new(AddProgram{
         name,
         install_type: match source {
-            Url(_) => todo!("url install unimplemented"),
+            Url(_) => DEFAULT {update_archive_type: None},
             // Both unwraps here are safe as they are in get_file_extract_task()
             File(ref file_path) => {
                 let update_archive_type = match args.file_format {
@@ -55,7 +83,7 @@ pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
             Git(_) => todo!("git install unimplemented")
         },
         update_url: None,
-    }), 1.0));
+    }), 0.1));
     wait_for_tasks(tasks, ui)
 }
 

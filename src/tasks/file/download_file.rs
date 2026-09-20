@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use crate::task::{ProgressReporter, Task, TaskResult, ToTaskResultExt};
 
-struct DownloadFileTask {
+pub struct DownloadFileTask {
     pub url: String,
     pub dst: PathBuf
 }
