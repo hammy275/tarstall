@@ -85,7 +85,12 @@ pub fn install(args: &InstallArgs, ui: &mut dyn UI) -> TaskResult {
             Folder(_) => DEFAULT {update_archive_type: None},
             Git(_) => todo!("git install unimplemented")
         },
-        update_url: None,
+        update_url: match source {
+            Url(url) => Some(url),
+            File(_) => None,
+            Folder(_) => None,
+            Git(_) => todo!("git install unimplemented")
+        },
     }), 0.1));
     wait_for_tasks(tasks, ui)
 }
