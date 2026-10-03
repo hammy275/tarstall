@@ -30,6 +30,15 @@ impl Display for Program {
 }
 
 impl Program {
+
+    pub fn can_update(&self) -> bool {
+        match self.install_type {
+            InstallType::DEFAULT { .. } => self.update_url.is_some(),
+            InstallType::GIT => true,
+            InstallType::SINGLE => self.update_url.is_some()
+        }
+    }
+
     pub fn old_deserialize(json: &Map<String, Value>, name: &str) -> Option<Program> {
         let install_type = match json.get("install_type")?.as_str()? {
             "default" => {

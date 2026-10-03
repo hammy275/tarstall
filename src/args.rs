@@ -4,6 +4,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use crate::exec::list::list;
 use crate::exec::manage_program::manage;
 use crate::exec::remove::remove;
+use crate::exec::update::update;
 use crate::program::InstallFileFormat;
 
 #[derive(Parser, Debug)]
@@ -78,7 +79,7 @@ pub fn run(args: &TarstallArgs, ui: &mut dyn UI) -> Result<(), String> {
         Command::List { .. } => list(ui),
         Command::First { .. } => todo!(),
         Command::Erase { .. } => todo!(),
-        Command::Update(_) => todo!(),
+        Command::Update(ref update_args) => update(update_args, ui),
         Command::Manage(ref program_args) => manage(program_args, ui),
         Command::RemoveLock { .. } => todo!(),
         Command::Config { .. } => todo!(),

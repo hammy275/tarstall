@@ -1,12 +1,36 @@
-use crate::task::Tasks;
+use crate::task::{ProgressReporter, ProgressSender, Task, TaskResult, TaskRunner, Tasks};
 use crate::tasks::file::file_transfer::{FileTransfer, TransferMode};
-use crate::tasks::file::task_of_tasks::TaskOfTasks;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Create a task to move a folder and its contents from source to destination.
-pub fn create_folder_transfer(source: PathBuf, destination: PathBuf, transfer_mode: TransferMode) -> Option<TaskOfTasks> {
+
+pub struct FolderTransferTask {
+    pub source: PathBuf,
+    pub destination: PathBuf,
+    pub transfer_mode: TransferMode
+}
+
+impl Task for FolderTransferTask {
+    fn run(&self, progress_reporter: ProgressReporter) -> TaskResult {
+        match create_folder_transfer_tasks(self.source.clone(), self.destination.clone(), self.transfer_mode) {
+            None => Err("could not determine files to transfer".to_string()),
+            Some(tasks) => {
+                let mut task_runner = TaskRunner::create(tasks,
+                                                         ProgressSender::Reporter(progress_reporter));
+                task_runner.run_tasks()
+                    .join()
+                    .unwrap_or_else(|_| Err("failed to join child task runner thread".to_string()))
+            }
+        }
+    }
+
+    fn undo(&self) -> TaskResult {
+        todo!("Add folder transfer undo")
+    }
+}
+
+fn create_folder_transfer_tasks(source: PathBuf, destination: PathBuf, transfer_mode: TransferMode) -> Option<Tasks> {
     let mut tasks: Tasks = Vec::new();
     let source_paths = walk(source.clone());
     if let Some(paths) = source_paths {
@@ -25,8 +49,7 @@ pub fn create_folder_transfer(source: PathBuf, destination: PathBuf, transfer_mo
     } else {
         return None
     }
-    Some(TaskOfTasks{ tasks })
-
+    Some(tasks)
 }
 
 

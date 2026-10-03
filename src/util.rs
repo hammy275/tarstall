@@ -1,8 +1,9 @@
 use std::{env, fs};
 use std::path::PathBuf;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 use std::time::{SystemTime};
-use crate::task::{ProgressSender, TaskRunner, Tasks};
+use crate::task::{ProgressSender, Task, TaskRunner, Tasks};
+use crate::tasks::file::delete_dir::DeleteDirTask;
 use crate::ui::UI;
 
 pub fn wait_for_tasks(tasks: Tasks, ui: &mut dyn UI) -> Result<(), String> {
@@ -36,12 +37,21 @@ pub fn home_dir() -> PathBuf {
 
 /// Get a temporary directory that will remove itself when dropped.
 pub fn temp_dir() -> Result<TempDir, String> {
+    get_temp_dir(true)
+}
+
+/// Get a temporary directory that must be manually cleaned up.
+pub fn temp_dir_no_autodrop() -> Result<TempDir, String> {
+    get_temp_dir(false)
+}
+
+fn get_temp_dir(auto_drop: bool) -> Result<TempDir, String> {
     let tmp_root = env::temp_dir().join("tarstall");
     if let Ok(diff) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
         let maybe_subdir = diff.as_nanos().to_string();
         let path = tmp_root.join(maybe_subdir);
         return match fs::create_dir_all(path.clone()) {
-            Ok(_) => Ok(TempDir{path}),
+            Ok(_) => Ok(TempDir{path, auto_drop}),
             Err(err) => Err(err.to_string())
         }
     }
@@ -49,12 +59,24 @@ pub fn temp_dir() -> Result<TempDir, String> {
 }
 
 pub struct TempDir {
-    pub path: PathBuf
+    pub path: PathBuf,
+    auto_drop: bool
 }
 
 impl Drop for TempDir {
     fn drop(&mut self) {
-        // Just a temporary directory, so okay if this fails
-        _ = fs::remove_dir_all(self.path.clone())
+        if self.auto_drop {
+            // Just a temporary directory, so okay if this fails
+            _ = fs::remove_dir_all(self.path.clone())
+        }
+    }
+}
+
+impl TempDir {
+    /// Get a task for dropping this temporary directory.
+    pub fn get_drop_task(&self) -> Arc<dyn Task> {
+        Arc::new(DeleteDirTask{
+            path: self.path.clone(),
+        })
     }
 }

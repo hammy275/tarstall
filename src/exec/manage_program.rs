@@ -1,16 +1,24 @@
 use std::env::consts::OS;
 use std::string::ToString;
 use directories::UserDirs;
-use crate::args::ProgramArgs;
-use crate::config::{has_program, tarstall_home};
+use crate::args::{ProgramArgs, UpdateArgs};
+use crate::config::{get_program, has_program, tarstall_home};
 use crate::exec::remove::remove;
+use crate::exec::update::update;
+use crate::program::Program;
 use crate::task::TaskResult;
 use crate::ui::{ChooseOption, UI};
 
 pub fn manage(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
     let mut opts = Vec::new();
-    if !has_program(args.program.as_str()) {
-        return Err(format!("Program {} not found", args.program))
+    let program = match get_program(args.program.as_str()) {
+        None => return Err(format!("Program {} not found", args.program)),
+        Some(program) => program
+    };
+    let update_msg;
+    if program.can_update() {
+        update_msg = format!("Update {}", args.program);
+        opts.push(ChooseOption{ short: "u", msg: update_msg.as_str() });
     }
     if OS == "windows" {
         opts.push(ChooseOption{ short: "s", msg: "Add shortcut to desktop" })
@@ -23,6 +31,9 @@ pub fn manage(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
     loop {
         let choice = ui.choose("Select an option: ".to_string(), &opts);
         match opts[choice].short {
+            "u" => if let err @ Err(_) = update(&UpdateArgs{ tarstall: false, program: Some(args.program.clone()) }, ui) {
+                return err
+            }
             "s" => if let Err(err) = windows_shortcut(args, ui) {
                 return Err(err)
             }

@@ -92,3 +92,11 @@ pub fn has_program(name: &str) -> bool {
         .find(| program | { program.name == name })
         .is_some()
 }
+
+
+/// Get a copy of a program by its name.
+pub fn get_program(name: &str) -> Option<Program> {
+    DB.read().unwrap().programs.iter()
+        .find(| program | { program.name == name })
+        .map(| program | { program.clone() })
+}
