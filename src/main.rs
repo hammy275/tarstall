@@ -12,7 +12,7 @@ mod args;
 mod ui;
 mod exec;
 
-fn main() {
+fn main() -> Result<(), String> {
     if let Err(err) = config::load() {
         println!("Failed to load tarstall database: {}", err);
         exit(1)
@@ -30,13 +30,14 @@ For help, type \"tarstall -h\"
 
 For additional help, visit the tarstall wiki: https://github.com/hammy275/tarstall/wiki",
             config::VERSION, config::FILE_VERSION, config::INTERNAL_PROGRAM_VERSION,
-            config::DB.read().unwrap().version.branch)
+            config::DB.read().unwrap().version.branch);
+        Ok(())
     } else {
         let args = args::get_args();
         let mut ui = Box::new(cli_ui::new());
         match args::run(&args, &mut *ui) {
-            Ok(_) => {}
-            Err(msg) => println!("Error: {}", msg)
+            Ok(_) => Ok(()),
+            Err(msg) => Err(msg)
         }
     }
 }
