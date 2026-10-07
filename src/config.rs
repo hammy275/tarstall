@@ -6,7 +6,7 @@ use crate::util::home_dir;
 use crate::db;
 use std::env;
 use std::path::{Path, PathBuf};
-use std::sync::{OnceLock, RwLock, RwLockWriteGuard};
+use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::program::Program;
 use crate::tasks::file::write_file::WriteFile;
 
@@ -94,9 +94,34 @@ pub fn has_program(name: &str) -> bool {
 }
 
 
-/// Get a copy of a program by its name.
+/// Get a copy of a program by its name. Will acquire a lock, so lock must not already be held.
 pub fn get_program(name: &str) -> Option<Program> {
-    DB.read().unwrap().programs.iter()
+    get_program_with_read_lock(name, &DB.read().unwrap())
+}
+
+/// Get a copy of a program by its name using an already-held read lock.
+pub fn get_program_with_read_lock(name: &str, db: &RwLockReadGuard<Database>) -> Option<Program> {
+    db.programs.iter()
         .find(| program | { program.name == name })
         .map(| program | { program.clone() })
+}
+
+
+/// Get a copy of a program by its name using an already-held write lock.
+pub fn get_program_with_write_lock(name: &str, db: &RwLockWriteGuard<Database>) -> Option<Program> {
+    db.programs.iter()
+        .find(| program | { program.name == name })
+        .map(| program | { program.clone() })
+}
+
+
+/// Replace a program with a new version of itself.
+pub fn replace_program(program: Program, db: &mut RwLockWriteGuard<Database>) -> Result<(), String> {
+    for (index, old_program) in db.programs.iter().enumerate() {
+        if old_program.name == (&program).name {
+            db.programs[index] = program;
+            break;
+        }
+    }
+    Ok(())
 }

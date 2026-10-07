@@ -54,7 +54,7 @@ impl UI for CliUI {
         }
     }
 
-    fn ask_file(&mut self, root_path: PathBuf) -> Result<PathBuf, String> {
+    fn ask_file(&mut self, root_path: PathBuf, can_escape_root_or_be_empty: bool) -> Result<PathBuf, String> {
         let mut dirs_in = 0;
         let mut cwd = root_path;
         loop {
@@ -84,8 +84,10 @@ impl UI for CliUI {
             }
             println!("Folders: {}", folders.join(", "));
             println!("Files: {}", files.join(", "));
-            if dirs_in == 0 {
+            if dirs_in == 0 && !can_escape_root_or_be_empty {
                 println!("Enter a folder to traverse to or a file to select: ")
+            } else if can_escape_root_or_be_empty {
+                println!("Enter a folder to traverse to, a file to select, \"..\" to go up a directory, or press ENTER to select no file: ")
             } else {
                 println!("Enter a folder to traverse to, a file to select, or \"..\" to go up a directory: ")
             }
@@ -95,11 +97,13 @@ impl UI for CliUI {
             } else if folders.contains(&input) {
                 cwd = cwd.join(input);
                 dirs_in += 1;
-            } else if input == ".." && dirs_in != 0 {
-                // Unwrap is okay. We entered some child directory to end up here, so there's
-                // definitely a parent.
-                cwd = cwd.parent().unwrap().to_path_buf();
-                dirs_in -= 1;
+            } else if input == ".." && (dirs_in != 0 || can_escape_root_or_be_empty) {
+                cwd = cwd.parent().map(| path | {
+                    dirs_in -= 1;
+                    path.to_path_buf()
+                }).unwrap_or(cwd);
+            } else if input.is_empty() && can_escape_root_or_be_empty {
+                return Ok(PathBuf::new())
             }
         }
     }

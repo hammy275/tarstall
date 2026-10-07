@@ -17,7 +17,7 @@ pub trait UI {
     /// Ask the user the provided message and require them to pick one of the provided options.
     fn choose(&mut self, msg: String, options: &Vec<ChooseOption>) -> usize;
     /// Ask the user to select a file.
-    fn ask_file(&mut self, root_path: PathBuf) -> Result<PathBuf, String>;
+    fn ask_file(&mut self, root_path: PathBuf, can_escape_root_or_be_empty: bool) -> Result<PathBuf, String>;
 }
 
 pub struct ChooseOption<'a> {

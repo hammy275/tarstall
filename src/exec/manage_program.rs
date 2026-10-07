@@ -2,7 +2,7 @@ use std::env::consts::OS;
 use std::string::ToString;
 use directories::UserDirs;
 use crate::args::{ProgramArgs, UpdateArgs};
-use crate::config::{get_program, has_program, tarstall_home};
+use crate::config::{get_program, tarstall_home, DB, replace_program, save_db, get_program_with_write_lock};
 use crate::exec::remove::remove;
 use crate::exec::update::update;
 use crate::program::Program;
@@ -19,6 +19,11 @@ pub fn manage(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
     if program.can_update() {
         update_msg = format!("Update {}", args.program);
         opts.push(ChooseOption{ short: "u", msg: update_msg.as_str() });
+    }
+    if program.can_update_ignore_post_update_script() {
+        opts.push(ChooseOption{ short: "p", msg: "Add/remove post-update script" })
+    } else {
+        opts.push(ChooseOption{ short: "p", msg: "Add/remove update script" })
     }
     if OS == "windows" {
         opts.push(ChooseOption{ short: "s", msg: "Add shortcut to desktop" })
@@ -37,10 +42,37 @@ pub fn manage(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
             "s" => if let Err(err) = windows_shortcut(args, ui) {
                 return Err(err)
             }
+            "p" => return post_update_script(args, ui),
             "r" => return remove(args, ui),
             "e" => return Ok(()),
             _ => return Err("Invalid option".to_string())
         }
+    }
+}
+
+fn post_update_script(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
+    match ui.ask_file(tarstall_home().join("bin").join(args.program.clone()), true) {
+        Ok(file_path) => {
+            match DB.write() {
+                Ok(mut db) => {
+                    let mut program = match get_program_with_write_lock(args.program.as_str(), &db) {
+                        Some(program) => program,
+                        None => return Err("Program not found even though it was found earlier".to_string())
+                    };
+                    if file_path.as_os_str().is_empty() {
+                        program.post_update_script = None;
+                    } else {
+                        program.post_update_script = Some(file_path)
+                    }
+                    match replace_program(program, &mut db) {
+                        Ok(_) => save_db(db),
+                        err @ Err(_) => err
+                    }
+                },
+                Err(err) => Err(err.to_string())
+            }
+        }
+        Err(err) => Err(err)
     }
 }
 
@@ -49,7 +81,7 @@ fn windows_shortcut(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
     use lnks::Shortcut; // use in here since it's Windows-only
     // Note: Windows shortcuts are not tracked in tarstall's database since they're easily-visible
     // files.
-    match ui.ask_file(tarstall_home().join("bin").join(args.program.clone())) {
+    match ui.ask_file(tarstall_home().join("bin").join(args.program.clone()), false) {
         Ok(path) => match UserDirs::new() {
             Some(dirs) => match dirs.desktop_dir() {
                 Some(desktop_dir) => {

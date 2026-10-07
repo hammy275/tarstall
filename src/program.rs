@@ -32,6 +32,10 @@ impl Display for Program {
 impl Program {
 
     pub fn can_update(&self) -> bool {
+        self.can_update_ignore_post_update_script() || self.post_update_script.is_some()
+    }
+
+    pub fn can_update_ignore_post_update_script(&self) -> bool {
         match self.install_type {
             InstallType::DEFAULT { .. } => self.update_url.is_some(),
             InstallType::GIT => true,
