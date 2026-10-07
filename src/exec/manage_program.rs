@@ -42,7 +42,9 @@ pub fn manage(args: &ProgramArgs, ui: &mut dyn UI) -> TaskResult {
             "s" => if let Err(err) = windows_shortcut(args, ui) {
                 return Err(err)
             }
-            "p" => return post_update_script(args, ui),
+            "p" => if let err @ Err(_) = post_update_script(args, ui) {
+                return err
+            }
             "r" => return remove(args, ui),
             "e" => return Ok(()),
             _ => return Err("Invalid option".to_string())
