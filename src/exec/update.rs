@@ -1,9 +1,11 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 use crate::args::{InstallArgs, UpdateArgs};
 use crate::config::get_program;
 use crate::exec::install::gather_install_tasks;
 use crate::program::{InstallType};
 use crate::task::{TaskResult, Tasks};
+use crate::tasks::file::run_script::RunScriptTask;
 use crate::ui::UI;
 use crate::util::wait_for_tasks;
 
@@ -44,7 +46,7 @@ pub fn update(args: &UpdateArgs, ui: &mut dyn UI) -> TaskResult {
                     InstallType::SINGLE => todo!("single updating not supported")
                 }
                 match program.post_update_script {
-                    Some(script_path) => todo!("post update script support"),
+                    Some(script_path) => tasks.push((Arc::new(RunScriptTask { script_path }), 1.0)),
                     None => {}
                 }
             },
