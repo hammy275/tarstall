@@ -38,8 +38,7 @@ impl Program {
     pub fn can_update_ignore_post_update_script(&self) -> bool {
         match self.install_type {
             InstallType::DEFAULT { .. } => self.update_url.is_some(),
-            InstallType::GIT => true,
-            InstallType::SINGLE => self.update_url.is_some()
+            InstallType::GIT => true
         }
     }
 
@@ -51,7 +50,7 @@ impl Program {
                 InstallType::DEFAULT {update_archive_type }
             }
             "git" => InstallType::GIT,
-            "single" => InstallType::SINGLE,
+            "single" => InstallType::DEFAULT {update_archive_type: None},
             _ => return None
         };
         let mut shortcut_paths: Vec<PathBuf> = Vec::new();
@@ -113,12 +112,10 @@ impl Program {
 /// The method of how the program was installed and is kept up-to-date.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub enum InstallType {
-    /// Program was installed from an archive or folder and is not a single file when extracted.
+    /// Program was installed from an archive or folder.
     DEFAULT {update_archive_type: Option<InstallFileFormat>},
     /// Program was installed via git.
-    GIT,
-    /// Program is a single file when extracted.
-    SINGLE,
+    GIT
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

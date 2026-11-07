@@ -42,8 +42,7 @@ pub fn update(args: &UpdateArgs, ui: &mut dyn UI) -> TaskResult {
                             None => return Err(format!("{} does not have an update URL, please add one", program_name))
                         };
                     }
-                    InstallType::GIT => todo!("git updating not supported"),
-                    InstallType::SINGLE => todo!("single updating not supported")
+                    InstallType::GIT => todo!("git updating not supported")
                 }
                 match program.post_update_script {
                     Some(script_path) => tasks.push((Arc::new(RunScriptTask { script_path }), 1.0)),

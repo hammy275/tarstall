@@ -195,7 +195,7 @@ mod tests {
                 },
                 Program{
                     name: "fake_appimage".to_string(),
-                    install_type: InstallType::SINGLE,
+                    install_type: InstallType::DEFAULT {update_archive_type: None},
                     shortcut_paths: Vec::new(),
                     post_update_script: None,
                     update_url: None,
